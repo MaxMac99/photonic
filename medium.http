@@ -1,0 +1,9 @@
+#@name Create name
+POST {{host}}/media
+    ?filename=IMG_4598.HEIC
+Content-Type: image/heif
+
+< ./test/IMG_4598.HEIC
+
+###
+
