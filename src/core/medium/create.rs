@@ -1,19 +1,19 @@
 use std::ffi::OsStr;
 use std::path::Path;
 
-use chrono::{DateTime, FixedOffset, Utc};
+use chrono::{Datelike, DateTime, FixedOffset, Utc};
 use mime::Mime;
 use mongodb::bson::oid::ObjectId;
 use serde::Deserialize;
 
 use crate::common::meta::MetaInfo;
-use crate::models::{AppError, Medium, MediumItem, MediumType};
+use crate::models::{Album, AppError, Medium, MediumItem, MediumType};
 use crate::repository::{MongoRepo, PhotoRepo};
 use crate::repository::photo::PathOptions;
 
 #[derive(Deserialize)]
 pub struct CreateMediumOpts {
-    album_id: Option<String>,
+    album_id: Option<ObjectId>,
     filename: String,
     #[serde(default)]
     tags: Vec<String>,
@@ -34,10 +34,21 @@ pub async fn create_medium(db: &MongoRepo, store: &PhotoRepo, opts: &CreateMediu
         .ok_or(AppError::WrongFilename)?;
     let date_taken = opts.date_taken.or(metainfo.date)
         .ok_or(AppError::NoDateTaken)?;
+    let mut album: Option<Album> = None;
+    if let Some(album_id) = opts.album_id {
+        album = db.get_album_by_id(album_id).await
+            .map_err(|_| AppError::UnknownError)?;
+        if album.is_none() {
+            return Err(AppError::AlbumNotFound(album_id.to_string()));
+        }
+    }
 
+    let name = album.as_ref().map(|album| album.name.clone());
+    let year = album.as_ref().and_then(|album| album.first_date)
+        .map(|date| date.year() as u32);
     let path_opts = PathOptions {
-        album: None,
-        album_year: None,
+        album: name,
+        album_year: year,
         date: date_taken,
         camera_make: metainfo.camera_make,
         camera_model: metainfo.camera_model,

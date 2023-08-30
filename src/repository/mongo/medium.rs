@@ -20,7 +20,7 @@ impl MongoRepo {
             sidecars: new_medium.sidecars,
         };
         let medium = self
-            .col
+            .medium_col
             .insert_one(new_doc, None)
             .await
             .ok()

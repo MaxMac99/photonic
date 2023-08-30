@@ -4,7 +4,7 @@ use mongodb::{Client, Collection};
 use mongodb::bson::doc;
 use mongodb::options::{ClientOptions, Credential};
 
-use crate::models::Medium;
+use crate::models::{Album, Medium};
 use crate::repository::mongo::MongoRepo;
 
 impl MongoRepo {
@@ -29,8 +29,9 @@ impl MongoRepo {
         db.run_command(doc! {"ping": 1}, None)
             .await
             .expect("Could not ping database");
-        let col: Collection<Medium> = db.collection("medium");
+        let medium_col: Collection<Medium> = db.collection("medium");
+        let album_col: Collection<Album> = db.collection("album");
 
-        MongoRepo { col }
+        MongoRepo { medium_col, album_col }
     }
 }

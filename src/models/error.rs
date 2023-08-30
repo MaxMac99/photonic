@@ -20,9 +20,12 @@ pub enum AppError {
     /// The filename needs to contain the file extension
     #[display(fmt = "Given filename was not in correct format")]
     WrongFilename,
-    /// Could not extract Date Taken
+    /// Could not extract date taken
     #[display(fmt = "Could not find a date for the image")]
     NoDateTaken,
+    /// Could not find album with id
+    #[display(fmt = "Could not find album with id {}", _0)]
+    AlbumNotFound(String),
     /// The image already exists
     #[display(fmt = "The image already exists")]
     AlreadyExists,

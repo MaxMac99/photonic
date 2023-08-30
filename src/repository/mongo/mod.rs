@@ -1,10 +1,12 @@
 use mongodb::Collection;
 
-use crate::models::Medium;
+use crate::models::{Album, Medium};
 
-mod create_medium;
+mod medium;
 pub mod repo;
+mod album;
 
 pub struct MongoRepo {
-    col: Collection<Medium>,
+    medium_col: Collection<Medium>,
+    album_col: Collection<Album>,
 }
