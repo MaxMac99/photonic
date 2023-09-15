@@ -14,3 +14,4 @@ http_server = { path = "../http_server" }
 clap = { version = "4.4.2", features = ["cargo"] }
 env_logger = "0.10.0"
 actix-web = "4.4.0"
+dotenv = "0.15.0"

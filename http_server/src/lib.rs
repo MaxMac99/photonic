@@ -5,17 +5,15 @@ use log::info;
 
 mod api;
 
-#[derive(Clone)]
-struct ServerContext {}
-
 pub async fn run() -> Result<(), core::Error> {
-    let context = Arc::new(ServerContext {});
+    let config = Arc::new(core::Config::load().await?);
+    let service = Arc::new(core::Service::new(config.clone()).await);
 
     let endpoint = ("0.0.0.0", 8080);
     info!("Starting fotonic server. endpoint={:?}", &endpoint);
     HttpServer::new(move || {
         App::new()
-            .app_data(Arc::clone(&context))
+            .app_data(Arc::clone(&service))
             .service(web::scope("/api/v1")
                 .service(web::scope("/medium")
                     .service(web::resource("")

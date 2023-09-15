@@ -1,5 +1,5 @@
 #@name Create name
-POST {{host}}/media
+POST {{host}}/api/v1/medium
     ?filename=IMG_4598.HEIC
 Content-Type: image/heif
 

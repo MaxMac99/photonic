@@ -40,10 +40,10 @@ impl Config {
 
         fs::create_dir_all(&base_path)
             .await
-            .map_err(|_| Error::Internal(String::from("Could not create base path")))?;
+            .map_err(|err| Error::Internal(format!("Could not create directories for path {:?}: {}", &base_path, err.to_string())))?;
         let canonicalized = fs::canonicalize(&base_path)
             .await
-            .map_err(|_| Error::Internal(String::from("Could not create base path")))?;
+            .map_err(|err| Error::Internal(format!("Could not canonicalize path {:?}: {}", &base_path, err.to_string())))?;
 
         let pattern = std::env::var(ENV_STORAGE_PATTERN)
             .unwrap_or(String::from(DEFAULT_STORAGE_PATTERN));
