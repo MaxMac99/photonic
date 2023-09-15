@@ -1082,7 +1082,7 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
       operationId: ping
-      description: Pings the server
+      description: Pings the http_server
 components:
   schemas:
     Medium:

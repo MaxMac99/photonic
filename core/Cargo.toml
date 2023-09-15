@@ -1,0 +1,22 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+meta = { path = "../meta" }
+
+chrono = { version = "0.4.30", features = ["serde"] }
+serde = { version = "1.0.188", features = ["derive", "serde_derive"] }
+thiserror = "1.0.47"
+mongodb = { version = "2.6.1", features = ["bson-chrono-0_4"] }
+actix-web = "4.4.0"
+derive_more = "0.99.17"
+mime = "0.3.17"
+tokio = { version = "1.32.0", features = ["fs"] }
+path-clean = "1.0.1"
+serde_json = "1.0.107"
+mime_serde_shim = "0.2.2"
+derive_setters = "0.1.6"

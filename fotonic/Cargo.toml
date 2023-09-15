@@ -1,0 +1,16 @@
+[package]
+name = "fotonic"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "fotonic"
+path = "src/main.rs"
+
+[dependencies]
+core = { path = "../core" }
+http_server = { path = "../http_server" }
+
+clap = { version = "4.4.2", features = ["cargo"] }
+env_logger = "0.10.0"
+actix-web = "4.4.0"
