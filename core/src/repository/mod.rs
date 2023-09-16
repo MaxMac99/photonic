@@ -1,9 +1,10 @@
-use std::env;
+use std::sync::Arc;
 
 use mongodb::{Client, Collection};
 use mongodb::bson::doc;
 use mongodb::options::{ClientOptions, Credential};
 
+use crate::{Config, Error};
 use crate::entities::{Album, Medium};
 
 mod album;
@@ -16,28 +17,29 @@ pub struct Repository {
 }
 
 impl Repository {
-    pub async fn init() -> Self {
-        let mut opts = ClientOptions::parse(
-            env::var("MONGO_URL").expect("No url provided"),
-        )
+    pub async fn init(config: Arc<Config>) -> Result<Self, Error> {
+        let mut opts = ClientOptions::parse(config.mongo.url.clone())
             .await
-            .expect("Invalid options for MongoDB");
+            .map_err(|err| Error::Internal(format!("Invalid options for MongoDB: {}", err.to_string())))?;
         opts.credential = Some(
             Credential::builder()
-                .username(env::var("MONGO_USER").expect("No user provided"))
-                .password(env::var("MONGO_PASSWORD").expect("No password provided"))
+                .username(config.mongo.username.clone())
+                .password(config.mongo.password.clone())
                 .build(),
         );
 
-        let client =
-            Client::with_options(opts).expect("Could not connect with MongoDB");
+        let client = Client::with_options(opts)
+            .map_err(|err| Error::Internal(format!("Could not connect to MongoDB: {}", err.to_string())))?;
         let db = client.database("fotonic");
         db.run_command(doc! {"ping": 1}, None)
             .await
-            .expect("Could not ping database");
+            .map_err(|err| Error::Internal(format!("Could not ping MongoDB: {}", err.to_string())))?;
         let medium_col: Collection<Medium> = db.collection("medium");
         let album_col: Collection<Album> = db.collection("album");
 
-        Self { medium_col, album_col }
+        Ok(Self {
+            medium_col,
+            album_col,
+        })
     }
 }
