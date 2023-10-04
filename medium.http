@@ -1,4 +1,4 @@
-#@name Create name
+#@name Create with Heic
 POST {{host}}/api/v1/medium
     ?filename=IMG_4598.HEIC
 Content-Type: image/heif
@@ -7,3 +7,11 @@ Content-Type: image/heif
 
 ###
 
+#@name Create with RAW
+POST {{host}}/api/v1/medium
+    ?filename=IMG_4597.DNG
+Content-Type: image/dng
+
+< ./test/IMG_4597.DNG
+
+###

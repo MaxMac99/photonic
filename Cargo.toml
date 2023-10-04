@@ -3,7 +3,8 @@ members = [
     "fotonic",
     "core",
     "meta",
-    "http_server"
+    "http_server",
+    "exiftool"
 ]
 
 default-members = [

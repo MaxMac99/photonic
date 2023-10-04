@@ -15,7 +15,7 @@ pub enum MediumError {
 impl From<meta::Error> for MediumError {
     fn from(value: meta::Error) -> Self {
         match value {
-            meta::Error::NoMimeType => MediumError::UnsupportedFile,
+            meta::Error::MimeMismatch { found_mime, given_mime } => MediumError::MimeMismatch { found_mime, given_mime },
             meta::Error::NotSupported(_) => MediumError::UnsupportedFile,
             _ => MediumError::UnsupportedFile,
         }

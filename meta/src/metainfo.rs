@@ -15,12 +15,21 @@ pub struct MetaInfo {
 }
 
 impl MetaInfo {
-    pub fn from(data: &[u8]) -> Result<Self, Error> {
+    pub fn from(data: &[u8], ext: &str, given_mime: Mime) -> Result<Self, Error> {
+        let lower_ext = ext.to_lowercase();
         let mimetype: Mime = infer::get(data)
-            .ok_or(Error::NoMimeType)?
-            .mime_type()
-            .parse()
-            .map_err(|_| Error::NoMimeType)?;
+            .and_then(|mime| mime.mime_type()
+                .parse()
+                .ok())
+            .or_else(|| mime_guess::from_ext(&lower_ext).first())
+            .unwrap_or(given_mime.clone());
+
+        if mimetype != given_mime {
+            return Err(Error::MimeMismatch {
+                given_mime: given_mime.to_string(),
+                found_mime: mimetype.to_string(),
+            }.into());
+        }
 
         let mut cursor = Cursor::new(data);
         let exifreader = Reader::new();

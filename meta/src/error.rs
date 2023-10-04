@@ -4,7 +4,10 @@ use std::fmt;
 #[non_exhaustive]
 pub enum Error {
     /// Could not find Mimetype.
-    NoMimeType,
+    MimeMismatch {
+        found_mime: String,
+        given_mime: String,
+    },
     /// The file is not supported.
     NotSupported(&'static str),
 }
@@ -26,8 +29,8 @@ impl From<exif::Error> for Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Error::NoMimeType => f.write_str("Could not extract mime type."),
+        match self {
+            Error::MimeMismatch { found_mime, given_mime } => f.write_str(format!("The given mime type ({}) does not match the found mime type ({})", given_mime, found_mime).as_str()),
             Error::NotSupported(msg) => f.write_str(msg),
         }
     }

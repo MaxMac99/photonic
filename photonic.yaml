@@ -49,7 +49,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      operationId: getMedia
+      operationId: findAllMedia
       description: |-
         Gets all media.
         Can be filtered by date.
@@ -1224,12 +1224,8 @@ components:
       title: PaginatedResult
       type: object
       properties:
-        page:
-          type: integer
-        per_page:
-          type: integer
-        has_next:
-          type: boolean
+        next:
+          type: string
         results:
           type: array
           items: { }

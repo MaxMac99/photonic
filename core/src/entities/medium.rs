@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use chrono::{DateTime, FixedOffset, Utc};
+use chrono::{DateTime, Utc};
 use mime::Mime;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -42,8 +42,9 @@ pub struct Medium {
     pub id: Option<ObjectId>,
     #[serde(rename = "mediumType")]
     pub medium_type: MediumType,
-    #[serde(rename = "dateTaken")]
-    pub date_taken: DateTime<FixedOffset>,
+    #[serde(rename = "dateTaken", with = "mongodb::bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub date_taken: DateTime<Utc>,
+    pub timezone: i32,
     pub originals: Vec<MediumItem>,
     pub album: Option<ObjectId>,
     pub tags: Vec<String>,

@@ -1,0 +1,1173 @@
+[
+  {
+    "SourceFile": "/Users/maxvissing/Git/fotonic/test/IMG_4598.HEIC",
+    "ExifTool:ExifTool:ExifTool:": {
+      "ExifToolVersion": {
+        "desc": "ExifTool Version Number",
+        "id": "ExifToolVersion",
+        "table": "Extra",
+        "val": 12.60
+      }
+    },
+    "File:System:Other:": {
+      "FileName": {
+        "desc": "File Name",
+        "id": "FileName",
+        "table": "Extra",
+        "val": "IMG_4598.HEIC"
+      },
+      "Directory": {
+        "desc": "Directory",
+        "id": "Directory",
+        "table": "Extra",
+        "val": "/Users/maxvissing/Git/fotonic/test"
+      },
+      "FileSize": {
+        "desc": "File Size",
+        "id": "FileSize",
+        "num": 126481,
+        "table": "Extra",
+        "val": "126 kB"
+      },
+      "FilePermissions": {
+        "desc": "File Permissions",
+        "id": "FilePermissions",
+        "num": 100644,
+        "table": "Extra",
+        "val": "-rw-r--r--"
+      }
+    },
+    "File:System:Time:": {
+      "FileModifyDate": {
+        "desc": "File Modification Date/Time",
+        "id": "FileModifyDate",
+        "table": "Extra",
+        "val": "2023:08:16 08:58:40+02:00"
+      },
+      "FileAccessDate": {
+        "desc": "File Access Date/Time",
+        "id": "FileAccessDate",
+        "table": "Extra",
+        "val": "2023:09:29 22:59:57+02:00"
+      },
+      "FileInodeChangeDate": {
+        "desc": "File Inode Change Date/Time",
+        "id": "FileInodeChangeDate",
+        "table": "Extra",
+        "val": "2023:08:16 08:59:45+02:00"
+      }
+    },
+    "File:File:Other:": {
+      "FileType": {
+        "desc": "File Type",
+        "id": "FileType",
+        "table": "Extra",
+        "val": "HEIC"
+      },
+      "FileTypeExtension": {
+        "desc": "File Type Extension",
+        "id": "FileTypeExtension",
+        "num": "HEIC",
+        "table": "Extra",
+        "val": "heic"
+      },
+      "MIMEType": {
+        "desc": "MIME Type",
+        "id": "MIMEType",
+        "table": "Extra",
+        "val": "image/heic"
+      }
+    },
+    "QuickTime:QuickTime:Video:": {
+      "MajorBrand": {
+        "desc": "Major Brand",
+        "id": "0x0000",
+        "num": "heic",
+        "table": "QuickTime::FileType",
+        "val": "High Efficiency Image Format HEVC still image (.HEIC)"
+      },
+      "MinorVersion": {
+        "desc": "Minor Version",
+        "id": "0x0001",
+        "table": "QuickTime::FileType",
+        "val": "0.0.0"
+      },
+      "CompatibleBrands": {
+        "desc": "Compatible Brands",
+        "id": "0x0002",
+        "table": "QuickTime::FileType",
+        "val": [
+          "mif1",
+          "MiHE",
+          "MiPr",
+          "miaf",
+          "MiHB",
+          "heic"
+        ]
+      },
+      "HandlerType": {
+        "desc": "Handler Type",
+        "id": "0x0008",
+        "num": "pict",
+        "table": "QuickTime::Handler",
+        "val": "Picture"
+      },
+      "HEVCConfigurationVersion": {
+        "desc": "HEVC Configuration Version",
+        "id": "0x0000",
+        "table": "QuickTime::HEVCConfig",
+        "val": 1
+      },
+      "GeneralProfileSpace": {
+        "desc": "General Profile Space",
+        "id": "0x0001",
+        "num": 0,
+        "table": "QuickTime::HEVCConfig",
+        "val": "Conforming"
+      },
+      "GeneralTierFlag": {
+        "desc": "General Tier Flag",
+        "id": "1.1",
+        "num": 0,
+        "table": "QuickTime::HEVCConfig",
+        "val": "Main Tier"
+      },
+      "GeneralProfileIDC": {
+        "desc": "General Profile IDC",
+        "id": "1.2",
+        "num": 3,
+        "table": "QuickTime::HEVCConfig",
+        "val": "Main Still Picture"
+      },
+      "GenProfileCompatibilityFlags": {
+        "desc": "Gen Profile Compatibility Flags",
+        "id": "0x0002",
+        "num": 1879048192,
+        "table": "QuickTime::HEVCConfig",
+        "val": "Main Still Picture, Main 10, Main"
+      },
+      "ConstraintIndicatorFlags": {
+        "desc": "Constraint Indicator Flags",
+        "id": "0x0006",
+        "table": "QuickTime::HEVCConfig",
+        "val": "176 0 0 0 0 0"
+      },
+      "GeneralLevelIDC": {
+        "desc": "General Level IDC",
+        "id": "0x000c",
+        "num": 90,
+        "table": "QuickTime::HEVCConfig",
+        "val": "90 (level 3.0)"
+      },
+      "MinSpatialSegmentationIDC": {
+        "desc": "Min Spatial Segmentation IDC",
+        "id": "0x000d",
+        "table": "QuickTime::HEVCConfig",
+        "val": 0
+      },
+      "ParallelismType": {
+        "desc": "Parallelism Type",
+        "id": "0x000f",
+        "table": "QuickTime::HEVCConfig",
+        "val": 0
+      },
+      "ChromaFormat": {
+        "desc": "Chroma Format",
+        "id": "0x0010",
+        "num": 1,
+        "table": "QuickTime::HEVCConfig",
+        "val": "4:2:0"
+      },
+      "BitDepthLuma": {
+        "desc": "Bit Depth Luma",
+        "id": "0x0011",
+        "table": "QuickTime::HEVCConfig",
+        "val": 8
+      },
+      "BitDepthChroma": {
+        "desc": "Bit Depth Chroma",
+        "id": "0x0012",
+        "table": "QuickTime::HEVCConfig",
+        "val": 8
+      },
+      "AverageFrameRate": {
+        "desc": "Average Frame Rate",
+        "id": "0x0013",
+        "table": "QuickTime::HEVCConfig",
+        "val": 0
+      },
+      "ConstantFrameRate": {
+        "desc": "Constant Frame Rate",
+        "id": "0x0015",
+        "num": 0,
+        "table": "QuickTime::HEVCConfig",
+        "val": "Unknown"
+      },
+      "NumTemporalLayers": {
+        "desc": "Num Temporal Layers",
+        "id": "21.1",
+        "table": "QuickTime::HEVCConfig",
+        "val": 1
+      },
+      "TemporalIDNested": {
+        "desc": "Temporal ID Nested",
+        "id": "21.2",
+        "num": 0,
+        "table": "QuickTime::HEVCConfig",
+        "val": "No"
+      },
+      "MediaDataSize": {
+        "desc": "Media Data Size",
+        "id": "mdat-size",
+        "table": "QuickTime::Main",
+        "val": 121795
+      },
+      "MediaDataOffset": {
+        "desc": "Media Data Offset",
+        "id": "mdat-offset",
+        "table": "QuickTime::Main",
+        "val": 4686
+      }
+    },
+    "QuickTime:Meta:Video:": {
+      "PrimaryItemReference": {
+        "desc": "Primary Item Reference",
+        "id": "pitm",
+        "index": 0,
+        "table": "QuickTime::Meta",
+        "val": 49
+      },
+      "MetaImageSize": {
+        "desc": "Meta Image Size",
+        "id": "idat",
+        "num": "0 1287 4032 3024",
+        "table": "QuickTime::Meta",
+        "val": "4032x3024"
+      }
+    },
+    "XMP:XMP-x:Document:": {
+      "XMPToolkit": {
+        "desc": "XMP Toolkit",
+        "id": "xmptk",
+        "table": "XMP::x",
+        "val": "XMP Core 6.0.0"
+      }
+    },
+    "XMP:XMP-HDRGainMap:Unknown:": {
+      "HDRGainMapVersion": {
+        "desc": "HDR Gain Map Version",
+        "id": "HDRGainMap:HDRGainMapVersion",
+        "table": "XMP::other",
+        "val": 65536
+      }
+    },
+    "File:File:Image:": {
+      "ExifByteOrder": {
+        "desc": "Exif Byte Order",
+        "id": "ExifByteOrder",
+        "num": "MM",
+        "table": "Extra",
+        "val": "Big-endian (Motorola, MM)"
+      },
+      "ImageWidth": {
+        "desc": "Image Width",
+        "id": "ImageWidth",
+        "table": "Extra",
+        "val": 4032
+      },
+      "ImageHeight": {
+        "desc": "Image Height",
+        "id": "ImageHeight",
+        "table": "Extra",
+        "val": 3024
+      }
+    },
+    "EXIF:IFD0:Camera:string": {
+      "Make": {
+        "desc": "Make",
+        "id": "0x010f",
+        "table": "Exif::Main",
+        "val": "Apple"
+      },
+      "Model": {
+        "desc": "Camera Model Name",
+        "id": "0x0110",
+        "table": "Exif::Main",
+        "val": "iPhone 14 Pro"
+      }
+    },
+    "EXIF:IFD0:Image:int16u": {
+      "Orientation": {
+        "desc": "Orientation",
+        "id": "0x0112",
+        "num": 6,
+        "table": "Exif::Main",
+        "val": "Rotate 90 CW"
+      },
+      "ResolutionUnit": {
+        "desc": "Resolution Unit",
+        "id": "0x0128",
+        "num": 2,
+        "table": "Exif::Main",
+        "val": "inches"
+      }
+    },
+    "EXIF:IFD0:Image:rational64u": {
+      "XResolution": {
+        "desc": "X Resolution",
+        "id": "0x011a",
+        "table": "Exif::Main",
+        "val": 72
+      },
+      "YResolution": {
+        "desc": "Y Resolution",
+        "id": "0x011b",
+        "table": "Exif::Main",
+        "val": 72
+      }
+    },
+    "EXIF:IFD0:Image:string": {
+      "Software": {
+        "desc": "Software",
+        "id": "0x0131",
+        "table": "Exif::Main",
+        "val": 17.0
+      },
+      "HostComputer": {
+        "desc": "Host Computer",
+        "id": "0x013c",
+        "table": "Exif::Main",
+        "val": "iPhone 14 Pro"
+      }
+    },
+    "EXIF:IFD0:Time:string": {
+      "ModifyDate": {
+        "desc": "Modify Date",
+        "id": "0x0132",
+        "table": "Exif::Main",
+        "val": "2023:08:16 08:58:40"
+      }
+    },
+    "EXIF:ExifIFD:Image:rational64u": {
+      "ExposureTime": {
+        "desc": "Exposure Time",
+        "id": "0x829a",
+        "num": 0.06666666667,
+        "table": "Exif::Main",
+        "val": "1/15"
+      },
+      "FNumber": {
+        "desc": "F Number",
+        "id": "0x829d",
+        "num": 1.78,
+        "table": "Exif::Main",
+        "val": 1.8
+      },
+      "ApertureValue": {
+        "desc": "Aperture Value",
+        "id": "0x9202",
+        "num": 1.77999999976351,
+        "table": "Exif::Main",
+        "val": 1.8
+      },
+      "LensInfo": {
+        "desc": "Lens Info",
+        "id": "0xa432",
+        "num": "2.220000029 9 1.78 2.8",
+        "table": "Exif::Main",
+        "val": "2.220000029-9mm f/1.78-2.8"
+      }
+    },
+    "EXIF:ExifIFD:Camera:int16u": {
+      "ExposureProgram": {
+        "desc": "Exposure Program",
+        "id": "0x8822",
+        "num": 2,
+        "table": "Exif::Main",
+        "val": "Program AE"
+      },
+      "MeteringMode": {
+        "desc": "Metering Mode",
+        "id": "0x9207",
+        "num": 5,
+        "table": "Exif::Main",
+        "val": "Multi-segment"
+      },
+      "Flash": {
+        "desc": "Flash",
+        "id": "0x9209",
+        "num": 16,
+        "table": "Exif::Main",
+        "val": "Off, Did not fire"
+      },
+      "SubjectArea": {
+        "desc": "Subject Area",
+        "id": "0x9214",
+        "table": "Exif::Main",
+        "val": "2011 1508 2323 1330"
+      },
+      "SensingMethod": {
+        "desc": "Sensing Method",
+        "id": "0xa217",
+        "num": 2,
+        "table": "Exif::Main",
+        "val": "One-chip color area"
+      },
+      "ExposureMode": {
+        "desc": "Exposure Mode",
+        "id": "0xa402",
+        "num": 0,
+        "table": "Exif::Main",
+        "val": "Auto"
+      },
+      "WhiteBalance": {
+        "desc": "White Balance",
+        "id": "0xa403",
+        "num": 0,
+        "table": "Exif::Main",
+        "val": "Auto"
+      },
+      "FocalLengthIn35mmFormat": {
+        "desc": "Focal Length In 35mm Format",
+        "id": "0xa405",
+        "num": 24,
+        "table": "Exif::Main",
+        "val": "24 mm"
+      }
+    },
+    "EXIF:ExifIFD:Image:int16u": {
+      "ISO": {
+        "desc": "ISO",
+        "id": "0x8827",
+        "table": "Exif::Main",
+        "val": 12500
+      },
+      "ColorSpace": {
+        "desc": "Color Space",
+        "id": "0xa001",
+        "num": 65535,
+        "table": "Exif::Main",
+        "val": "Uncalibrated"
+      },
+      "CompositeImage": {
+        "desc": "Composite Image",
+        "id": "0xa460",
+        "num": 2,
+        "table": "Exif::Main",
+        "val": "General Composite Image"
+      }
+    },
+    "EXIF:ExifIFD:Image:undef": {
+      "ExifVersion": {
+        "desc": "Exif Version",
+        "id": "0x9000",
+        "table": "Exif::Main",
+        "val": "0232"
+      },
+      "SceneType": {
+        "desc": "Scene Type",
+        "id": "0xa301",
+        "num": 1,
+        "table": "Exif::Main",
+        "val": "Directly photographed"
+      }
+    },
+    "EXIF:ExifIFD:Time:string": {
+      "DateTimeOriginal": {
+        "desc": "Date/Time Original",
+        "id": "0x9003",
+        "table": "Exif::Main",
+        "val": "2023:08:16 08:58:40"
+      },
+      "CreateDate": {
+        "desc": "Create Date",
+        "id": "0x9004",
+        "table": "Exif::Main",
+        "val": "2023:08:16 08:58:40"
+      },
+      "OffsetTime": {
+        "desc": "Offset Time",
+        "id": "0x9010",
+        "table": "Exif::Main",
+        "val": "+02:00"
+      },
+      "OffsetTimeOriginal": {
+        "desc": "Offset Time Original",
+        "id": "0x9011",
+        "table": "Exif::Main",
+        "val": "+02:00"
+      },
+      "OffsetTimeDigitized": {
+        "desc": "Offset Time Digitized",
+        "id": "0x9012",
+        "table": "Exif::Main",
+        "val": "+02:00"
+      },
+      "SubSecTimeOriginal": {
+        "desc": "Sub Sec Time Original",
+        "id": "0x9291",
+        "table": "Exif::Main",
+        "val": 825
+      },
+      "SubSecTimeDigitized": {
+        "desc": "Sub Sec Time Digitized",
+        "id": "0x9292",
+        "table": "Exif::Main",
+        "val": 825
+      }
+    },
+    "EXIF:ExifIFD:Image:rational64s": {
+      "ShutterSpeedValue": {
+        "desc": "Shutter Speed Value",
+        "id": "0x9201",
+        "num": 0.0664340000866681,
+        "table": "Exif::Main",
+        "val": "1/15"
+      },
+      "BrightnessValue": {
+        "desc": "Brightness Value",
+        "id": "0x9203",
+        "table": "Exif::Main",
+        "val": -11.33409625
+      },
+      "ExposureCompensation": {
+        "desc": "Exposure Compensation",
+        "id": "0x9204",
+        "table": "Exif::Main",
+        "val": 0
+      }
+    },
+    "EXIF:ExifIFD:Camera:rational64u": {
+      "FocalLength": {
+        "desc": "Focal Length",
+        "id": "0x920a",
+        "num": 6.86,
+        "table": "Exif::Main",
+        "val": "6.9 mm"
+      }
+    },
+    "MakerNotes:Apple:Image:int32s": {
+      "MakerNoteVersion": {
+        "desc": "Maker Note Version",
+        "id": "0x0001",
+        "table": "Apple::Main",
+        "val": 14
+      },
+      "AEStable": {
+        "desc": "AE Stable",
+        "id": "0x0004",
+        "num": 0,
+        "table": "Apple::Main",
+        "val": "No"
+      },
+      "AETarget": {
+        "desc": "AE Target",
+        "id": "0x0005",
+        "table": "Apple::Main",
+        "val": 92
+      },
+      "AEAverage": {
+        "desc": "AE Average",
+        "id": "0x0006",
+        "table": "Apple::Main",
+        "val": 1
+      },
+      "AFStable": {
+        "desc": "AF Stable",
+        "id": "0x0007",
+        "num": 1,
+        "table": "Apple::Main",
+        "val": "Yes"
+      },
+      "FocusPosition": {
+        "desc": "Focus Position",
+        "id": "0x002f",
+        "table": "Apple::Main",
+        "val": 255
+      },
+      "AFMeasuredDepth": {
+        "desc": "AF Measured Depth",
+        "id": "0x0038",
+        "table": "Apple::Main",
+        "val": 9
+      },
+      "AFConfidence": {
+        "desc": "AF Confidence",
+        "id": "0x003d",
+        "table": "Apple::Main",
+        "val": 4
+      },
+      "FrontFacingCamera": {
+        "desc": "Front Facing Camera",
+        "id": "0x0045",
+        "num": 0,
+        "table": "Apple::Main",
+        "val": "No"
+      }
+    },
+    "MakerNotes:Apple:Image:": {
+      "RunTimeFlags": {
+        "desc": "Run Time Flags",
+        "id": "flags",
+        "num": 1,
+        "table": "Apple::RunTime",
+        "val": "Valid"
+      },
+      "RunTimeValue": {
+        "desc": "Run Time Value",
+        "id": "value",
+        "table": "Apple::RunTime",
+        "val": 298346235013458
+      },
+      "RunTimeScale": {
+        "desc": "Run Time Scale",
+        "id": "timescale",
+        "table": "Apple::RunTime",
+        "val": 1000000000
+      },
+      "RunTimeEpoch": {
+        "desc": "Run Time Epoch",
+        "id": "epoch",
+        "table": "Apple::RunTime",
+        "val": 0
+      }
+    },
+    "MakerNotes:Apple:Camera:rational64s": {
+      "AccelerationVector": {
+        "desc": "Acceleration Vector",
+        "id": "0x0008",
+        "table": "Apple::Main",
+        "val": "-0.0008732806886 -0.00399215147 -0.994561256"
+      }
+    },
+    "MakerNotes:Apple:Image:rational64s": {
+      "FocusDistanceRange": {
+        "desc": "Focus Distance Range",
+        "id": "0x000c",
+        "num": "0.5859375 0.90234375",
+        "table": "Apple::Main",
+        "val": "0.59 - 0.90 m"
+      },
+      "HDRHeadroom": {
+        "desc": "HDR Headroom",
+        "id": "0x0021",
+        "table": "Apple::Main",
+        "val": 0.7432090045
+      },
+      "SignalToNoiseRatio": {
+        "desc": "Signal To Noise Ratio",
+        "id": "0x0027",
+        "table": "Apple::Main",
+        "val": -18.09068872
+      },
+      "HDRGain": {
+        "desc": "HDR Gain",
+        "id": "0x0030",
+        "table": "Apple::Main",
+        "val": 0
+      }
+    },
+    "MakerNotes:Apple:Image:int64u": {
+      "LivePhotoVideoIndex": {
+        "desc": "Live Photo Video Index",
+        "id": "0x0017",
+        "table": "Apple::Main",
+        "val": 4202500
+      }
+    },
+    "MakerNotes:Apple:Image:undef": {
+      "SemanticStyle": {
+        "desc": "Semantic Style",
+        "id": "0x0040",
+        "table": "Apple::Main",
+        "val": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      }
+    },
+    "EXIF:ExifIFD:Image:int32u": {
+      "ExifImageWidth": {
+        "desc": "Exif Image Width",
+        "id": "0xa002",
+        "table": "Exif::Main",
+        "val": 4032
+      },
+      "ExifImageHeight": {
+        "desc": "Exif Image Height",
+        "id": "0xa003",
+        "table": "Exif::Main",
+        "val": 3024
+      }
+    },
+    "EXIF:ExifIFD:Image:string": {
+      "LensMake": {
+        "desc": "Lens Make",
+        "id": "0xa433",
+        "table": "Exif::Main",
+        "val": "Apple"
+      },
+      "LensModel": {
+        "desc": "Lens Model",
+        "id": "0xa434",
+        "table": "Exif::Main",
+        "val": "iPhone 14 Pro back triple camera 6.86mm f/1.78"
+      }
+    },
+    "EXIF:GPS:Location:string": {
+      "GPSLatitudeRef": {
+        "desc": "GPS Latitude Ref",
+        "id": "0x0001",
+        "num": "N",
+        "table": "GPS::Main",
+        "val": "North"
+      },
+      "GPSLongitudeRef": {
+        "desc": "GPS Longitude Ref",
+        "id": "0x0003",
+        "num": "E",
+        "table": "GPS::Main",
+        "val": "East"
+      },
+      "GPSSpeedRef": {
+        "desc": "GPS Speed Ref",
+        "id": "0x000c",
+        "num": "K",
+        "table": "GPS::Main",
+        "val": "km/h"
+      },
+      "GPSImgDirectionRef": {
+        "desc": "GPS Img Direction Ref",
+        "id": "0x0010",
+        "num": "T",
+        "table": "GPS::Main",
+        "val": "True North"
+      },
+      "GPSDestBearingRef": {
+        "desc": "GPS Dest Bearing Ref",
+        "id": "0x0017",
+        "num": "T",
+        "table": "GPS::Main",
+        "val": "True North"
+      }
+    },
+    "EXIF:GPS:Location:rational64u": {
+      "GPSLatitude": {
+        "desc": "GPS Latitude",
+        "id": "0x0002",
+        "num": 51.8334666666667,
+        "table": "GPS::Main",
+        "val": "51 deg 50' 0.48\""
+      },
+      "GPSLongitude": {
+        "desc": "GPS Longitude",
+        "id": "0x0004",
+        "num": 6.83425555555556,
+        "table": "GPS::Main",
+        "val": "6 deg 50' 3.32\""
+      },
+      "GPSAltitude": {
+        "desc": "GPS Altitude",
+        "id": "0x0006",
+        "num": 53.12433602,
+        "table": "GPS::Main",
+        "val": "53.12433602 m"
+      },
+      "GPSSpeed": {
+        "desc": "GPS Speed",
+        "id": "0x000d",
+        "table": "GPS::Main",
+        "val": 0
+      },
+      "GPSImgDirection": {
+        "desc": "GPS Img Direction",
+        "id": "0x0011",
+        "table": "GPS::Main",
+        "val": 301.2791747
+      },
+      "GPSDestBearing": {
+        "desc": "GPS Dest Bearing",
+        "id": "0x0018",
+        "table": "GPS::Main",
+        "val": 301.2791747
+      },
+      "GPSHPositioningError": {
+        "desc": "GPS Horizontal Positioning Error",
+        "id": "0x001f",
+        "num": 17.14009866,
+        "table": "GPS::Main",
+        "val": "17.14009866 m"
+      }
+    },
+    "EXIF:GPS:Location:int8u": {
+      "GPSAltitudeRef": {
+        "desc": "GPS Altitude Ref",
+        "id": "0x0005",
+        "num": 0,
+        "table": "GPS::Main",
+        "val": "Above Sea Level"
+      }
+    },
+    "EXIF:GPS:Time:rational64u": {
+      "GPSTimeStamp": {
+        "desc": "GPS Time Stamp",
+        "id": "0x0007",
+        "table": "GPS::Main",
+        "val": "06:58:40.05"
+      }
+    },
+    "EXIF:GPS:Time:string": {
+      "GPSDateStamp": {
+        "desc": "GPS Date Stamp",
+        "id": "0x001d",
+        "table": "GPS::Main",
+        "val": "2023:08:16"
+      }
+    },
+    "ICC_Profile:ICC-header:Image:": {
+      "ProfileCMMType": {
+        "desc": "Profile CMM Type",
+        "id": "0x0004",
+        "num": "appl",
+        "table": "ICC_Profile::Header",
+        "val": "Apple Computer Inc."
+      },
+      "ProfileVersion": {
+        "desc": "Profile Version",
+        "id": "0x0008",
+        "num": 1024,
+        "table": "ICC_Profile::Header",
+        "val": "4.0.0"
+      },
+      "ProfileClass": {
+        "desc": "Profile Class",
+        "id": "0x000c",
+        "num": "mntr",
+        "table": "ICC_Profile::Header",
+        "val": "Display Device Profile"
+      },
+      "ColorSpaceData": {
+        "desc": "Color Space Data",
+        "id": "0x0010",
+        "table": "ICC_Profile::Header",
+        "val": "RGB "
+      },
+      "ProfileConnectionSpace": {
+        "desc": "Profile Connection Space",
+        "id": "0x0014",
+        "table": "ICC_Profile::Header",
+        "val": "XYZ "
+      },
+      "ProfileFileSignature": {
+        "desc": "Profile File Signature",
+        "id": "0x0024",
+        "table": "ICC_Profile::Header",
+        "val": "acsp"
+      },
+      "PrimaryPlatform": {
+        "desc": "Primary Platform",
+        "id": "0x0028",
+        "num": "APPL",
+        "table": "ICC_Profile::Header",
+        "val": "Apple Computer Inc."
+      },
+      "CMMFlags": {
+        "desc": "CMM Flags",
+        "id": "0x002c",
+        "num": 0,
+        "table": "ICC_Profile::Header",
+        "val": "Not Embedded, Independent"
+      },
+      "DeviceManufacturer": {
+        "desc": "Device Manufacturer",
+        "id": "0x0030",
+        "num": "APPL",
+        "table": "ICC_Profile::Header",
+        "val": "Apple Computer Inc."
+      },
+      "DeviceModel": {
+        "desc": "Device Model",
+        "id": "0x0034",
+        "table": "ICC_Profile::Header",
+        "val": ""
+      },
+      "DeviceAttributes": {
+        "desc": "Device Attributes",
+        "id": "0x0038",
+        "num": "0 0",
+        "table": "ICC_Profile::Header",
+        "val": "Reflective, Glossy, Positive, Color"
+      },
+      "RenderingIntent": {
+        "desc": "Rendering Intent",
+        "id": "0x0040",
+        "num": 0,
+        "table": "ICC_Profile::Header",
+        "val": "Perceptual"
+      },
+      "ConnectionSpaceIlluminant": {
+        "desc": "Connection Space Illuminant",
+        "id": "0x0044",
+        "table": "ICC_Profile::Header",
+        "val": "0.9642 1 0.82491"
+      },
+      "ProfileCreator": {
+        "desc": "Profile Creator",
+        "id": "0x0050",
+        "num": "appl",
+        "table": "ICC_Profile::Header",
+        "val": "Apple Computer Inc."
+      },
+      "ProfileID": {
+        "desc": "Profile ID",
+        "id": "0x0054",
+        "num": "236 253 163 142 56 133 71 195 109 180 189 79 122 218 24 47",
+        "table": "ICC_Profile::Header",
+        "val": "ecfda38e388547c36db4bd4f7ada182f"
+      }
+    },
+    "ICC_Profile:ICC-header:Time:": {
+      "ProfileDateTime": {
+        "desc": "Profile Date Time",
+        "id": "0x0018",
+        "table": "ICC_Profile::Header",
+        "val": "2022:01:01 00:00:00"
+      }
+    },
+    "ICC_Profile:ICC_Profile:Image:": {
+      "ProfileDescription": {
+        "desc": "Profile Description",
+        "id": "desc",
+        "table": "ICC_Profile::Main",
+        "val": "Display P3"
+      },
+      "ProfileCopyright": {
+        "desc": "Profile Copyright",
+        "id": "cprt",
+        "table": "ICC_Profile::Main",
+        "val": "Copyright Apple Inc., 2022"
+      },
+      "MediaWhitePoint": {
+        "desc": "Media White Point",
+        "id": "wtpt",
+        "table": "ICC_Profile::Main",
+        "val": "0.96419 1 0.82489"
+      },
+      "RedMatrixColumn": {
+        "desc": "Red Matrix Column",
+        "id": "rXYZ",
+        "table": "ICC_Profile::Main",
+        "val": "0.51512 0.2412 -0.00105"
+      },
+      "GreenMatrixColumn": {
+        "desc": "Green Matrix Column",
+        "id": "gXYZ",
+        "table": "ICC_Profile::Main",
+        "val": "0.29198 0.69225 0.04189"
+      },
+      "BlueMatrixColumn": {
+        "desc": "Blue Matrix Column",
+        "id": "bXYZ",
+        "table": "ICC_Profile::Main",
+        "val": "0.1571 0.06657 0.78407"
+      },
+      "RedTRC": {
+        "desc": "Red Tone Reproduction Curve",
+        "id": "rTRC",
+        "table": "ICC_Profile::Main",
+        "val": "base64:cGFyYQAAAAAAAwAAAAJmZgAA8qcAAA1ZAAAT0AAACls="
+      },
+      "ChromaticAdaptation": {
+        "desc": "Chromatic Adaptation",
+        "id": "chad",
+        "table": "ICC_Profile::Main",
+        "val": "1.04788 0.02292 -0.0502 0.02959 0.99048 -0.01706 -0.00923 0.01508 0.75168"
+      },
+      "BlueTRC": {
+        "desc": "Blue Tone Reproduction Curve",
+        "id": "bTRC",
+        "table": "ICC_Profile::Main",
+        "val": "base64:cGFyYQAAAAAAAwAAAAJmZgAA8qcAAA1ZAAAT0AAACls="
+      },
+      "GreenTRC": {
+        "desc": "Green Tone Reproduction Curve",
+        "id": "gTRC",
+        "table": "ICC_Profile::Main",
+        "val": "base64:cGFyYQAAAAAAAwAAAAJmZgAA8qcAAA1ZAAAT0AAACls="
+      }
+    },
+    "QuickTime:QuickTime:Image:": {
+      "ImageSpatialExtent": {
+        "desc": "Image Spatial Extent",
+        "id": "ispe",
+        "num": "4032 3024",
+        "table": "QuickTime::ItemPropCont",
+        "val": "4032x3024"
+      },
+      "Rotation": {
+        "desc": "Rotation",
+        "id": "irot",
+        "table": "QuickTime::ItemPropCont",
+        "val": 270
+      },
+      "ImagePixelDepth": {
+        "desc": "Image Pixel Depth",
+        "id": "pixi",
+        "table": "QuickTime::ItemPropCont",
+        "val": 8
+      },
+      "AuxiliaryImageType": {
+        "desc": "Auxiliary Image Type",
+        "id": "auxC",
+        "table": "QuickTime::ItemPropCont",
+        "val": "urn:com:apple:photo:2020:aux:hdrgainmap"
+      }
+    },
+    "Composite:Composite:Camera:": {
+      "RunTimeSincePowerUp": {
+        "desc": "Run Time Since Power Up",
+        "id": "Apple-RunTimeSincePowerUp",
+        "num": 298346.235013458,
+        "table": "Composite",
+        "val": "3 days 10:52:26"
+      },
+      "ScaleFactor35efl": {
+        "desc": "Scale Factor To 35 mm Equivalent",
+        "id": "Exif-ScaleFactor35efl",
+        "num": 3.49854227405248,
+        "table": "Composite",
+        "val": 3.5
+      },
+      "CircleOfConfusion": {
+        "desc": "Circle Of Confusion",
+        "id": "Exif-CircleOfConfusion",
+        "num": "0.00858822282975103",
+        "table": "Composite",
+        "val": "0.009 mm"
+      },
+      "FocalLength35efl": {
+        "desc": "Focal Length",
+        "id": "Exif-FocalLength35efl",
+        "num": 24,
+        "table": "Composite",
+        "val": "6.9 mm (35 mm equivalent: 24.0 mm)"
+      },
+      "HyperfocalDistance": {
+        "desc": "Hyperfocal Distance",
+        "id": "Exif-HyperfocalDistance",
+        "num": 3.07839911145579,
+        "table": "Composite",
+        "val": "3.08 m"
+      },
+      "LensID": {
+        "desc": "Lens ID",
+        "id": "Exif-LensID-2",
+        "table": "Composite",
+        "val": "iPhone 14 Pro back triple camera 6.86mm f/1.78"
+      }
+    },
+    "Composite:Composite:Image:": {
+      "Aperture": {
+        "desc": "Aperture",
+        "id": "Exif-Aperture",
+        "num": 1.78,
+        "table": "Composite",
+        "val": 1.8
+      },
+      "ShutterSpeed": {
+        "desc": "Shutter Speed",
+        "id": "Exif-ShutterSpeed",
+        "num": 0.06666666667,
+        "table": "Composite",
+        "val": "1/15"
+      },
+      "ImageSize": {
+        "desc": "Image Size",
+        "id": "Exif-ImageSize",
+        "num": "4032 3024",
+        "table": "Composite",
+        "val": "4032x3024"
+      },
+      "LightValue": {
+        "desc": "Light Value",
+        "id": "Exif-LightValue",
+        "num": -1.39513920674236,
+        "table": "Composite",
+        "val": -1.4
+      },
+      "Megapixels": {
+        "desc": "Megapixels",
+        "id": "Exif-Megapixels",
+        "num": 12.192768,
+        "table": "Composite",
+        "val": 12.2
+      },
+      "FOV": {
+        "desc": "Field Of View",
+        "id": "Exif-FOV",
+        "num": 73.7398575770811,
+        "table": "Composite",
+        "val": "73.7 deg"
+      }
+    },
+    "Composite:Composite:Time:": {
+      "SubSecCreateDate": {
+        "desc": "Create Date",
+        "id": "Exif-SubSecCreateDate",
+        "table": "Composite",
+        "val": "2023:08:16 08:58:40.825+02:00"
+      },
+      "SubSecDateTimeOriginal": {
+        "desc": "Date/Time Original",
+        "id": "Exif-SubSecDateTimeOriginal",
+        "table": "Composite",
+        "val": "2023:08:16 08:58:40.825+02:00"
+      },
+      "SubSecModifyDate": {
+        "desc": "Modify Date",
+        "id": "Exif-SubSecModifyDate",
+        "table": "Composite",
+        "val": "2023:08:16 08:58:40+02:00"
+      },
+      "GPSDateTime": {
+        "desc": "GPS Date/Time",
+        "id": "GPS-GPSDateTime",
+        "table": "Composite",
+        "val": "2023:08:16 06:58:40.05Z"
+      }
+    },
+    "Composite:Composite:Location:": {
+      "GPSAltitude": {
+        "desc": "GPS Altitude",
+        "id": "GPS-GPSAltitude",
+        "num": 53.12433602,
+        "table": "Composite",
+        "val": "53.1 m Above Sea Level"
+      },
+      "GPSLatitude": {
+        "desc": "GPS Latitude",
+        "id": "GPS-GPSLatitude",
+        "num": 51.8334666666667,
+        "table": "Composite",
+        "val": "51 deg 50' 0.48\" N"
+      },
+      "GPSLongitude": {
+        "desc": "GPS Longitude",
+        "id": "GPS-GPSLongitude",
+        "num": 6.83425555555556,
+        "table": "Composite",
+        "val": "6 deg 50' 3.32\" E"
+      },
+      "GPSPosition": {
+        "desc": "GPS Position",
+        "id": "Exif-GPSPosition",
+        "num": "51.8334666666667 6.83425555555556",
+        "table": "Composite",
+        "val": "51 deg 50' 0.48\" N, 6 deg 50' 3.32\" E"
+      }
+    }
+  }
+]
+

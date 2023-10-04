@@ -1,4 +1,4 @@
-use chrono::{DateTime, FixedOffset};
+use chrono::{DateTime, Utc};
 
 #[derive(Debug, Default)]
 pub struct PathOptions {
@@ -6,7 +6,7 @@ pub struct PathOptions {
     pub album_year: Option<u32>,
     pub camera_make: Option<String>,
     pub camera_model: Option<String>,
-    pub date: DateTime<FixedOffset>,
+    pub date: DateTime<Utc>,
     pub filename: String,
     pub extension: String,
 }

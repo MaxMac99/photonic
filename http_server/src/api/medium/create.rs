@@ -3,20 +3,20 @@ use std::sync::Arc;
 use actix_web::{HttpMessage, HttpRequest, HttpResponse, Responder, Result, web};
 use actix_web::web::Query;
 
-use core::{CreateMediumInput, Error};
+use core::Error;
 
-use crate::api::medium::model::input::CreateMedium;
+use crate::api::medium::model::input::CreateMediumInput;
 
 pub async fn create_medium(
     ctx: web::Data<Arc<core::Service>>,
     req: HttpRequest,
-    opts: Query<CreateMedium>,
+    opts: Query<CreateMediumInput>,
     body: web::Bytes,
 ) -> Result<impl Responder> {
     let mime = req.mime_type()?.ok_or(Error::InvalidArgument(String::from("Could not find mime type")))?;
 
     let input = opts.into_inner();
-    let create_medium = CreateMediumInput {
+    let create_medium = core::CreateMediumInput {
         album_id: input.album_id,
         filename: input.filename,
         tags: input.tags,

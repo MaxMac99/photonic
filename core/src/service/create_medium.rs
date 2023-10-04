@@ -1,7 +1,8 @@
 use std::ffi::OsStr;
 use std::path::Path;
 
-use chrono::{Datelike, Utc};
+use chrono::{Datelike, DateTime, Utc};
+use log::debug;
 use mongodb::bson::oid::ObjectId;
 
 use meta::MetaInfo;
@@ -14,21 +15,20 @@ use crate::store::PathOptions;
 
 impl Service {
     pub async fn create_medium(&self, input: CreateMediumInput, content: &[u8]) -> Result<ObjectId, Error> {
-        let metainfo = MetaInfo::from(content)
-            .map_err(|_| MediumError::UnsupportedFile)?;
-
-        if metainfo.mimetype != input.mime {
-            return Err(MediumError::MimeMismatch {
-                given_mime: input.mime.to_string(),
-                found_mime: metainfo.mimetype.to_string(),
-            }.into());
-        }
-
         let (filename, extension) = stem_and_extension_from_filename(&input.filename)
             .ok_or(MediumError::WrongFilename)?;
+        let metainfo = MetaInfo::from(content, extension, input.mime.clone())
+            .map_err(|err| {
+                debug!("Could not parse file: {}", err);
+                MediumError::UnsupportedFile
+            })?;
+
         let date_taken = input.date_taken
             .or(metainfo.date)
             .ok_or(MediumError::NoDateTaken)?;
+        let timezone = date_taken.timezone().local_minus_utc();
+        let date_taken: DateTime<Utc> = date_taken.into();
+
         let mut album: Option<Album> = None;
         if let Some(album_id) = input.album_id {
             album = self.repo.get_album_by_id(album_id).await
@@ -57,6 +57,7 @@ impl Service {
             id: None,
             medium_type: MediumType::Photo,
             date_taken,
+            timezone,
             originals: vec![MediumItem {
                 id: None,
                 mime: input.mime,
