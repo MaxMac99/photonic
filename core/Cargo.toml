@@ -12,7 +12,6 @@ chrono = { version = "0.4.30", features = ["serde"] }
 serde = { version = "1.0.188", features = ["derive", "serde_derive"] }
 thiserror = "1.0.47"
 mongodb = { version = "2.6.1", features = ["bson-chrono-0_4"] }
-actix-web = "4.4.0"
 derive_more = "0.99.17"
 mime = "0.3.17"
 tokio = { version = "1.32.0", features = ["fs"] }
@@ -22,3 +21,4 @@ mime_serde_shim = "0.2.2"
 derive_setters = "0.1.6"
 futures-util = "0.3.28"
 log = "0.4.20"
+axum = "0.6.20"

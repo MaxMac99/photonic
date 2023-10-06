@@ -1,22 +1,18 @@
-use actix_web::{HttpResponse, ResponseError};
-use actix_web::http::StatusCode;
+use axum::http::StatusCode;
+use axum::Json;
+use axum::response::{IntoResponse, Response};
 
-use crate::http::api::Error;
+use crate::errors;
 
-impl ResponseError for crate::Error {
-    fn status_code(&self) -> StatusCode {
+impl IntoResponse for errors::Error {
+    fn into_response(self) -> Response {
         match self {
-            crate::Error::InvalidArgument(_) => StatusCode::BAD_REQUEST,
-            crate::Error::AuthenticationRequired => StatusCode::UNAUTHORIZED,
-            crate::Error::PermissionDenied(_) => StatusCode::FORBIDDEN,
-            crate::Error::NotFound(_) => StatusCode::NOT_FOUND,
-            crate::Error::AlreadyExists(_) => StatusCode::CONFLICT,
-            crate::Error::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            errors::Error::Internal(desc) => (StatusCode::INTERNAL_SERVER_ERROR, Json(desc)).into_response(),
+            errors::Error::NotFound(desc) => (StatusCode::NOT_FOUND, Json(desc)).into_response(),
+            errors::Error::AuthenticationRequired => StatusCode::UNAUTHORIZED.into_response(),
+            errors::Error::PermissionDenied(desc) => (StatusCode::FORBIDDEN, Json(desc)).into_response(),
+            errors::Error::InvalidArgument(desc) => (StatusCode::BAD_REQUEST, Json(desc)).into_response(),
+            errors::Error::AlreadyExists(desc) => (StatusCode::CONFLICT, Json(desc)).into_response(),
         }
-    }
-
-    fn error_response(&self) -> HttpResponse {
-        let err: Error = self.clone().into();
-        HttpResponse::build(self.status_code()).json(err)
     }
 }

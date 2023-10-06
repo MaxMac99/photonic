@@ -1,30 +1,29 @@
 use std::sync::Arc;
 
-use actix_web::{HttpMessage, HttpRequest, HttpResponse, Responder, Result, web};
-use actix_web::web::Query;
-
-use core::Error;
+use axum::{Json, TypedHeader};
+use axum::body::Bytes;
+use axum::extract::{Query, State};
+use axum::headers::ContentType;
+use axum::http::StatusCode;
+use axum::response::Result;
 
 use crate::api::medium::model::input::CreateMediumInput;
 
 pub async fn create_medium(
-    ctx: web::Data<Arc<core::Service>>,
-    req: HttpRequest,
+    State(service): State<Arc<core::Service>>,
+    content_type: TypedHeader<ContentType>,
     opts: Query<CreateMediumInput>,
-    body: web::Bytes,
-) -> Result<impl Responder> {
-    let mime = req.mime_type()?.ok_or(Error::InvalidArgument(String::from("Could not find mime type")))?;
-
-    let input = opts.into_inner();
+    body: Bytes,
+) -> Result<(StatusCode, Json<String>)> {
+    let opts = opts.0;
     let create_medium = core::CreateMediumInput {
-        album_id: input.album_id,
-        filename: input.filename,
-        tags: input.tags,
-        date_taken: input.date_taken,
-        mime,
+        album_id: opts.album_id,
+        filename: opts.filename,
+        tags: opts.tags,
+        date_taken: opts.date_taken,
+        mime: content_type.0.into(),
     };
-    let id = ctx.create_medium(create_medium, body.as_ref()).await?;
+    let id = service.create_medium(create_medium, body.as_ref()).await?;
 
-    Ok(HttpResponse::Ok()
-        .body(id.to_hex()))
+    Ok((StatusCode::CREATED, Json(id.to_hex())))
 }

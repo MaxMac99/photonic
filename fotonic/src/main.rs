@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
 use clap::{command, Command};
-use env_logger::{Env, Target};
-use log::debug;
+use tracing::debug;
+use tracing_subscriber::{EnvFilter, fmt};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 mod cli;
 
@@ -11,9 +13,10 @@ async fn main() -> Result<(), core::Error> {
     dotenv::dotenv()
         .map_err(|err| core::Error::Internal(format!("Could not read dot env: {}", err.to_string())))?;
 
-    let mut builder = env_logger::Builder::from_env(Env::default().default_filter_or("info"));
-    builder.target(Target::Stdout);
-    builder.init();
+    tracing_subscriber::registry()
+        .with(EnvFilter::from_default_env())
+        .with(fmt::layer())
+        .init();
 
     let matches = command!()
         .subcommand(Command::new(cli::SERVER_SUBCOMMAND)
