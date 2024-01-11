@@ -12,15 +12,18 @@ pub mod inputs;
 pub struct Service {
     repo: Repository,
     store: Store,
+    meta: meta::Service,
 }
 
 impl Service {
     pub async fn new(config: Arc<Config>) -> Result<Self, Error> {
         let repo = Repository::init(config.clone()).await?;
         let store = Store::new(config);
+        let meta = meta::Service::new().await?;
         Ok(Self {
             repo,
             store,
+            meta,
         })
     }
 }

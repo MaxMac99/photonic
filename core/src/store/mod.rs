@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-pub use path_opts::PathOptions;
+pub use path::PathOptions;
 
 use crate::config::Config;
 
-mod path_opts;
+mod path;
 mod save;
 
 #[derive(Debug)]

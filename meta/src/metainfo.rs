@@ -2,6 +2,7 @@ use std::io::Cursor;
 
 use chrono::{DateTime, FixedOffset, Local, NaiveDate};
 use exif::{Exif, Field, In, Reader, Tag, Value};
+use futures::Stream;
 use mime::Mime;
 
 use crate::Error;
@@ -15,25 +16,19 @@ pub struct MetaInfo {
 }
 
 impl MetaInfo {
-    pub fn from(data: &[u8], ext: &str, given_mime: Mime) -> Result<Self, Error> {
+    pub fn from(data: &[u8], ext: &str) -> Result<Self, Error> {
         let lower_ext = ext.to_lowercase();
         let mimetype: Mime = infer::get(data)
             .and_then(|mime| mime.mime_type()
                 .parse()
                 .ok())
             .or_else(|| mime_guess::from_ext(&lower_ext).first())
-            .unwrap_or(given_mime.clone());
-
-        if mimetype != given_mime {
-            return Err(Error::MimeMismatch {
-                given_mime: given_mime.to_string(),
-                found_mime: mimetype.to_string(),
-            }.into());
-        }
+            .ok_or(Error::NoMimeType)?;
 
         let mut cursor = Cursor::new(data);
         let exifreader = Reader::new();
-        let exif = exifreader.read_from_container(&mut cursor).map_err(|err| Error::from(err))?;
+        let exif = exifreader.read_from_container(&mut cursor)
+            .map_err(|err| Error::from(err))?;
 
         let date = date_time_original(&exif)
             .or_else(|| date_time_digitalized(&exif))
@@ -102,11 +97,16 @@ fn field_to_date(date: &Field, offset: Option<&Field>, sub_sec: Option<&Field>) 
 }
 
 fn exif_datetime_to_chrono(exif: &exif::DateTime) -> Option<DateTime<FixedOffset>> {
-    let chrono_date = NaiveDate::from_ymd_opt(exif.year as i32, exif.month as u32, exif.day as u32).or(None)?
-        .and_hms_nano_opt(exif.hour as u32, exif.minute as u32, exif.second as u32, exif.nanosecond.unwrap_or(0)).or(None)?;
-    let fixed_offset: Option<FixedOffset> = exif.offset.and_then(|offset| FixedOffset::east_opt(offset as i32 * 60 * 60));
-
-    let tz = fixed_offset.unwrap_or(FixedOffset::east_opt(Local::now().offset().local_minus_utc()).unwrap());
+    let chrono_date = NaiveDate::from_ymd_opt(exif.year as i32, exif.month as u32, exif.day as u32)
+        .or(None)?
+        .and_hms_nano_opt(exif.hour as u32,
+                          exif.minute as u32,
+                          exif.second as u32,
+                          exif.nanosecond.unwrap_or(0))
+        .or(None)?;
+    let tz = exif.offset
+        .and_then(|offset| FixedOffset::east_opt(offset as i32 * 60))
+        .unwrap_or(FixedOffset::east_opt(Local::now().offset().local_minus_utc()).unwrap());
     chrono_date.and_local_timezone(tz).earliest()
 }
 
@@ -124,12 +124,12 @@ mod test {
 
     #[test]
     fn exif_heic() -> Result<(), Error> {
-        let file = std::fs::File::open("test/IMG_4598.HEIC").map_err(|err| Io(err))?;
+        let file = std::fs::File::open("../test/IMG_4598.HEIC").map_err(|err| Io(err))?;
         let mut reader = BufReader::new(file);
         let mut buffer = Vec::new();
         reader.read_to_end(&mut buffer).map_err(|err| Io(err))?;
 
-        let info = MetaInfo::from(&buffer)?;
+        let info = MetaInfo::from(&buffer, "heic")?;
         println!("{:?}", info.date);
         assert_eq!(info.date, Some(NaiveDate::from_ymd_opt(2023, 08, 16)
             .unwrap()
@@ -146,12 +146,12 @@ mod test {
 
     #[test]
     fn exif_dng() -> Result<(), Error> {
-        let file = std::fs::File::open("test/IMG_4597.DNG").map_err(|err| Io(err))?;
+        let file = std::fs::File::open("../test/IMG_4597.DNG").map_err(|err| Io(err))?;
         let mut reader = BufReader::new(file);
         let mut buffer = Vec::new();
         reader.read_to_end(&mut buffer).map_err(|err| Io(err))?;
 
-        let info = MetaInfo::from(&buffer)?;
+        let info = MetaInfo::from(&buffer, "heic")?;
         assert_eq!(info.date, Some(NaiveDate::from_ymd_opt(2023, 08, 16)
             .unwrap()
             .and_hms_milli_opt(8, 58, 15, 779)
@@ -175,7 +175,7 @@ mod test {
             minute: 4,
             second: 5,
             nanosecond: Some(10),
-            offset: Some(-1),
+            offset: Some(-60),
         };
 
         let conv = exif_datetime_to_chrono(&datetime);

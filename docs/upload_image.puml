@@ -1,0 +1,29 @@
+@startuml
+actor User
+participant Server
+participant Fotostore as ps
+participant "Metadata Extractor" as meta
+database Filesystem as fs
+database DB as db
+
+User -> Server++: Upload image
+
+Server -> fs++: Store image at temp path
+return Saved
+Server -> ps++: Store image
+
+ps -> meta++: Extract minimal metadata
+meta -> fs++: Read file
+return File
+return Metadata
+
+ps -> db++: Save metadata
+return Metadata
+ps -> fs++: Move file
+return Success
+
+return Image metadata
+
+return 201 (Metadata)
+
+@enduml

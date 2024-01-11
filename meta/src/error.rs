@@ -1,28 +1,38 @@
 use std::fmt;
 
+use exiftool::ExifError;
+
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Error {
     /// Could not find Mimetype.
-    MimeMismatch {
-        found_mime: String,
-        given_mime: String,
-    },
+    NoMimeType,
     /// The file is not supported.
-    NotSupported(&'static str),
+    NotSupported(String),
+    Unknown(String),
+}
+
+impl From<ExifError> for Error {
+    fn from(value: ExifError) -> Self {
+        match value {
+            ExifError::CouldNotFindToolError(text) => Error::Unknown(String::from(text.to_string())),
+            ExifError::ParseError(text) => Error::NotSupported(text),
+            ExifError::InvalidPathError => Error::Unknown(String::from("Given path not valid")),
+        }
+    }
 }
 
 impl From<exif::Error> for Error {
     fn from(value: exif::Error) -> Self {
         match value {
-            exif::Error::InvalidFormat(text) => Error::NotSupported(text),
-            exif::Error::Io(_) => Error::NotSupported("IO error"),
-            exif::Error::NotFound(text) => Error::NotSupported(text),
-            exif::Error::BlankValue(text) => Error::NotSupported(text),
-            exif::Error::TooBig(text) => Error::NotSupported(text),
-            exif::Error::NotSupported(text) => Error::NotSupported(text),
-            exif::Error::UnexpectedValue(text) => Error::NotSupported(text),
-            _ => Error::NotSupported("Unknown Error")
+            exif::Error::InvalidFormat(text) => Error::NotSupported(String::from(text)),
+            exif::Error::Io(_) => Error::NotSupported(String::from("IO error")),
+            exif::Error::NotFound(text) => Error::NotSupported(String::from(text)),
+            exif::Error::BlankValue(text) => Error::NotSupported(String::from(text)),
+            exif::Error::TooBig(text) => Error::NotSupported(String::from(text)),
+            exif::Error::NotSupported(text) => Error::NotSupported(String::from(text)),
+            exif::Error::UnexpectedValue(text) => Error::NotSupported(String::from(text)),
+            _ => Error::NotSupported(String::from("Unknown Error"))
         }
     }
 }
@@ -30,8 +40,9 @@ impl From<exif::Error> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::MimeMismatch { found_mime, given_mime } => f.write_str(format!("The given mime type ({}) does not match the found mime type ({})", given_mime, found_mime).as_str()),
+            Error::NoMimeType => f.write_str("Could not find Mimetype"),
             Error::NotSupported(msg) => f.write_str(msg),
+            Error::Unknown(msg) => f.write_str(msg),
         }
     }
 }

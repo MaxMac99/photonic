@@ -4,7 +4,7 @@ use axum::extract::{Query, State};
 use axum::Json;
 use axum::response::Result;
 
-use crate::api::medium::model::input::FindAllMediumInput;
+use crate::api::medium::model::find_all::FindAllMediumInput;
 
 pub async fn find_all(
     State(service): State<Arc<core::Service>>,

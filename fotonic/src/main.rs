@@ -1,10 +1,12 @@
 use std::path::PathBuf;
 
 use clap::{command, Command};
-use tracing::debug;
+use tracing::log::debug;
 use tracing_subscriber::{EnvFilter, fmt};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+
+use exiftool::ExifError;
 
 mod cli;
 
@@ -31,7 +33,8 @@ async fn main() -> Result<(), core::Error> {
         let exiftool = exiftool::Exiftool::new().await.unwrap();
         let target_path = std::env::current_dir().unwrap().join(PathBuf::from("test/IMG_4597.DNG"));
         debug!("Target: {}", target_path.display());
-        exiftool.read_file(target_path).await.expect("Error reading file");
+        exiftool.read_file(target_path, false, false).await
+            .map_err(|err| <ExifError as Into<meta::Error>>::into(err))?;
     }
 
     Ok(())

@@ -52,3 +52,13 @@ impl From<std::string::FromUtf8Error> for Error {
         Error::Internal(err.to_string())
     }
 }
+
+impl From<meta::Error> for Error {
+    fn from(err: meta::Error) -> Self {
+        match err {
+            meta::Error::NoMimeType => Error::InvalidArgument(err.to_string()),
+            meta::Error::NotSupported(_) => Error::NotFound(err.to_string()),
+            _ => Error::Internal(err.to_string()),
+        }
+    }
+}

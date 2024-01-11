@@ -1,25 +1,28 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use chrono::{Datelike, Timelike};
 use path_clean::PathClean;
 use tokio::{fs, io::AsyncWriteExt};
 
 use crate::errors::MediumError;
-use crate::store::path_opts::PathOptions;
+use crate::store::path::PathOptions;
 use crate::store::Store;
 
 impl Store {
+    pub async fn import_file<P>(&self, options: &PathOptions, path: P) -> Result<PathBuf, MediumError>
+        where P: AsRef<Path>
+    {
+        let dest_path = self.to_path(options);
+        let destination = self.prepare_destination(&dest_path).await?;
+
+        fs::rename(path, destination).await?;
+
+        Ok(dest_path)
+    }
+
     pub async fn save_file(&self, options: &PathOptions, data: &[u8]) -> Result<PathBuf, MediumError> {
         let path = self.to_path(options);
-        let destination = self.config.storage.base_path.join(&path).clean();
-        if !destination.starts_with(&self.config.storage.base_path) {
-            return Err(MediumError::WrongFilename);
-        }
-
-        if destination.extension().is_none() {
-            return Err(MediumError::WrongFilename);
-        }
-        fs::create_dir_all(&destination.parent().unwrap()).await?;
+        let destination = self.prepare_destination(&path).await?;
 
         let mut file = fs::OpenOptions::new()
             .create_new(true)
@@ -27,9 +30,21 @@ impl Store {
             .append(true)
             .open(&destination)
             .await?;
-
         file.write_all(data).await?;
+
         Ok(path)
+    }
+
+    async fn prepare_destination(&self, path: &PathBuf) -> Result<PathBuf, MediumError> {
+        let destination = self.config.storage.base_path.join(&path).clean();
+        if !destination.starts_with(&self.config.storage.base_path) {
+            return Err(MediumError::WrongFilename);
+        }
+        if destination.extension().is_none() {
+            return Err(MediumError::WrongFilename);
+        }
+        fs::create_dir_all(&destination.parent().unwrap()).await?;
+        Ok(destination)
     }
 
     fn to_path(&self, options: &PathOptions) -> PathBuf {
@@ -84,9 +99,9 @@ mod test {
     use std::path::PathBuf;
     use std::sync::Arc;
 
-    use chrono::{TimeZone, Utc};
+    use chrono::{DateTime, TimeZone, Utc};
 
-    use crate::config::{Config, Storage};
+    use crate::config::{Config, Mongo, Storage};
     use crate::store::Store;
 
     use super::PathOptions;
@@ -97,7 +112,13 @@ mod test {
             storage: Storage {
                 base_path: PathBuf::new(),
                 pattern: String::from("/<album_year>/<album>/<year><month><day>/<camera_make>_<camera_model>/<filename>_<hour><minute><second>.<extension>"),
-            }
+                cache_path: PathBuf::new(),
+            },
+            mongo: Mongo {
+                url: "".to_string(),
+                username: "".to_string(),
+                password: "".to_string(),
+            },
         };
         let store = Store {
             config: Arc::new(config),
@@ -105,7 +126,7 @@ mod test {
         let opts = PathOptions {
             album: Some(String::from("Album with space")),
             album_year: Some(2022),
-            date: Utc.with_ymd_and_hms(2023, 2, 1, 8, 7, 6).unwrap().fixed_offset(),
+            date: DateTime::from(Utc.with_ymd_and_hms(2023, 2, 1, 8, 7, 6).unwrap().fixed_offset()),
             camera_make: Some(String::from("Sony Alpha")),
             camera_model: Some(String::from("A7S III")),
             filename: String::from("DSC 123"),
@@ -121,7 +142,13 @@ mod test {
             storage: Storage {
                 base_path: PathBuf::new(),
                 pattern: String::from("/<album_year>/<album>/<year><month><day>/<camera_make>_<camera_model>/<filename>_<hour><minute><second>.<extension>"),
-            }
+                cache_path: Default::default(),
+            },
+            mongo: Mongo {
+                url: "".to_string(),
+                username: "".to_string(),
+                password: "".to_string(),
+            },
         };
         let store = Store {
             config: Arc::new(config),
@@ -132,9 +159,7 @@ mod test {
 
         assert_eq!(
             store.to_path(&opts),
-            PathBuf::from(
-                "/Unknown/Unknown/UnknownUnknownUnknown/Unknown_Unknown/DSC 123_UnknownUnknownUnknown.jpg"
-            )
+            PathBuf::from("/Unknown/Unknown/UnknownUnknownUnknown/Unknown_Unknown/DSC 123_UnknownUnknownUnknown.jpg")
         )
     }
 }

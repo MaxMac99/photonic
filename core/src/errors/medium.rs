@@ -1,3 +1,5 @@
+use std::io::ErrorKind;
+
 use crate::Error;
 
 pub enum MediumError {
@@ -9,13 +11,14 @@ pub enum MediumError {
     WrongFilename,
     WrongAlbum,
     NoDateTaken,
+    AlreadyExists,
     UnknownError(String),
 }
 
 impl From<meta::Error> for MediumError {
     fn from(value: meta::Error) -> Self {
         match value {
-            meta::Error::MimeMismatch { found_mime, given_mime } => MediumError::MimeMismatch { found_mime, given_mime },
+            meta::Error::NoMimeType => MediumError::UnsupportedFile,
             meta::Error::NotSupported(_) => MediumError::UnsupportedFile,
             _ => MediumError::UnsupportedFile,
         }
@@ -24,7 +27,10 @@ impl From<meta::Error> for MediumError {
 
 impl From<std::io::Error> for MediumError {
     fn from(value: std::io::Error) -> Self {
-        MediumError::UnknownError(value.to_string())
+        match value.kind() {
+            ErrorKind::AlreadyExists => MediumError::AlreadyExists,
+            _ => MediumError::UnknownError(value.to_string())
+        }
     }
 }
 
@@ -36,6 +42,7 @@ impl From<MediumError> for Error {
             MediumError::WrongFilename => Error::InvalidArgument(String::from("Could not find extension from filename")),
             MediumError::WrongAlbum => Error::InvalidArgument(String::from("Could not find the album")),
             MediumError::NoDateTaken => Error::InvalidArgument(String::from("Could not find a date when the image was taken")),
+            MediumError::AlreadyExists => Error::AlreadyExists(String::from("The file already exists")),
             MediumError::UnknownError(value) => Error::Internal(value),
         }
     }
