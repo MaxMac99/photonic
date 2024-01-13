@@ -19,6 +19,6 @@ pub struct PathOptions {
 
 impl Store {
     pub fn get_temp_file_path(&self, ext: &str) -> PathBuf {
-        self.config.storage.cache_path.join(format!("{}.{}", Uuid::new_v4().as_hyphenated(), ext))
+        self.config.storage.cache_path.join("tmp").join(format!("{}.{}", Uuid::new_v4().as_hyphenated(), ext))
     }
 }
