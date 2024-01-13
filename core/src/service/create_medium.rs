@@ -10,6 +10,7 @@ use tokio::{fs, join};
 use tokio::fs::File;
 use tokio::io::BufWriter;
 use tokio_util::io::StreamReader;
+use tracing::debug;
 
 use crate::entities::{Album, Medium, MediumItem, MediumType};
 use crate::errors::{Error, MediumError};
@@ -31,6 +32,8 @@ impl Service {
         let mut file = BufWriter::new(File::create(&temp_path).await?);
 
         tokio::io::copy(&mut body_reader, &mut file).await?;
+
+        debug!("Uploaded file temporarily to {}", temp_path.display());
 
         Ok(temp_path)
     }

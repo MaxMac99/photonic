@@ -22,7 +22,6 @@ pub async fn create_medium(
     let opts = opts.0;
 
     let temp_path = service.store_stream_temporarily(&opts.extension, body.into_data_stream()).await?;
-    info!("Stored file temporarily at {}", &temp_path.display());
 
     let create_medium = core::CreateMediumInput {
         album_id: opts.album_id,
@@ -40,5 +39,6 @@ pub async fn create_medium(
         })
         .await?;
 
+    info!("Successfully uploaded file with id {}", &id);
     Ok((StatusCode::CREATED, Json(id.to_hex())))
 }
