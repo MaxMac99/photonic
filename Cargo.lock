@@ -102,12 +102,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anyhow"
-version = "1.0.79"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "080e9890a082662b09c1ad45f567faeeb47f22b5fb23895fbe1e651e718e25ca"
-
-[[package]]
 name = "async-trait"
 version = "0.1.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -370,6 +364,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "702fc72eb24e5a1e48ce58027a675bc24edd52096d5397d4aea7c6dd9eca0bd1"
 
 [[package]]
+name = "cli"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "dotenv",
+ "exiftool",
+ "fotonic",
+ "http_server",
+ "meta",
+ "snafu",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -380,32 +390,6 @@ name = "convert_case"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
-
-[[package]]
-name = "core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "chrono",
- "derive_more",
- "derive_setters",
- "futures",
- "futures-util",
- "log",
- "meta",
- "mime",
- "mime_serde_shim",
- "mongodb",
- "path-clean",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tokio-util",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "core-foundation-sys"
@@ -634,6 +618,7 @@ dependencies = [
  "once_cell",
  "serde",
  "serde_json",
+ "snafu",
  "tokio",
 ]
 
@@ -662,15 +647,25 @@ dependencies = [
 name = "fotonic"
 version = "0.1.0"
 dependencies = [
- "clap",
- "core",
- "dotenv",
- "exiftool",
- "http_server",
+ "axum",
+ "chrono",
+ "derive_more",
+ "derive_setters",
+ "futures",
+ "futures-util",
+ "log",
  "meta",
+ "mime",
+ "mime_serde_shim",
+ "mongodb",
+ "path-clean",
+ "serde",
+ "serde_json",
+ "snafu",
  "tokio",
+ "tokio-util",
  "tracing",
- "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -929,11 +924,12 @@ dependencies = [
  "axum",
  "axum-extra",
  "chrono",
- "core",
  "env_logger",
+ "fotonic",
  "futures",
  "hyper",
  "serde",
+ "snafu",
  "tokio",
  "tokio-util",
  "tower-http",
@@ -1240,6 +1236,7 @@ dependencies = [
  "log",
  "mime",
  "mime_guess",
+ "snafu",
 ]
 
 [[package]]
@@ -1902,6 +1899,28 @@ name = "smallvec"
 version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62bb4feee49fdd9f707ef802e22365a35de4b7b299de4763d44bfea899442ff9"
+
+[[package]]
+name = "snafu"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d342c51730e54029130d7dc9fd735d28c4cd360f1368c01981d4f03ff207f096"
+dependencies = [
+ "backtrace",
+ "snafu-derive",
+]
+
+[[package]]
+name = "snafu-derive"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "080c44971436b1af15d6f61ddd8b543995cf63ab8e677d46b00cc06f4ef267a0"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.48",
+]
 
 [[package]]
 name = "socket2"

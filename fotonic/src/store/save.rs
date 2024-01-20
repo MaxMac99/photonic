@@ -1,26 +1,64 @@
+use std::backtrace::Backtrace;
 use std::path::{Path, PathBuf};
 
 use chrono::{Datelike, Timelike};
 use path_clean::PathClean;
-use tokio::{fs, io::AsyncWriteExt};
+use snafu::{ResultExt, Snafu};
+use tokio::{fs, io, io::AsyncWriteExt};
 
-use crate::errors::MediumError;
 use crate::store::path::PathOptions;
 use crate::store::Store;
 
+#[derive(Snafu, Debug)]
+pub enum ImportError {
+    #[snafu(display("The given file is outside the base storage"))]
+    OutsideBaseStorage { backtrace: Backtrace },
+    #[snafu(display("Could not find a file extension"))]
+    NoFileExtension { backtrace: Backtrace },
+    #[snafu(display("Could not move file from {source_path:?} to {destination_path:?}"))]
+    Move {
+        source_path: PathBuf,
+        destination_path: PathBuf,
+        source: io::Error,
+        backtrace: Backtrace,
+    },
+    #[snafu(display("Could not create file at {path:?}"))]
+    CreateFile {
+        path: PathBuf,
+        source: io::Error,
+        backtrace: Backtrace,
+    },
+    #[snafu(display("Could not write to file at {path:?}"))]
+    WriteFile {
+        path: PathBuf,
+        source: io::Error,
+        backtrace: Backtrace,
+    },
+    #[snafu(display("Could not create path at {path:?}"))]
+    CreatePath {
+        path: PathBuf,
+        source: io::Error,
+        backtrace: Backtrace,
+    },
+}
+
 impl Store {
-    pub async fn import_file<P>(&self, options: &PathOptions, path: P) -> Result<PathBuf, MediumError>
+    pub async fn import_file<P>(&self, options: &PathOptions, path: P) -> Result<PathBuf, ImportError>
         where P: AsRef<Path>
     {
         let dest_path = self.to_path(options);
         let destination = self.prepare_destination(&dest_path).await?;
 
-        fs::rename(path, destination).await?;
+        fs::rename(&path, &destination).await
+            .context(MoveSnafu {
+                source_path: path.as_ref().to_path_buf(),
+                destination_path: destination,
+            })?;
 
         Ok(dest_path)
     }
 
-    pub async fn save_file(&self, options: &PathOptions, data: &[u8]) -> Result<PathBuf, MediumError> {
+    pub async fn save_file(&self, options: &PathOptions, data: &[u8]) -> Result<PathBuf, ImportError> {
         let path = self.to_path(options);
         let destination = self.prepare_destination(&path).await?;
 
@@ -29,21 +67,30 @@ impl Store {
             .write(true)
             .append(true)
             .open(&destination)
-            .await?;
-        file.write_all(data).await?;
+            .await
+            .context(CreateFileSnafu {
+                path: path.clone(),
+            })?;
+        file.write_all(data).await
+            .context(WriteFileSnafu {
+                path: path.clone(),
+            })?;
 
         Ok(path)
     }
 
-    async fn prepare_destination(&self, path: &PathBuf) -> Result<PathBuf, MediumError> {
+    async fn prepare_destination(&self, path: &PathBuf) -> Result<PathBuf, ImportError> {
         let destination = self.config.storage.base_path.join(&path).clean();
         if !destination.starts_with(&self.config.storage.base_path) {
-            return Err(MediumError::WrongFilename);
+            return OutsideBaseStorageSnafu.fail();
         }
         if destination.extension().is_none() {
-            return Err(MediumError::WrongFilename);
+            return NoFileExtensionSnafu.fail();
         }
-        fs::create_dir_all(&destination.parent().unwrap()).await?;
+        fs::create_dir_all(&destination.parent().unwrap()).await
+            .context(CreatePathSnafu {
+                path: path.clone(),
+            })?;
         Ok(destination)
     }
 
@@ -131,6 +178,7 @@ mod test {
             camera_model: Some(String::from("A7S III")),
             filename: String::from("DSC 123"),
             extension: String::from("jpg"),
+            timezone: 0,
         };
 
         assert_eq!(store.to_path(&opts), PathBuf::from("/2022/Album with space/20230201/Sony_Alpha_A7S_III/DSC 123_080706.jpg"))

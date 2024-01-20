@@ -2,10 +2,11 @@ use std::io::Cursor;
 
 use chrono::{DateTime, FixedOffset, Local, NaiveDate};
 use exif::{Exif, Field, In, Reader, Tag, Value};
-use futures::Stream;
 use mime::Mime;
+use snafu::OptionExt;
 
-use crate::Error;
+use crate::error::ExtractMimetypeSnafu;
+use crate::MetaError;
 
 #[derive(Debug)]
 pub struct MetaInfo {
@@ -16,19 +17,18 @@ pub struct MetaInfo {
 }
 
 impl MetaInfo {
-    pub fn from(data: &[u8], ext: &str) -> Result<Self, Error> {
+    pub fn from(data: &[u8], ext: &str) -> Result<Self, MetaError> {
         let lower_ext = ext.to_lowercase();
         let mimetype: Mime = infer::get(data)
             .and_then(|mime| mime.mime_type()
                 .parse()
                 .ok())
             .or_else(|| mime_guess::from_ext(&lower_ext).first())
-            .ok_or(Error::NoMimeType)?;
+            .context(ExtractMimetypeSnafu)?;
 
         let mut cursor = Cursor::new(data);
         let exifreader = Reader::new();
-        let exif = exifreader.read_from_container(&mut cursor)
-            .map_err(|err| Error::from(err))?;
+        let exif = exifreader.read_from_container(&mut cursor)?;
 
         let date = date_time_original(&exif)
             .or_else(|| date_time_digitalized(&exif))
@@ -119,11 +119,11 @@ mod test {
     use exif::Error::Io;
     use mime::Mime;
 
-    use crate::{Error, MetaInfo};
+    use crate::{MetaError, MetaInfo};
     use crate::metainfo::exif_datetime_to_chrono;
 
     #[test]
-    fn exif_heic() -> Result<(), Error> {
+    fn exif_heic() -> Result<(), MetaError> {
         let file = std::fs::File::open("../test/IMG_4598.HEIC").map_err(|err| Io(err))?;
         let mut reader = BufReader::new(file);
         let mut buffer = Vec::new();
@@ -145,7 +145,7 @@ mod test {
     }
 
     #[test]
-    fn exif_dng() -> Result<(), Error> {
+    fn exif_dng() -> Result<(), MetaError> {
         let file = std::fs::File::open("../test/IMG_4597.DNG").map_err(|err| Io(err))?;
         let mut reader = BufReader::new(file);
         let mut buffer = Vec::new();

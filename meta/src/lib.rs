@@ -1,4 +1,4 @@
-pub use error::Error;
+pub use error::MetaError;
 pub use metainfo::MetaInfo;
 pub use service::Service;
 

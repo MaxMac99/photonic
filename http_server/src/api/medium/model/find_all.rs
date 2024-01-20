@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use core::ObjectId;
+use fotonic::ObjectId;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct FindAllMediumInput {

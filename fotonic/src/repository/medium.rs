@@ -1,16 +1,26 @@
 use chrono::{DateTime, Utc};
-use futures_util::stream::TryStreamExt;
+use futures_util::TryStreamExt;
 use mongodb::bson::{doc, Document};
 use mongodb::options::FindOptions;
 use mongodb::results::InsertOneResult;
+use snafu::{ResultExt, Snafu};
 
 use crate::entities::Medium;
-use crate::errors::MediumError;
 use crate::ObjectId;
 use crate::repository::Repository;
 
+#[derive(Snafu, Debug)]
+pub enum SaveMediumError {
+    #[snafu(display("Could not create medium"))]
+    Insert { source: mongodb::error::Error },
+    #[snafu(display("Could not find media"))]
+    Find { source: mongodb::error::Error },
+    #[snafu(display("Could not collect media"))]
+    Collect { source: mongodb::error::Error },
+}
+
 impl Repository {
-    pub async fn create_medium(&self, new_medium: Medium) -> Result<InsertOneResult, MediumError> {
+    pub async fn create_medium(&self, new_medium: Medium) -> Result<InsertOneResult, SaveMediumError> {
         let new_doc = Medium {
             id: None,
             medium_type: new_medium.medium_type,
@@ -26,11 +36,11 @@ impl Repository {
         let medium = self.medium_col
             .insert_one(new_doc, None)
             .await
-            .map_err(|err| MediumError::UnknownError(format!("Could not create Medium: {}", err.to_string())))?;
+            .context(InsertSnafu)?;
         Ok(medium)
     }
 
-    pub async fn find_media(&self, page_size: i64, next_date: Option<DateTime<Utc>>, next_id: Option<ObjectId>, start_date: Option<DateTime<Utc>>, end_date: Option<DateTime<Utc>>, album_id: Option<ObjectId>, include_no_album: bool) -> Result<Vec<Medium>, MediumError> {
+    pub async fn find_media(&self, page_size: i64, next_date: Option<DateTime<Utc>>, next_id: Option<ObjectId>, start_date: Option<DateTime<Utc>>, end_date: Option<DateTime<Utc>>, album_id: Option<ObjectId>, include_no_album: bool) -> Result<Vec<Medium>, SaveMediumError> {
         let find_opts = FindOptions::builder()
             .limit(page_size)
             .sort(doc! {
@@ -86,11 +96,11 @@ impl Repository {
         let cursor = self.medium_col
             .find(filter, find_opts)
             .await
-            .map_err(|err| MediumError::UnknownError(format!("Could not find media: {}", err.to_string())))?;
+            .context(FindSnafu)?;
 
         let result: Vec<Medium> = cursor.try_collect()
             .await
-            .map_err(|err| MediumError::UnknownError(format!("Could not collect media: {}", err.to_string())))?;
+            .context(CollectSnafu)?;
 
         Ok(result)
     }

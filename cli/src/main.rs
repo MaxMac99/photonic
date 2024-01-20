@@ -1,19 +1,17 @@
 use std::path::PathBuf;
 
 use clap::{command, Command};
+use snafu::{ResultExt, Whatever};
 use tracing::log::debug;
 use tracing_subscriber::{EnvFilter, fmt};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
-use exiftool::ExifError;
-
 mod cli;
 
 #[tokio::main]
-async fn main() -> Result<(), core::Error> {
-    dotenv::dotenv()
-        .map_err(|err| core::Error::Internal(format!("Could not read dot env: {}", err.to_string())))?;
+async fn main() -> Result<(), Whatever> {
+    dotenv::dotenv().whatever_context("Could not initialize dotenv")?;
 
     tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())
@@ -34,7 +32,7 @@ async fn main() -> Result<(), core::Error> {
         let target_path = std::env::current_dir().unwrap().join(PathBuf::from("test/IMG_4597.DNG"));
         debug!("Target: {}", target_path.display());
         exiftool.read_file(target_path, false, false).await
-            .map_err(|err| <ExifError as Into<meta::Error>>::into(err))?;
+            .whatever_context("Could not read exif from file")?;
     }
 
     Ok(())

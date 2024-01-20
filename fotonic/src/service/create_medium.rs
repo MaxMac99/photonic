@@ -1,25 +1,88 @@
+use std::backtrace::Backtrace;
 use std::path::{Path, PathBuf};
 
 use axum::body::Bytes;
 use axum::BoxError;
-use chrono::{Datelike, DateTime, Utc};
+use chrono::{Datelike, DateTime, FixedOffset, Utc};
 use futures::TryFutureExt;
-use futures_util::{FutureExt, io, Stream, TryStreamExt};
+use futures_util::{io, Stream, TryStreamExt};
+use mime::Mime;
 use mongodb::bson::oid::ObjectId;
+use snafu::{OptionExt, ResultExt, Snafu};
 use tokio::{fs, join};
 use tokio::fs::File;
 use tokio::io::BufWriter;
 use tokio_util::io::StreamReader;
 use tracing::debug;
 
+use meta::MetaError;
+
 use crate::entities::{Album, Medium, MediumItem, MediumType};
-use crate::errors::{Error, MediumError};
-use crate::service::inputs::CreateMediumInput;
+use crate::repository::SaveMediumError;
 use crate::service::Service;
+use crate::store::ImportError;
 use crate::store::PathOptions;
 
+#[derive(Debug, Clone)]
+pub struct CreateMediumInput {
+    pub album_id: Option<ObjectId>,
+    pub filename: String,
+    pub extension: String,
+    pub tags: Vec<String>,
+    pub date_taken: Option<DateTime<FixedOffset>>,
+    pub mime: Mime,
+}
+
+#[derive(Snafu, Debug)]
+pub enum CreateMediumError {
+    #[snafu(display("Could not create file for stream at {path:?}: {source}"))]
+    StreamCreateFile {
+        path: PathBuf,
+        source: io::Error,
+        backtrace: Backtrace,
+    },
+    #[snafu(display("Could not stream to file: {source}"))]
+    StreamWriteFile {
+        source: io::Error,
+        backtrace: Backtrace,
+    },
+    #[snafu(display("Could not get metadata for file at {path:?}: {source}"))]
+    FileMetadata {
+        path: PathBuf,
+        source: io::Error,
+        backtrace: Backtrace,
+    },
+    #[snafu(display("Could not get meta information"), context(false))]
+    MetaError {
+        #[snafu(backtrace)]
+        source: MetaError,
+    },
+    #[snafu(display("Could not import file"), context(false))]
+    Import {
+        #[snafu(backtrace)]
+        source: ImportError
+    },
+    #[snafu(display("Could not save medium"), context(false))]
+    SaveMedium {
+        #[snafu(backtrace)]
+        source: SaveMediumError
+    },
+    #[snafu(display("Could not find the date when this medium was taken"))]
+    NoDateTaken { backtrace: Backtrace },
+    #[snafu(display("Could not get album"), context(false))]
+    GetAlbum {
+        source: mongodb::error::Error,
+        backtrace: Backtrace,
+    },
+    #[snafu(display("Could not find album with id {album_id}"))]
+    WrongAlbum {
+        album_id: ObjectId,
+        backtrace: Backtrace,
+    },
+}
+
 impl Service {
-    pub async fn store_stream_temporarily<S, E>(&self, extension: &str, stream: S) -> Result<PathBuf, Error>
+    pub async fn store_stream_temporarily<S, E>(&self, extension: &str, stream: S) -> Result<PathBuf, CreateMediumError>
         where
             S: Stream<Item=Result<Bytes, E>>,
             E: Into<BoxError>,
@@ -29,16 +92,24 @@ impl Service {
         let body_reader = StreamReader::new(body_with_error);
         futures::pin_mut!(body_reader);
 
-        let mut file = BufWriter::new(File::create(&temp_path).await?);
+        let file = File::create(&temp_path).await
+            .context(StreamCreateFileSnafu { path: temp_path.clone() })?;
+        let mut buffer = BufWriter::new(file);
 
-        tokio::io::copy(&mut body_reader, &mut file).await?;
+        tokio::io::copy(&mut body_reader, &mut buffer).await
+            .context(StreamWriteFileSnafu)?;
 
         debug!("Uploaded file temporarily to {}", temp_path.display());
 
         Ok(temp_path)
     }
 
-    pub async fn create_medium<P>(&self, input: CreateMediumInput, path: P) -> Result<ObjectId, Error>
+    async fn test(&self) -> Result<(), CreateMediumError> {
+        self.meta.read_file("Something stupid").await?;
+        Ok(())
+    }
+
+    pub async fn create_medium<P>(&self, input: CreateMediumInput, path: P) -> Result<ObjectId, CreateMediumError>
         where P: AsRef<Path>
     {
         let (file_size, path_opts) = self.create_path_options(&input, &path).await?;
@@ -72,7 +143,7 @@ impl Service {
         let id = self.repo.create_medium(medium)
             .or_else(|err| async {
                 // Remove file if it could not store metadata
-                fs::remove_file(&target_path).await?;
+                let _ = fs::remove_file(&target_path).await;
                 Err(err)
             })
             .await?
@@ -82,16 +153,18 @@ impl Service {
         Ok(id)
     }
 
-    async fn create_path_options<P>(&self, input: &CreateMediumInput, path: P) -> Result<(u64, PathOptions), Error>
+    async fn create_path_options<P>(&self, input: &CreateMediumInput, path: P) -> Result<(u64, PathOptions), CreateMediumError>
         where P: AsRef<Path>
     {
         let (size, meta_info, album) = join!(fs::metadata(&path), self.meta.read_file(&path), self.get_album(input));
-        let size = size?.len();
-        let meta_info = meta_info.map_err(|err| MediumError::UnsupportedFile)?;
+        let size = size
+            .context(FileMetadataSnafu { path: path.as_ref().to_path_buf() })?
+            .len();
+        let meta_info = meta_info?;
 
         let date_taken = input.date_taken
             .or(meta_info.date)
-            .ok_or(MediumError::NoDateTaken)?;
+            .context(NoDateTakenSnafu)?;
         let timezone = date_taken.timezone().local_minus_utc();
         let date_taken: DateTime<Utc> = date_taken.into();
 
@@ -112,13 +185,12 @@ impl Service {
         Ok((size, path_opts))
     }
 
-    async fn get_album(&self, input: &CreateMediumInput) -> Result<Option<Album>, Error> {
+    async fn get_album(&self, input: &CreateMediumInput) -> Result<Option<Album>, CreateMediumError> {
         let mut album: Option<Album> = None;
         if let Some(album_id) = input.album_id {
-            album = self.repo.get_album_by_id(album_id).await
-                .map_err(|err| Error::Internal(err.to_string()))?;
+            album = self.repo.get_album_by_id(album_id).await?;
             if album.is_none() {
-                return Err(MediumError::WrongAlbum.into());
+                return WrongAlbumSnafu { album_id }.fail();
             }
         }
         Ok(album)

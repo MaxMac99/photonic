@@ -1,9 +1,8 @@
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
+use snafu::{ResultExt, Whatever};
 use tokio::fs;
-
-use crate::Error;
 
 const ENV_STORAGE_BASE_DIRECTORY: &str = "STORAGE_BASE_DIRECTORY";
 const ENV_STORAGE_PATTERN: &str = "STORAGE_PATTERN";
@@ -38,7 +37,7 @@ const DEFAULT_STORAGE_PATTERN: &str = "/<album_year>/<album>/<month><day>/<camer
 const DEFAULT_STORAGE_CACHE_DIRECTORY: &str = "/cache";
 
 impl Config {
-    pub async fn load() -> Result<Self, Error> {
+    pub async fn load() -> Result<Self, Whatever> {
         let storage = Config::create_storage().await?;
         let mongo = Config::create_mongo()?;
 
@@ -50,7 +49,7 @@ impl Config {
         Ok(config)
     }
 
-    async fn create_storage() -> Result<Storage, Error> {
+    async fn create_storage() -> Result<Storage, Whatever> {
         let base_path = Self::get_or_create_directory(ENV_STORAGE_BASE_DIRECTORY, DEFAULT_STORAGE_BASE_DIRECTORY).await?;
         let pattern = std::env::var(ENV_STORAGE_PATTERN)
             .unwrap_or(String::from(DEFAULT_STORAGE_PATTERN));
@@ -63,13 +62,13 @@ impl Config {
         })
     }
 
-    fn create_mongo() -> Result<Mongo, Error> {
+    fn create_mongo() -> Result<Mongo, Whatever> {
         let url = std::env::var(ENV_MONGO_URL)
-            .map_err(|err| Error::Internal(format!("Could not find mongodb url: {}", err.to_string())))?;
+            .whatever_context("Could not get mongo url")?;
         let username = std::env::var(ENV_MONGO_USERNAME)
-            .map_err(|err| Error::Internal(format!("Could not find mongodb user: {}", err.to_string())))?;
+            .whatever_context("Could not get mongo username")?;
         let password = std::env::var(ENV_MONGO_PASSWORD)
-            .map_err(|err| Error::Internal(format!("Could not find mongodb password: {}", err.to_string())))?;
+            .whatever_context("Could not get mongo password")?;
 
         Ok(Mongo {
             url,
@@ -78,22 +77,22 @@ impl Config {
         })
     }
 
-    async fn get_or_create_directory(env_var: &str, default: &str) -> Result<PathBuf, Error> {
+    async fn get_or_create_directory(env_var: &str, default: &str) -> Result<PathBuf, Whatever> {
         let mut base_path = std::env::var(env_var)
             .map(|val| PathBuf::from(val))
             .unwrap_or(PathBuf::from(default));
 
         if !base_path.starts_with("/") {
             let cwd = std::env::current_dir()
-                .map_err(|err| Error::Internal(format!("Could not find current working directory: {}", err.to_string())))?;
+                .whatever_context("Could not get current directory")?;
             base_path = cwd.join(base_path);
         }
 
         fs::create_dir_all(&base_path)
             .await
-            .map_err(|err| Error::Internal(format!("Could not create directories for path {:?}: {}", &base_path, err.to_string())))?;
+            .with_whatever_context(|_| format!("Could not create directory at path {:?} fo env var {}", base_path.clone(), env_var))?;
         fs::canonicalize(&base_path)
             .await
-            .map_err(|err| Error::Internal(format!("Could not canonicalize path {:?}: {}", &base_path, err.to_string())))
+            .with_whatever_context(|_| format!("Could not canonicalize directory at path {:?} fo env var {}", base_path.clone(), env_var))
     }
 }

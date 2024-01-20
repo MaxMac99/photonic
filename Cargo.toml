@@ -1,12 +1,12 @@
 [workspace]
 members = [
+    "cli",
     "fotonic",
-    "core",
     "meta",
     "http_server",
     "exiftool"
 ]
 
 default-members = [
-    "fotonic",
+    "cli",
 ]

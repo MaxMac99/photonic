@@ -1,10 +1,12 @@
 use std::{ops::Drop, process::Stdio};
+use std::backtrace::Backtrace;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use log::debug;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use snafu::{OptionExt, ResultExt, Snafu};
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     process::{Child, Command},
@@ -20,11 +22,16 @@ pub struct Exiftool {
     receiver: Mutex<Receiver<(bool, String)>>,
 }
 
-#[derive(Debug)]
+#[derive(Snafu, Debug)]
 pub enum ExifError {
-    CouldNotFindToolError(std::io::Error),
-    ParseError(String),
-    InvalidPathError,
+    #[snafu(display("Could not find tool"))]
+    NoTool { source: std::io::Error, backtrace: Backtrace },
+    #[snafu(display("Could not parse response: {message}"))]
+    Parse { message: String, backtrace: Backtrace },
+    #[snafu(display("The path {path:?} does not exists"))]
+    FileNotExists { path: PathBuf, backtrace: Backtrace },
+    #[snafu(display("The path {path:?} is not valid"))]
+    InvalidPath { path: PathBuf, backtrace: Backtrace },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -70,18 +77,18 @@ impl Exiftool {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(|err| ExifError::CouldNotFindToolError(err))?;
+            .context(NoToolSnafu)?;
 
         let stdout = process.stdout
             .take()
-            .ok_or(ExifError::ParseError(String::from("Could not connect to exiftool")))?;
+            .context(ParseSnafu { message: String::from("Could not connect to exiftool") })?;
         let stdout_reader = BufReader::new(stdout).lines();
         let (transmitter, receiver) = mpsc::channel(10);
         Self::start_reading(stdout_reader, transmitter.clone(), false);
 
         let stderr = process.stderr
             .take()
-            .ok_or(ExifError::ParseError(String::from("Could not connect to exiftool")))?;
+            .context(ParseSnafu { message: String::from("Could not connect to exiftool") })?;
         let stderr_reader = BufReader::new(stderr).lines();
         Self::start_reading(stderr_reader, transmitter.clone(), true);
 
@@ -110,14 +117,14 @@ impl Exiftool {
         let mut process = self.process.lock().await;
         let stdin = process.stdin
             .as_mut()
-            .ok_or(ExifError::ParseError(String::from("Could not connect to exiftool")))?;
+            .context(ParseSnafu { message: String::from("Could not connect to exiftool") })?;
 
         let mut cmd_num = self.cmd_count.lock().await;
         *cmd_num += 1;
         let cmd = format!("{}\n-echo4\n{{ready{:05}}}=${{status}}\n-execute{:05}\n", cmd, cmd_num, cmd_num);
         stdin.write_all(cmd.as_bytes())
             .await
-            .map_err(|err| ExifError::ParseError(err.to_string()))?;
+            .map_err(|err| ParseSnafu { message: err.to_string() }.build())?;
 
         let ready = format!("{{ready{:05}}}", cmd_num);
 
@@ -143,7 +150,7 @@ impl Exiftool {
         }
 
         if status_code != 0 {
-            return Err(ExifError::ParseError(err_result));
+            return ParseSnafu { message: err_result }.fail();
         }
         Ok(result)
     }
@@ -155,9 +162,9 @@ impl Exiftool {
             .to_path_buf()
             .into_os_string()
             .into_string()
-            .map_err(|_| ExifError::InvalidPathError)?;
+            .map_err(|_| InvalidPathSnafu { path: file.as_ref().to_path_buf() }.build())?;
         if !Path::new(&path).exists() {
-            return Err(ExifError::InvalidPathError);
+            return FileNotExistsSnafu { path: PathBuf::from(path) }.fail();
         }
 
         // -j json
@@ -179,7 +186,7 @@ impl Exiftool {
         let cmd = format!("\n-j\n-l\n-struct{}\n{}", options, path);
         let result = self.send_command(cmd).await?;
         let res: Value = serde_json::from_str(&result)
-            .map_err(|err| ExifError::ParseError(err.to_string()))?;
+            .map_err(|err| ParseSnafu { message: err.to_string() }.build())?;
         let fields_iterator = res.as_array()
             .unwrap()
             .first()

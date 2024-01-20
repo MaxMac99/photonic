@@ -4,10 +4,12 @@ use std::str::FromStr;
 
 use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone};
 use mime::Mime;
+use snafu::OptionExt;
 
 use exiftool::{Exiftool, Metadata};
 
-use crate::{Error, MetaInfo};
+use crate::{MetaError, MetaInfo};
+use crate::error::ExtractMimetypeSnafu;
 
 #[derive(Debug)]
 pub struct Service {
@@ -15,13 +17,13 @@ pub struct Service {
 }
 
 impl Service {
-    pub async fn new() -> Result<Self, Error> {
+    pub async fn new() -> Result<Self, MetaError> {
         Ok(Self {
             exiftool: Exiftool::new().await?
         })
     }
 
-    pub async fn read_file<P>(&self, path: P) -> Result<MetaInfo, Error>
+    pub async fn read_file<P>(&self, path: P) -> Result<MetaInfo, MetaError>
         where P: AsRef<Path>
     {
         let metadata = self.exiftool.read_file(path, false, false).await?;
@@ -35,7 +37,7 @@ impl Service {
         let mimetype: Mime = metadata.get("MIMEType")
             .and_then(|value| value.value.as_str())
             .and_then(|value| Mime::from_str(value).ok())
-            .ok_or(Error::NotSupported(String::from("Could not extract mimetype")))?;
+            .context(ExtractMimetypeSnafu)?;
         let meta_info = MetaInfo {
             date: Self::extract_date_time(&metadata),
             camera_make,

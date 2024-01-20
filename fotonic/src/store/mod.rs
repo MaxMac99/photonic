@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 pub use path::PathOptions;
+pub(crate) use save::ImportError;
 
 use crate::config::Config;
 

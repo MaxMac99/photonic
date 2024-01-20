@@ -1,18 +1,26 @@
 use std::sync::Arc;
 
 use axum::Router;
+use snafu::{ResultExt, Whatever};
 use tokio::net::TcpListener;
 use tokio::signal;
 use tower_http::trace::TraceLayer;
 use tracing::log::{debug, info};
 
+pub use error::ResponseError;
+use fotonic::config::Config;
+use fotonic::service::Service;
+
 mod api;
+mod error;
 
-pub async fn run() -> Result<(), core::Error> {
-    let config = Arc::new(core::Config::load().await?);
-    let service = Arc::new(core::Service::new(config.clone()).await?);
+pub async fn run() -> Result<(), Whatever> {
+    let config = Arc::new(Config::load().await?);
+    let service = Arc::new(Service::new(config.clone()).await?);
 
-    let listener = TcpListener::bind("0.0.0.0:8080").await?;
+    let address = "0.0.0.0:8080";
+    let listener = TcpListener::bind(address).await
+        .whatever_context("Could not bind to address")?;
     info!("Starting fotonic server at {}", listener.local_addr().unwrap());
 
     let app = Router::new()
@@ -23,7 +31,7 @@ pub async fn run() -> Result<(), core::Error> {
     axum::serve(listener, app.into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await
-        .map_err(|err| core::Error::Internal(err.to_string()))?;
+        .whatever_context("Serve failed")?;
 
     Ok(())
 }
