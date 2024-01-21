@@ -117,11 +117,6 @@ impl Service {
         Ok(temp_path)
     }
 
-    async fn test(&self) -> Result<(), CreateMediumError> {
-        self.meta.read_file("Something stupid", false).await?;
-        Ok(())
-    }
-
     pub async fn create_medium<P>(
         &self,
         input: CreateMediumInput,

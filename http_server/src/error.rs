@@ -5,17 +5,20 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use snafu::{prelude::*, AsErrorSource, ErrorCompat, Snafu};
+use snafu::{AsErrorSource, ErrorCompat, Snafu};
 use tracing::log::error;
 
 use fotonic::service::CreateMediumError;
 
-trait BacktraceError: ErrorCompat + Error + AsErrorSource + Debug {}
+pub(crate) trait BacktraceError:
+    ErrorCompat + Error + AsErrorSource + Debug
+{
+}
 
 impl<T: ErrorCompat + Error + AsErrorSource + Debug> BacktraceError for T {}
 
 #[derive(Snafu, Debug)]
-pub enum ResponseError {
+pub(crate) enum ResponseError {
     #[snafu(display("{message}"))]
     BadRequest { message: String },
     #[snafu(display("Authentication required"))]

@@ -6,7 +6,6 @@ use tokio::{net::TcpListener, signal};
 use tower_http::trace::TraceLayer;
 use tracing::log::{debug, info};
 
-pub use error::ResponseError;
 use fotonic::{config::Config, service::Service};
 
 mod api;

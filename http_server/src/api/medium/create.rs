@@ -13,7 +13,7 @@ use tokio::fs;
 use tracing::log::info;
 
 use crate::{
-    api::medium::model::create_medium::CreateMediumInput, ResponseError,
+    api::medium::model::create_medium::CreateMediumInput, error::ResponseError,
 };
 
 pub async fn create_medium(

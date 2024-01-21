@@ -6,6 +6,7 @@ members = [
     "http_server",
     "exiftool"
 ]
+resolver = "2"
 
 default-members = [
     "cli",
