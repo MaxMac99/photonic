@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use clap::{command, Command};
 use snafu::{ResultExt, Whatever};
 use tracing::log::debug;
-use tracing_subscriber::{EnvFilter, fmt};
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{
+    fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter,
+};
 
 mod cli;
 
@@ -19,8 +19,9 @@ async fn main() -> Result<(), Whatever> {
         .init();
 
     let matches = command!()
-        .subcommand(Command::new(cli::SERVER_SUBCOMMAND)
-            .about(cli::SERVER_DESCRIPTION))
+        .subcommand(
+            Command::new(cli::SERVER_SUBCOMMAND).about(cli::SERVER_DESCRIPTION),
+        )
         .subcommand(Command::new("exif"))
         .get_matches();
 
@@ -28,11 +29,18 @@ async fn main() -> Result<(), Whatever> {
         cli::server::run().await?;
     }
     if let Some(_) = matches.subcommand_matches("exif") {
-        let exiftool = exiftool::Exiftool::new().await.unwrap();
-        let target_path = std::env::current_dir().unwrap().join(PathBuf::from("test/IMG_4597.DNG"));
-        debug!("Target: {}", target_path.display());
-        exiftool.read_file(target_path, false, false).await
+        let meta = meta::Service::new()
+            .await
+            .whatever_context("Could not create meta service")?;
+        let target_path = std::env::current_dir()
+            .unwrap()
+            .join(PathBuf::from("test/data/IMG_4597.DNG"));
+        debug!("Target: {:?}", target_path);
+        let exif = meta
+            .read_file(target_path, true)
+            .await
             .whatever_context("Could not read exif from file")?;
+        debug!("Exif: {:#?}", exif);
     }
 
     Ok(())

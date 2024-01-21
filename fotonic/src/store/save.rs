@@ -1,13 +1,14 @@
-use std::backtrace::Backtrace;
-use std::path::{Path, PathBuf};
+use std::{
+    backtrace::Backtrace,
+    path::{Path, PathBuf},
+};
 
 use chrono::{Datelike, Timelike};
 use path_clean::PathClean;
 use snafu::{ResultExt, Snafu};
 use tokio::{fs, io, io::AsyncWriteExt};
 
-use crate::store::path::PathOptions;
-use crate::store::Store;
+use crate::store::{path::PathOptions, Store};
 
 #[derive(Snafu, Debug)]
 pub enum ImportError {
@@ -15,7 +16,9 @@ pub enum ImportError {
     OutsideBaseStorage { backtrace: Backtrace },
     #[snafu(display("Could not find a file extension"))]
     NoFileExtension { backtrace: Backtrace },
-    #[snafu(display("Could not move file from {source_path:?} to {destination_path:?}"))]
+    #[snafu(display(
+        "Could not move file from {source_path:?} to {destination_path:?}"
+    ))]
     Move {
         source_path: PathBuf,
         destination_path: PathBuf,
@@ -43,22 +46,30 @@ pub enum ImportError {
 }
 
 impl Store {
-    pub async fn import_file<P>(&self, options: &PathOptions, path: P) -> Result<PathBuf, ImportError>
-        where P: AsRef<Path>
+    pub async fn import_file<P>(
+        &self,
+        options: &PathOptions,
+        path: P,
+    ) -> Result<PathBuf, ImportError>
+    where
+        P: AsRef<Path>,
     {
         let dest_path = self.to_path(options);
         let destination = self.prepare_destination(&dest_path).await?;
 
-        fs::rename(&path, &destination).await
-            .context(MoveSnafu {
-                source_path: path.as_ref().to_path_buf(),
-                destination_path: destination,
-            })?;
+        fs::rename(&path, &destination).await.context(MoveSnafu {
+            source_path: path.as_ref().to_path_buf(),
+            destination_path: destination,
+        })?;
 
         Ok(dest_path)
     }
 
-    pub async fn save_file(&self, options: &PathOptions, data: &[u8]) -> Result<PathBuf, ImportError> {
+    pub async fn save_file(
+        &self,
+        options: &PathOptions,
+        data: &[u8],
+    ) -> Result<PathBuf, ImportError> {
         let path = self.to_path(options);
         let destination = self.prepare_destination(&path).await?;
 
@@ -68,18 +79,18 @@ impl Store {
             .append(true)
             .open(&destination)
             .await
-            .context(CreateFileSnafu {
-                path: path.clone(),
-            })?;
-        file.write_all(data).await
-            .context(WriteFileSnafu {
-                path: path.clone(),
-            })?;
+            .context(CreateFileSnafu { path: path.clone() })?;
+        file.write_all(data)
+            .await
+            .context(WriteFileSnafu { path: path.clone() })?;
 
         Ok(path)
     }
 
-    async fn prepare_destination(&self, path: &PathBuf) -> Result<PathBuf, ImportError> {
+    async fn prepare_destination(
+        &self,
+        path: &PathBuf,
+    ) -> Result<PathBuf, ImportError> {
         let destination = self.config.storage.base_path.join(&path).clean();
         if !destination.starts_with(&self.config.storage.base_path) {
             return OutsideBaseStorageSnafu.fail();
@@ -87,10 +98,9 @@ impl Store {
         if destination.extension().is_none() {
             return NoFileExtensionSnafu.fail();
         }
-        fs::create_dir_all(&destination.parent().unwrap()).await
-            .context(CreatePathSnafu {
-                path: path.clone(),
-            })?;
+        fs::create_dir_all(&destination.parent().unwrap())
+            .await
+            .context(CreatePathSnafu { path: path.clone() })?;
         Ok(destination)
     }
 
@@ -100,7 +110,8 @@ impl Store {
         let album = options.album.as_deref().unwrap_or("Unknown");
         result = result.replace("<album>", &album);
 
-        let album_year = options.album_year.unwrap_or(options.date.year() as u32);
+        let album_year =
+            options.album_year.unwrap_or(options.date.year() as u32);
         let album_year = format!("{:04}", album_year);
         result = result.replace("<album_year>", &album_year);
 
@@ -143,13 +154,14 @@ impl Store {
 
 #[cfg(test)]
 mod test {
-    use std::path::PathBuf;
-    use std::sync::Arc;
+    use std::{path::PathBuf, sync::Arc};
 
     use chrono::{DateTime, TimeZone, Utc};
 
-    use crate::config::{Config, Mongo, Storage};
-    use crate::store::Store;
+    use crate::{
+        config::{Config, Mongo, Storage},
+        store::Store,
+    };
 
     use super::PathOptions;
 
@@ -173,7 +185,11 @@ mod test {
         let opts = PathOptions {
             album: Some(String::from("Album with space")),
             album_year: Some(2022),
-            date: DateTime::from(Utc.with_ymd_and_hms(2023, 2, 1, 8, 7, 6).unwrap().fixed_offset()),
+            date: DateTime::from(
+                Utc.with_ymd_and_hms(2023, 2, 1, 8, 7, 6)
+                    .unwrap()
+                    .fixed_offset(),
+            ),
             camera_make: Some(String::from("Sony Alpha")),
             camera_model: Some(String::from("A7S III")),
             filename: String::from("DSC 123"),

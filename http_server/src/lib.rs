@@ -2,14 +2,12 @@ use std::sync::Arc;
 
 use axum::Router;
 use snafu::{ResultExt, Whatever};
-use tokio::net::TcpListener;
-use tokio::signal;
+use tokio::{net::TcpListener, signal};
 use tower_http::trace::TraceLayer;
 use tracing::log::{debug, info};
 
 pub use error::ResponseError;
-use fotonic::config::Config;
-use fotonic::service::Service;
+use fotonic::{config::Config, service::Service};
 
 mod api;
 mod error;
@@ -19,9 +17,13 @@ pub async fn run() -> Result<(), Whatever> {
     let service = Arc::new(Service::new(config.clone()).await?);
 
     let address = "0.0.0.0:8080";
-    let listener = TcpListener::bind(address).await
+    let listener = TcpListener::bind(address)
+        .await
         .whatever_context("Could not bind to address")?;
-    info!("Starting fotonic server at {}", listener.local_addr().unwrap());
+    info!(
+        "Starting fotonic server at {}",
+        listener.local_addr().unwrap()
+    );
 
     let app = Router::new()
         .nest("/api/v1", api::app())
@@ -44,7 +46,7 @@ async fn shutdown_signal() {
     };
 
     #[cfg(unix)]
-        let terminate = async {
+    let terminate = async {
         signal::unix::signal(signal::unix::SignalKind::terminate())
             .expect("failed to install signal handler")
             .recv()

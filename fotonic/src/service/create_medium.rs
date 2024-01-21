@@ -1,27 +1,28 @@
-use std::backtrace::Backtrace;
-use std::path::{Path, PathBuf};
+use std::{
+    backtrace::Backtrace,
+    fmt::Debug,
+    path::{Path, PathBuf},
+};
 
-use axum::body::Bytes;
-use axum::BoxError;
-use chrono::{Datelike, DateTime, FixedOffset, Utc};
+use axum::{body::Bytes, BoxError};
+use chrono::{DateTime, Datelike, FixedOffset, Utc};
 use futures::TryFutureExt;
 use futures_util::{io, Stream, TryStreamExt};
 use mime::Mime;
 use mongodb::bson::oid::ObjectId;
 use snafu::{OptionExt, ResultExt, Snafu};
-use tokio::{fs, join};
-use tokio::fs::File;
-use tokio::io::BufWriter;
+use tokio::{fs, fs::File, io::BufWriter, join};
 use tokio_util::io::StreamReader;
 use tracing::debug;
 
 use meta::MetaError;
 
-use crate::entities::{Album, Medium, MediumItem, MediumType};
-use crate::repository::SaveMediumError;
-use crate::service::Service;
-use crate::store::ImportError;
-use crate::store::PathOptions;
+use crate::{
+    entities::{Album, Medium, MediumItem, MediumType},
+    repository::SaveMediumError,
+    service::Service,
+    store::{ImportError, PathOptions},
+};
 
 #[derive(Debug, Clone)]
 pub struct CreateMediumInput {
@@ -35,7 +36,9 @@ pub struct CreateMediumInput {
 
 #[derive(Snafu, Debug)]
 pub enum CreateMediumError {
-    #[snafu(display("Could not create file for stream at {path:?}: {source}"))]
+    #[snafu(display(
+        "Could not create file for stream at {path:?}: {source}"
+    ))]
     StreamCreateFile {
         path: PathBuf,
         source: io::Error,
@@ -60,12 +63,12 @@ pub enum CreateMediumError {
     #[snafu(display("Could not import file"), context(false))]
     Import {
         #[snafu(backtrace)]
-        source: ImportError
+        source: ImportError,
     },
     #[snafu(display("Could not save medium"), context(false))]
     SaveMedium {
         #[snafu(backtrace)]
-        source: SaveMediumError
+        source: SaveMediumError,
     },
     #[snafu(display("Could not find the date when this medium was taken"))]
     NoDateTaken { backtrace: Backtrace },
@@ -82,21 +85,31 @@ pub enum CreateMediumError {
 }
 
 impl Service {
-    pub async fn store_stream_temporarily<S, E>(&self, extension: &str, stream: S) -> Result<PathBuf, CreateMediumError>
-        where
-            S: Stream<Item=Result<Bytes, E>>,
-            E: Into<BoxError>,
+    pub async fn store_stream_temporarily<S, E>(
+        &self,
+        extension: &str,
+        stream: S,
+    ) -> Result<PathBuf, CreateMediumError>
+    where
+        S: Stream<Item = Result<Bytes, E>>,
+        E: Into<BoxError>,
     {
         let temp_path = self.store.get_temp_file_path(extension);
-        let body_with_error = stream.map_err(|err| io::Error::new(io::ErrorKind::Other, err));
+        let body_with_error =
+            stream.map_err(|err| io::Error::new(io::ErrorKind::Other, err));
         let body_reader = StreamReader::new(body_with_error);
         futures::pin_mut!(body_reader);
 
-        let file = File::create(&temp_path).await
-            .context(StreamCreateFileSnafu { path: temp_path.clone() })?;
+        let file =
+            File::create(&temp_path)
+                .await
+                .context(StreamCreateFileSnafu {
+                    path: temp_path.clone(),
+                })?;
         let mut buffer = BufWriter::new(file);
 
-        tokio::io::copy(&mut body_reader, &mut buffer).await
+        tokio::io::copy(&mut body_reader, &mut buffer)
+            .await
             .context(StreamWriteFileSnafu)?;
 
         debug!("Uploaded file temporarily to {}", temp_path.display());
@@ -105,14 +118,20 @@ impl Service {
     }
 
     async fn test(&self) -> Result<(), CreateMediumError> {
-        self.meta.read_file("Something stupid").await?;
+        self.meta.read_file("Something stupid", false).await?;
         Ok(())
     }
 
-    pub async fn create_medium<P>(&self, input: CreateMediumInput, path: P) -> Result<ObjectId, CreateMediumError>
-        where P: AsRef<Path>
+    pub async fn create_medium<P>(
+        &self,
+        input: CreateMediumInput,
+        path: P,
+    ) -> Result<ObjectId, CreateMediumError>
+    where
+        P: AsRef<Path> + Debug,
     {
-        let (file_size, path_opts) = self.create_path_options(&input, &path).await?;
+        let (file_size, path_opts) =
+            self.create_path_options(&input, &path).await?;
 
         let target_path = self.store.import_file(&path_opts, &path).await?;
 
@@ -140,7 +159,9 @@ impl Service {
             sidecars: vec![],
         };
 
-        let id = self.repo.create_medium(medium)
+        let id = self
+            .repo
+            .create_medium(medium)
             .or_else(|err| async {
                 // Remove file if it could not store metadata
                 let _ = fs::remove_file(&target_path).await;
@@ -153,16 +174,28 @@ impl Service {
         Ok(id)
     }
 
-    async fn create_path_options<P>(&self, input: &CreateMediumInput, path: P) -> Result<(u64, PathOptions), CreateMediumError>
-        where P: AsRef<Path>
+    async fn create_path_options<P>(
+        &self,
+        input: &CreateMediumInput,
+        path: P,
+    ) -> Result<(u64, PathOptions), CreateMediumError>
+    where
+        P: AsRef<Path> + Debug,
     {
-        let (size, meta_info, album) = join!(fs::metadata(&path), self.meta.read_file(&path), self.get_album(input));
+        let (size, meta_info, album) = join!(
+            fs::metadata(&path),
+            self.meta.read_file(&path, true),
+            self.get_album(input)
+        );
         let size = size
-            .context(FileMetadataSnafu { path: path.as_ref().to_path_buf() })?
+            .context(FileMetadataSnafu {
+                path: path.as_ref().to_path_buf(),
+            })?
             .len();
         let meta_info = meta_info?;
 
-        let date_taken = input.date_taken
+        let date_taken = input
+            .date_taken
             .or(meta_info.date)
             .context(NoDateTakenSnafu)?;
         let timezone = date_taken.timezone().local_minus_utc();
@@ -170,7 +203,9 @@ impl Service {
 
         let album = album?;
         let name = album.as_ref().map(|album| album.name.clone());
-        let year = album.as_ref().and_then(|album| album.first_date)
+        let year = album
+            .as_ref()
+            .and_then(|album| album.first_date)
             .map(|date| date.year() as u32);
         let path_opts = PathOptions {
             album: name,
@@ -185,7 +220,10 @@ impl Service {
         Ok((size, path_opts))
     }
 
-    async fn get_album(&self, input: &CreateMediumInput) -> Result<Option<Album>, CreateMediumError> {
+    async fn get_album(
+        &self,
+        input: &CreateMediumInput,
+    ) -> Result<Option<Album>, CreateMediumError> {
         let mut album: Option<Album> = None;
         if let Some(album_id) = input.album_id {
             album = self.repo.get_album_by_id(album_id).await?;

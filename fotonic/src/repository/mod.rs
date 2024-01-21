@@ -1,14 +1,18 @@
 use std::sync::Arc;
 
-use mongodb::{Client, Collection};
-use mongodb::bson::doc;
-use mongodb::options::{ClientOptions, Credential};
+use mongodb::{
+    bson::doc,
+    options::{ClientOptions, Credential},
+    Client, Collection,
+};
 use snafu::{ResultExt, Whatever};
 
 pub(crate) use medium::SaveMediumError;
 
-use crate::config::Config;
-use crate::entities::{Album, Medium};
+use crate::{
+    config::Config,
+    entities::{Album, Medium},
+};
 
 mod album;
 mod medium;
@@ -23,7 +27,9 @@ impl Repository {
     pub async fn init(config: Arc<Config>) -> Result<Self, Whatever> {
         let mut opts = ClientOptions::parse(config.mongo.url.clone())
             .await
-            .with_whatever_context(|_| format!("Mongo url error with {}", config.mongo.url))?;
+            .with_whatever_context(|_| {
+                format!("Mongo url error with {}", config.mongo.url)
+            })?;
         opts.credential = Some(
             Credential::builder()
                 .username(config.mongo.username.clone())

@@ -26,7 +26,10 @@ pub struct MediumItem {
     pub width: u32,
     pub height: u32,
     pub filesize: u64,
-    #[serde(rename = "lastSaved", with = "mongodb::bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    #[serde(
+        rename = "lastSaved",
+        with = "mongodb::bson::serde_helpers::chrono_datetime_as_bson_datetime"
+    )]
     pub last_saved: DateTime<Utc>,
     #[serde(rename = "originalStore")]
     pub original_store: bool,
@@ -42,7 +45,10 @@ pub struct Medium {
     pub id: Option<ObjectId>,
     #[serde(rename = "mediumType")]
     pub medium_type: MediumType,
-    #[serde(rename = "dateTaken", with = "mongodb::bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    #[serde(
+        rename = "dateTaken",
+        with = "mongodb::bson::serde_helpers::chrono_datetime_as_bson_datetime"
+    )]
     pub date_taken: DateTime<Utc>,
     pub timezone: i32,
     pub originals: Vec<MediumItem>,

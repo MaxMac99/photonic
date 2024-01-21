@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
-use axum::extract::{Query, State};
-use axum::Json;
-use axum::response::Result;
+use axum::{
+    extract::{Query, State},
+    response::Result,
+    Json,
+};
 
 use crate::api::medium::model::find_all::FindAllMediumInput;
 

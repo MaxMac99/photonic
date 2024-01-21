@@ -2,12 +2,9 @@ use std::sync::Arc;
 
 use snafu::{ResultExt, Whatever};
 
-pub use create_medium::CreateMediumError;
-pub use create_medium::CreateMediumInput;
+pub use create_medium::{CreateMediumError, CreateMediumInput};
 
-use crate::config::Config;
-use crate::repository::Repository;
-use crate::store::Store;
+use crate::{config::Config, repository::Repository, store::Store};
 
 mod create_medium;
 pub mod inputs;
@@ -23,12 +20,9 @@ impl Service {
     pub async fn new(config: Arc<Config>) -> Result<Self, Whatever> {
         let repo = Repository::init(config.clone()).await?;
         let store = Store::new(config);
-        let meta = meta::Service::new().await
+        let meta = meta::Service::new()
+            .await
             .whatever_context("Could not init meta Service")?;
-        Ok(Self {
-            repo,
-            store,
-            meta,
-        })
+        Ok(Self { repo, store, meta })
     }
 }

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use axum::Router;
-use axum::routing::get;
+use axum::{routing::get, Router};
 
 mod medium;
 

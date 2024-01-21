@@ -15,8 +15,6 @@ pub struct Store {
 
 impl Store {
     pub fn new(config: Arc<Config>) -> Self {
-        Self {
-            config
-        }
+        Self { config }
     }
 }

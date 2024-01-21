@@ -1,13 +1,13 @@
 use chrono::{DateTime, Utc};
 use futures_util::TryStreamExt;
-use mongodb::bson::{doc, Document};
-use mongodb::options::FindOptions;
-use mongodb::results::InsertOneResult;
+use mongodb::{
+    bson::{doc, Document},
+    options::FindOptions,
+    results::InsertOneResult,
+};
 use snafu::{ResultExt, Snafu};
 
-use crate::entities::Medium;
-use crate::ObjectId;
-use crate::repository::Repository;
+use crate::{entities::Medium, repository::Repository, ObjectId};
 
 #[derive(Snafu, Debug)]
 pub enum SaveMediumError {
@@ -20,7 +20,10 @@ pub enum SaveMediumError {
 }
 
 impl Repository {
-    pub async fn create_medium(&self, new_medium: Medium) -> Result<InsertOneResult, SaveMediumError> {
+    pub async fn create_medium(
+        &self,
+        new_medium: Medium,
+    ) -> Result<InsertOneResult, SaveMediumError> {
         let new_doc = Medium {
             id: None,
             medium_type: new_medium.medium_type,
@@ -33,14 +36,24 @@ impl Repository {
             edits: new_medium.edits,
             sidecars: new_medium.sidecars,
         };
-        let medium = self.medium_col
+        let medium = self
+            .medium_col
             .insert_one(new_doc, None)
             .await
             .context(InsertSnafu)?;
         Ok(medium)
     }
 
-    pub async fn find_media(&self, page_size: i64, next_date: Option<DateTime<Utc>>, next_id: Option<ObjectId>, start_date: Option<DateTime<Utc>>, end_date: Option<DateTime<Utc>>, album_id: Option<ObjectId>, include_no_album: bool) -> Result<Vec<Medium>, SaveMediumError> {
+    pub async fn find_media(
+        &self,
+        page_size: i64,
+        next_date: Option<DateTime<Utc>>,
+        next_id: Option<ObjectId>,
+        start_date: Option<DateTime<Utc>>,
+        end_date: Option<DateTime<Utc>>,
+        album_id: Option<ObjectId>,
+        include_no_album: bool,
+    ) -> Result<Vec<Medium>, SaveMediumError> {
         let find_opts = FindOptions::builder()
             .limit(page_size)
             .sort(doc! {
@@ -93,14 +106,14 @@ impl Repository {
                 "$and": filters
             })
         };
-        let cursor = self.medium_col
+        let cursor = self
+            .medium_col
             .find(filter, find_opts)
             .await
             .context(FindSnafu)?;
 
-        let result: Vec<Medium> = cursor.try_collect()
-            .await
-            .context(CollectSnafu)?;
+        let result: Vec<Medium> =
+            cursor.try_collect().await.context(CollectSnafu)?;
 
         Ok(result)
     }

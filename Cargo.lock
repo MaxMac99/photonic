@@ -1236,7 +1236,9 @@ dependencies = [
  "log",
  "mime",
  "mime_guess",
+ "serde_json",
  "snafu",
+ "tracing",
 ]
 
 [[package]]
