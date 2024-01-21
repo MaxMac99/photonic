@@ -15,7 +15,7 @@ use tokio::{fs, fs::File, io::BufWriter, join};
 use tokio_util::io::StreamReader;
 use tracing::debug;
 
-use meta::MetaError;
+use meta::{MetaError, MetaInfo};
 
 use crate::{
     entities::{Album, Medium, MediumItem, MediumType},
@@ -125,7 +125,7 @@ impl Service {
     where
         P: AsRef<Path> + Debug,
     {
-        let (file_size, path_opts) =
+        let (file_size, meta_info, path_opts) =
             self.create_path_options(&input, &path).await?;
 
         let target_path = self.store.import_file(&path_opts, &path).await?;
@@ -152,6 +152,7 @@ impl Service {
             preview: None,
             edits: vec![],
             sidecars: vec![],
+            additional_data: meta_info.additional_data,
         };
 
         let id = self
@@ -173,7 +174,7 @@ impl Service {
         &self,
         input: &CreateMediumInput,
         path: P,
-    ) -> Result<(u64, PathOptions), CreateMediumError>
+    ) -> Result<(u64, MetaInfo, PathOptions), CreateMediumError>
     where
         P: AsRef<Path> + Debug,
     {
@@ -206,13 +207,13 @@ impl Service {
             album: name,
             album_year: year,
             date: date_taken,
-            camera_make: meta_info.camera_make,
-            camera_model: meta_info.camera_model,
+            camera_make: meta_info.camera_make.clone(),
+            camera_model: meta_info.camera_model.clone(),
             timezone,
             filename: input.filename.clone(),
             extension: input.extension.clone(),
         };
-        Ok((size, path_opts))
+        Ok((size, meta_info, path_opts))
     }
 
     async fn get_album(

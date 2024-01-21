@@ -6,7 +6,7 @@ use std::{
 use chrono::{Datelike, Timelike};
 use path_clean::PathClean;
 use snafu::{ResultExt, Snafu};
-use tokio::{fs, io, io::AsyncWriteExt};
+use tokio::{fs, io};
 
 use crate::store::{path::PathOptions, Store};
 
@@ -63,28 +63,6 @@ impl Store {
         })?;
 
         Ok(dest_path)
-    }
-
-    pub async fn save_file(
-        &self,
-        options: &PathOptions,
-        data: &[u8],
-    ) -> Result<PathBuf, ImportError> {
-        let path = self.to_path(options);
-        let destination = self.prepare_destination(&path).await?;
-
-        let mut file = fs::OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .append(true)
-            .open(&destination)
-            .await
-            .context(CreateFileSnafu { path: path.clone() })?;
-        file.write_all(data)
-            .await
-            .context(WriteFileSnafu { path: path.clone() })?;
-
-        Ok(path)
     }
 
     async fn prepare_destination(

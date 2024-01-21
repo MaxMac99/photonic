@@ -35,6 +35,7 @@ impl Repository {
             preview: new_medium.preview,
             edits: new_medium.edits,
             sidecars: new_medium.sidecars,
+            additional_data: new_medium.additional_data,
         };
         let medium = self
             .medium_col

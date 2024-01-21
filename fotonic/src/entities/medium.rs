@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use chrono::{DateTime, Utc};
 use mime::Mime;
@@ -6,7 +6,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum MediumType {
+pub(crate) enum MediumType {
     Photo,
     Video,
     LivePhoto,
@@ -17,7 +17,7 @@ pub enum MediumType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MediumItem {
+pub(crate) struct MediumItem {
     pub id: Option<ObjectId>,
     #[serde(rename = "type", with = "mime_serde_shim")]
     pub mime: Mime,
@@ -37,10 +37,10 @@ pub struct MediumItem {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Sidecar {}
+pub(crate) struct Sidecar {}
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Medium {
+pub(crate) struct Medium {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     #[serde(rename = "mediumType")]
@@ -57,4 +57,5 @@ pub struct Medium {
     pub preview: Option<MediumItem>,
     pub edits: Vec<MediumItem>,
     pub sidecars: Vec<Sidecar>,
+    pub additional_data: HashMap<String, String>,
 }

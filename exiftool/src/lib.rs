@@ -239,7 +239,7 @@ impl Exiftool {
             .unwrap()
             .as_object()
             .unwrap()
-            .iter()
+            .into_iter()
             .filter(|(key, _)| *key != "SourceFile");
         let items: HashMap<String, Metadata> = if with_groups {
             fields_iterator
@@ -247,7 +247,7 @@ impl Exiftool {
                     value
                         .as_object()
                         .unwrap()
-                        .iter()
+                        .into_iter()
                         .map(|(key, value)| (group.clone(), key, value))
                 })
                 .map(|(group, key, value)| {
