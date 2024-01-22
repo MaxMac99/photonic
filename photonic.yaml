@@ -116,6 +116,10 @@ paths:
             type: string
           in: query
           name: filename
+        - schema:
+            type: string
+          in: query
+          name: extension
         - $ref: "#/components/parameters/album_id"
         - schema:
             type: array
