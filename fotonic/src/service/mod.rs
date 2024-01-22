@@ -7,7 +7,6 @@ pub use create_medium::{CreateMediumError, CreateMediumInput};
 use crate::{config::Config, repository::Repository, store::Store};
 
 mod create_medium;
-pub mod inputs;
 
 #[derive(Debug)]
 pub struct Service {
