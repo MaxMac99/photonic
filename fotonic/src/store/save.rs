@@ -150,6 +150,7 @@ mod test {
                 base_path: PathBuf::new(),
                 pattern: String::from("/<album_year>/<album>/<year><month><day>/<camera_make>_<camera_model>/<filename>_<hour><minute><second>.<extension>"),
                 cache_path: PathBuf::new(),
+                tmp_path: PathBuf::new(),
             },
             mongo: Mongo {
                 url: "".to_string(),
@@ -185,6 +186,7 @@ mod test {
                 base_path: PathBuf::new(),
                 pattern: String::from("/<album_year>/<album>/<year><month><day>/<camera_make>_<camera_model>/<filename>_<hour><minute><second>.<extension>"),
                 cache_path: Default::default(),
+                tmp_path: Default::default(),
             },
             mongo: Mongo {
                 url: "".to_string(),
@@ -195,9 +197,9 @@ mod test {
         let store = Store {
             config: Arc::new(config),
         };
-        let opts = PathOptions::default()
-            .filename(String::from("DSC 123"))
-            .extension(String::from("jpg"));
+        let mut opts = PathOptions::default();
+        opts.filename = String::from("DSC 123");
+        opts.extension = String::from("jpg");
 
         assert_eq!(
             store.to_path(&opts),
