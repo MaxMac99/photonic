@@ -3,7 +3,7 @@ use mongodb::{
     error::Error,
 };
 
-use crate::{entities::Album, repository::Repository};
+use crate::{model::Album, repository::Repository};
 
 impl Repository {
     pub async fn get_album_by_id(

@@ -6,7 +6,7 @@ pub use config::Config;
 pub use service::Service;
 
 pub mod config;
-mod entities;
+pub mod model;
 mod repository;
 pub mod service;
 mod store;

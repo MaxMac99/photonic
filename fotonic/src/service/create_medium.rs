@@ -18,8 +18,8 @@ use tracing::debug;
 use meta::{MetaError, MetaInfo};
 
 use crate::{
-    entities::{Album, Medium, MediumItem, MediumType},
-    repository::SaveMediumError,
+    model::{Album, Medium, MediumItem, MediumType},
+    repository::MediumRepoError,
     service::Service,
     store::{ImportError, PathOptions},
 };
@@ -68,7 +68,7 @@ pub enum CreateMediumError {
     #[snafu(display("Could not save medium"), context(false))]
     SaveMedium {
         #[snafu(backtrace)]
-        source: SaveMediumError,
+        source: MediumRepoError,
     },
     #[snafu(display("Could not find the date when this medium was taken"))]
     NoDateTaken { backtrace: Backtrace },
@@ -136,7 +136,7 @@ impl Service {
             date_taken: path_opts.date,
             timezone: path_opts.timezone,
             originals: vec![MediumItem {
-                id: None,
+                id: Some(ObjectId::new()),
                 mime: input.mime,
                 filename: String::from(path_opts.filename),
                 path: target_path.clone(),

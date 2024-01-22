@@ -8,13 +8,25 @@ use axum::{
     Json,
 };
 use axum_extra::{headers::ContentType, TypedHeader};
+use chrono::{DateTime, FixedOffset};
 use futures::TryFutureExt;
+use serde::Deserialize;
 use tokio::fs;
 use tracing::log::info;
 
-use crate::{
-    api::medium::model::create_medium::CreateMediumInput, error::ResponseError,
-};
+use fotonic::ObjectId;
+
+use crate::error::ResponseError;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateMediumInput {
+    pub album_id: Option<ObjectId>,
+    pub filename: String,
+    pub extension: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    pub date_taken: Option<DateTime<FixedOffset>>,
+}
 
 pub async fn create_medium(
     State(service): State<Arc<fotonic::Service>>,

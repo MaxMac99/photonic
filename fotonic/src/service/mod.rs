@@ -3,10 +3,13 @@ use std::sync::Arc;
 use snafu::{ResultExt, Whatever};
 
 pub use create_medium::{CreateMediumError, CreateMediumInput};
+pub use find_all::FindAllMediaInput;
 
+pub use crate::repository::MediumRepoError;
 use crate::{config::Config, repository::Repository, store::Store};
 
 mod create_medium;
+mod find_all;
 
 #[derive(Debug)]
 pub struct Service {

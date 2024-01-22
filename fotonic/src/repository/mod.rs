@@ -7,11 +7,11 @@ use mongodb::{
 };
 use snafu::{ResultExt, Whatever};
 
-pub(crate) use medium::SaveMediumError;
+pub use medium::MediumRepoError;
 
 use crate::{
     config::Config,
-    entities::{Album, Medium},
+    model::{Album, Medium},
 };
 
 mod album;

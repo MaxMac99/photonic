@@ -7,10 +7,14 @@ use mongodb::{
 };
 use snafu::{ResultExt, Snafu};
 
-use crate::{entities::Medium, repository::Repository, ObjectId};
+use crate::{
+    model::{DateDirection, Medium},
+    repository::Repository,
+    ObjectId,
+};
 
 #[derive(Snafu, Debug)]
-pub enum SaveMediumError {
+pub enum MediumRepoError {
     #[snafu(display("Could not create medium"))]
     Insert { source: mongodb::error::Error },
     #[snafu(display("Could not find media"))]
@@ -23,7 +27,7 @@ impl Repository {
     pub async fn create_medium(
         &self,
         new_medium: Medium,
-    ) -> Result<InsertOneResult, SaveMediumError> {
+    ) -> Result<InsertOneResult, MediumRepoError> {
         let new_doc = Medium {
             id: None,
             medium_type: new_medium.medium_type,
@@ -48,22 +52,52 @@ impl Repository {
     pub async fn find_media(
         &self,
         page_size: i64,
-        next_date: Option<DateTime<Utc>>,
-        next_id: Option<ObjectId>,
+        last_date: Option<DateTime<Utc>>,
+        last_id: Option<ObjectId>,
         start_date: Option<DateTime<Utc>>,
         end_date: Option<DateTime<Utc>>,
         album_id: Option<ObjectId>,
         include_no_album: bool,
-    ) -> Result<Vec<Medium>, SaveMediumError> {
+        date_direction: DateDirection,
+    ) -> Result<Vec<Medium>, MediumRepoError> {
+        let direction_val = match date_direction {
+            DateDirection::NewestFirst => -1,
+            DateDirection::OldestFirst => 1,
+        };
+        let direction_key = match date_direction {
+            DateDirection::NewestFirst => "$lt",
+            DateDirection::OldestFirst => "$gt",
+        };
         let find_opts = FindOptions::builder()
             .limit(page_size)
             .sort(doc! {
-                "date_taken": -1,
+                "date_taken": direction_val,
                 "_id": -1,
             })
             .build();
 
         let mut filters: Vec<Document> = Vec::new();
+        if let Some(last_date) = last_date {
+            filters.push(doc! {
+                "date_taken": {
+                    direction_key: last_date,
+                }
+            });
+        }
+        if let Some(last_id) = last_id {
+            filters.push(doc! {
+                "_id": {
+                    "$lt": last_id,
+                }
+            });
+        }
+        if let Some(start_date) = start_date {
+            filters.push(doc! {
+                "date_taken": {
+                    "$gte": start_date,
+                }
+            });
+        }
         if let Some(start_date) = start_date {
             filters.push(doc! {
                 "date_taken": {

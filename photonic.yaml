@@ -7,7 +7,7 @@ info:
     name: Max Vissing
     email: max_vissing@yahoo.de
 servers:
-  - url: "http://localhost:3535"
+  - url: "http://localhost:8080/api/v1"
     description: Develop
   - url: "https://photonic.vissing.ddnss.de"
     description: Production
@@ -58,9 +58,11 @@ paths:
       parameters:
         - $ref: "#/components/parameters/start_date"
         - $ref: "#/components/parameters/end_date"
-        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/page_last_date"
+        - $ref: "#/components/parameters/page_last_id"
         - $ref: "#/components/parameters/per_page"
         - $ref: "#/components/parameters/album_id"
+        - $ref: "#/components/parameters/direction"
         - schema:
             type: boolean
             default: true
@@ -774,7 +776,6 @@ paths:
       security:
         - Authentik: [ ]
       parameters:
-        - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/per_page"
       tags:
         - Media
@@ -900,7 +901,6 @@ paths:
           $ref: "#/components/responses/InternalServerError"
       operationId: getAlbums
       parameters:
-        - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/per_page"
         - $ref: "#/components/parameters/start_date"
         - $ref: "#/components/parameters/end_date"
@@ -996,7 +996,6 @@ paths:
           $ref: "#/components/responses/InternalServerError"
       operationId: getAlbum
       parameters:
-        - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/per_page"
         - $ref: "#/components/parameters/start_date"
         - $ref: "#/components/parameters/end_date"
@@ -1306,12 +1305,19 @@ components:
         type: string
         format: date-time
       description: Show media before date
-    page:
-      name: page
+    page_last_date:
+      name: page_last_date
       in: query
-      required: false
       schema:
-        type: integer
+        type: string
+        format: date-time
+      description: Used for pagination
+    page_last_id:
+      name: page_last_id
+      in: query
+      schema:
+        type: string
+      description: Used for pagination
     per_page:
       name: per_page
       in: query
@@ -1324,6 +1330,17 @@ components:
       required: false
       schema:
         type: string
+    direction:
+      name: direction
+      in: query
+      required: false
+      schema:
+        type: string
+        description: ASC = ascending = oldest first, DESC = descending = newest first
+        default: DESC
+        enum:
+          - ASC
+          - DESC
   responses:
     InternalServerError:
       description: Internal Server Error

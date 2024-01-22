@@ -6,7 +6,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) enum MediumType {
+pub enum MediumType {
     Photo,
     Video,
     LivePhoto,
@@ -17,7 +17,7 @@ pub(crate) enum MediumType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct MediumItem {
+pub struct MediumItem {
     pub id: Option<ObjectId>,
     #[serde(rename = "type", with = "mime_serde_shim")]
     pub mime: Mime,
@@ -37,10 +37,10 @@ pub(crate) struct MediumItem {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct Sidecar {}
+pub struct Sidecar {}
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct Medium {
+pub struct Medium {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     #[serde(rename = "mediumType")]

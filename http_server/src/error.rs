@@ -8,7 +8,7 @@ use axum::{
 use snafu::{AsErrorSource, ErrorCompat, Snafu};
 use tracing::log::error;
 
-use fotonic::service::CreateMediumError;
+use fotonic::service::{CreateMediumError, MediumRepoError};
 
 pub(crate) trait BacktraceError:
     ErrorCompat + Error + AsErrorSource + Debug
@@ -47,6 +47,17 @@ impl From<CreateMediumError> for ResponseError {
             CreateMediumError::WrongAlbum { .. } => ResponseError::NotFound {
                 message: err.to_string(),
             },
+            _ => ResponseError::Internal {
+                message: "".to_string(),
+                source: Box::new(err),
+            },
+        }
+    }
+}
+
+impl From<MediumRepoError> for ResponseError {
+    fn from(err: MediumRepoError) -> Self {
+        match err {
             _ => ResponseError::Internal {
                 message: "".to_string(),
                 source: Box::new(err),
