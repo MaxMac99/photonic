@@ -66,7 +66,7 @@ impl Service {
             .into_iter()
             .filter(|edit| edit.id == item_id)
             .next()
-            .context(PreviewNotFoundSnafu)?;
+            .context(ItemNotFoundSnafu { item_id })?;
         edit.path = self.store.get_full_path(&edit);
 
         Ok(edit)
@@ -82,7 +82,7 @@ impl Service {
             .await?
             .context(MediumNotFoundSnafu { medium_id })?;
 
-        let mut edit = medium.preview.context(ItemNotFoundSnafu { item_id })?;
+        let mut edit = medium.preview.context(PreviewNotFoundSnafu)?;
         edit.path = self.store.get_full_path(&edit);
 
         Ok(edit)
