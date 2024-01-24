@@ -18,9 +18,9 @@ pub enum RawMediumError {
         medium_id: ObjectId,
         backtrace: Backtrace,
     },
-    #[snafu(display("Could not find original with id {originals_id}"))]
-    OriginalNotFound {
-        originals_id: ObjectId,
+    #[snafu(display("Could not find original with id {item_id}"))]
+    ItemNotFound {
+        item_id: ObjectId,
         backtrace: Backtrace,
     },
 }
@@ -29,7 +29,7 @@ impl Service {
     pub async fn get_medium_original(
         &self,
         medium_id: ObjectId,
-        originals_id: ObjectId,
+        item_id: ObjectId,
     ) -> Result<MediumItem, RawMediumError> {
         let medium = self
             .repo
@@ -40,11 +40,33 @@ impl Service {
         let mut original = medium
             .originals
             .into_iter()
-            .filter(|original| original.id == originals_id)
+            .filter(|original| original.id == item_id)
             .next()
-            .context(OriginalNotFoundSnafu { originals_id })?;
+            .context(ItemNotFoundSnafu { item_id })?;
         original.path = self.store.get_full_path(&original);
 
         Ok(original)
+    }
+
+    pub async fn get_medium_edit(
+        &self,
+        medium_id: ObjectId,
+        item_id: ObjectId,
+    ) -> Result<MediumItem, RawMediumError> {
+        let medium = self
+            .repo
+            .get_medium(medium_id)
+            .await?
+            .context(MediumNotFoundSnafu { medium_id })?;
+
+        let mut edit = medium
+            .edits
+            .into_iter()
+            .filter(|edit| edit.id == item_id)
+            .next()
+            .context(ItemNotFoundSnafu { item_id })?;
+        edit.path = self.store.get_full_path(&edit);
+
+        Ok(edit)
     }
 }

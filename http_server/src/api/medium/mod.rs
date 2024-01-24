@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub use create_medium::create_medium;
 pub use find_all::find_all;
-pub use raw::get_medium_original_raw;
+pub use raw::{get_medium_edit_raw, get_medium_original_raw};
 
 mod create_medium;
 mod find_all;
