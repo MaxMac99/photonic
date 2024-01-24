@@ -15,4 +15,8 @@ pub fn app() -> Router<Arc<fotonic::Service>> {
             "/media/:medium_id/edits/:item_id/raw",
             get(medium::get_medium_edit_raw),
         )
+        .route(
+            "/media/:medium_id/preview/raw",
+            get(medium::get_medium_preview_raw),
+        )
 }

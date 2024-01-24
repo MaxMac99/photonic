@@ -32,6 +32,15 @@ pub async fn get_medium_edit_raw(
     stream_medium_item(edit).await
 }
 
+pub async fn get_medium_preview_raw(
+    State(service): State<Arc<fotonic::Service>>,
+    Path(medium_id): Path<ObjectId>,
+) -> Result<(HeaderMap, Body)> {
+    let edit = service.get_medium_preview(medium_id).await?;
+
+    stream_medium_item(edit).await
+}
+
 async fn stream_medium_item(
     medium_item: MediumItem,
 ) -> Result<(HeaderMap, Body)> {

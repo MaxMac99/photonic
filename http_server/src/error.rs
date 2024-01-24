@@ -77,6 +77,9 @@ impl From<RawMediumError> for ResponseError {
             RawMediumError::ItemNotFound { .. } => ResponseError::NotFound {
                 message: err.to_string(),
             },
+            RawMediumError::PreviewNotFound { .. } => ResponseError::NotFound {
+                message: err.to_string(),
+            },
             _ => ResponseError::Internal {
                 message: "".to_string(),
                 source: Box::new(err),

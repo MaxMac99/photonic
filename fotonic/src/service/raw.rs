@@ -18,11 +18,13 @@ pub enum RawMediumError {
         medium_id: ObjectId,
         backtrace: Backtrace,
     },
-    #[snafu(display("Could not find original with id {item_id}"))]
+    #[snafu(display("Could not find item in medium with id {item_id}"))]
     ItemNotFound {
         item_id: ObjectId,
         backtrace: Backtrace,
     },
+    #[snafu(display("Preview in medium does not exist"))]
+    PreviewNotFound { backtrace: Backtrace },
 }
 
 impl Service {
@@ -64,7 +66,23 @@ impl Service {
             .into_iter()
             .filter(|edit| edit.id == item_id)
             .next()
-            .context(ItemNotFoundSnafu { item_id })?;
+            .context(PreviewNotFoundSnafu)?;
+        edit.path = self.store.get_full_path(&edit);
+
+        Ok(edit)
+    }
+
+    pub async fn get_medium_preview(
+        &self,
+        medium_id: ObjectId,
+    ) -> Result<MediumItem, RawMediumError> {
+        let medium = self
+            .repo
+            .get_medium(medium_id)
+            .await?
+            .context(MediumNotFoundSnafu { medium_id })?;
+
+        let mut edit = medium.preview.context(ItemNotFoundSnafu { item_id })?;
         edit.path = self.store.get_full_path(&edit);
 
         Ok(edit)
