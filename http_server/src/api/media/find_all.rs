@@ -8,7 +8,7 @@ use axum::{
 
 use fotonic::service::FindAllMediaInput;
 
-use crate::{api::medium::model::MediumOverview, error::Result};
+use crate::{api::media::model::MediumOverview, error::Result};
 
 pub async fn find_all(
     State(service): State<Arc<fotonic::Service>>,
