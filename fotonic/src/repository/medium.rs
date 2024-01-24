@@ -152,4 +152,19 @@ impl Repository {
 
         Ok(result)
     }
+
+    pub async fn get_medium(
+        &self,
+        id: ObjectId,
+    ) -> Result<Option<Medium>, MediumRepoError> {
+        self.medium_col
+            .find_one(
+                doc! {
+                    "_id": id
+                },
+                None,
+            )
+            .await
+            .context(FindSnafu)
+    }
 }

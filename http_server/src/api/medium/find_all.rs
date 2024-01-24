@@ -3,13 +3,12 @@ use std::sync::Arc;
 use axum::{
     extract::{Query, State},
     http::StatusCode,
-    response::Result,
     Json,
 };
 
 use fotonic::service::FindAllMediaInput;
 
-use crate::{api::medium::model::MediumOverview, error::ResponseError};
+use crate::{api::medium::model::MediumOverview, error::Result};
 
 pub async fn find_all(
     State(service): State<Arc<fotonic::Service>>,
@@ -17,8 +16,7 @@ pub async fn find_all(
 ) -> Result<(StatusCode, Json<Vec<MediumOverview>>)> {
     let media: Vec<MediumOverview> = service
         .find_all_media(&opts)
-        .await
-        .map_err(ResponseError::from)?
+        .await?
         .into_iter()
         .map(MediumOverview::from)
         .collect();

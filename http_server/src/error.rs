@@ -5,10 +5,12 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use snafu::{AsErrorSource, ErrorCompat, Snafu};
+use snafu::{AsErrorSource, ErrorCompat, Snafu, Whatever};
 use tracing::log::error;
 
-use fotonic::service::{CreateMediumError, MediumRepoError};
+use fotonic::service::{CreateMediumError, MediumRepoError, RawMediumError};
+
+pub type Result<T, E = ResponseError> = std::result::Result<T, E>;
 
 pub(crate) trait BacktraceError:
     ErrorCompat + Error + AsErrorSource + Debug
@@ -66,6 +68,34 @@ impl From<MediumRepoError> for ResponseError {
     }
 }
 
+impl From<RawMediumError> for ResponseError {
+    fn from(err: RawMediumError) -> Self {
+        match err {
+            RawMediumError::MediumNotFound { .. } => ResponseError::NotFound {
+                message: err.to_string(),
+            },
+            RawMediumError::OriginalNotFound { .. } => {
+                ResponseError::NotFound {
+                    message: err.to_string(),
+                }
+            }
+            _ => ResponseError::Internal {
+                message: "".to_string(),
+                source: Box::new(err),
+            },
+        }
+    }
+}
+
+impl From<Whatever> for ResponseError {
+    fn from(err: Whatever) -> Self {
+        ResponseError::Internal {
+            message: "".to_string(),
+            source: Box::new(err),
+        }
+    }
+}
+
 impl IntoResponse for ResponseError {
     fn into_response(self) -> Response {
         match self {
@@ -103,13 +133,9 @@ fn create_response(
 ) -> Response {
     if let Some(source) = source {
         if let Some(backtrace) = source.backtrace() {
-            error!(
-                "Internal server error: {}\n{}",
-                source.to_string(),
-                backtrace
-            );
+            error!("{}: {}\n{}", code, source.to_string(), backtrace);
         } else {
-            error!("Internal server error: {}", source.to_string());
+            error!("{}: {}", code, source.to_string());
         }
     }
     (code, Json(message)).into_response()

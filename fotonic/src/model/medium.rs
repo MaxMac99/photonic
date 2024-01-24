@@ -18,7 +18,7 @@ pub enum MediumType {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MediumItem {
-    pub id: Option<ObjectId>,
+    pub id: ObjectId,
     #[serde(rename = "type", with = "mime_serde_shim")]
     pub mime: Mime,
     pub filename: String,

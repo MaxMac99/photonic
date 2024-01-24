@@ -136,7 +136,7 @@ impl Service {
             date_taken: path_opts.date,
             timezone: path_opts.timezone,
             originals: vec![MediumItem {
-                id: Some(ObjectId::new()),
+                id: ObjectId::new(),
                 mime: input.mime,
                 filename: String::from(path_opts.filename),
                 path: target_path.clone(),

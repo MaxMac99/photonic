@@ -67,7 +67,7 @@ impl From<Medium> for MediumOverview {
 impl From<MediumItem> for MediumItemOverview {
     fn from(value: MediumItem) -> Self {
         Self {
-            id: value.id.unwrap(),
+            id: value.id,
             mime: value.mime,
             filename: value.filename,
             width: value.width,
