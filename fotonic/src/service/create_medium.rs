@@ -18,7 +18,7 @@ use tracing::debug;
 use meta::{MetaError, MetaInfo};
 
 use crate::{
-    model::{Album, Medium, MediumItem, MediumType},
+    model::{Album, FileItem, Medium, MediumItem, MediumType, StoreLocation},
     repository::MediumRepoError,
     service::Service,
     store::{ImportError, PathOptions},
@@ -136,15 +136,17 @@ impl Service {
             date_taken: path_opts.date,
             timezone: path_opts.timezone,
             originals: vec![MediumItem {
-                id: ObjectId::new(),
-                mime: input.mime,
-                filename: String::from(path_opts.filename),
-                path: target_path.clone(),
+                file: FileItem {
+                    id: ObjectId::new(),
+                    mime: input.mime,
+                    filename: String::from(path_opts.filename),
+                    path: target_path.clone(),
+                    filesize: file_size,
+                    last_saved: Utc::now(),
+                    location: StoreLocation::Originals,
+                },
                 width: 0,
                 height: 0,
-                filesize: file_size,
-                last_saved: Utc::now(),
-                original_store: true,
                 priority: 10,
             }],
             album: None,

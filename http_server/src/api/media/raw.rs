@@ -10,7 +10,7 @@ use snafu::{ResultExt, Whatever};
 use tokio::fs;
 use tokio_util::io::ReaderStream;
 
-use fotonic::model::MediumItem;
+use fotonic::{model::FileItem, service::MediumFileSubItem};
 
 use crate::error::Result;
 
@@ -18,43 +18,58 @@ pub async fn get_medium_original_raw(
     State(service): State<Arc<fotonic::Service>>,
     Path((medium_id, item_id)): Path<(ObjectId, ObjectId)>,
 ) -> Result<(HeaderMap, Body)> {
-    let original = service.get_medium_original(medium_id, item_id).await?;
+    let original = service
+        .get_medium_file(medium_id, MediumFileSubItem::Original(item_id))
+        .await?;
 
-    stream_medium_item(original).await
+    stream_file_item(original).await
 }
 
 pub async fn get_medium_edit_raw(
     State(service): State<Arc<fotonic::Service>>,
     Path((medium_id, item_id)): Path<(ObjectId, ObjectId)>,
 ) -> Result<(HeaderMap, Body)> {
-    let edit = service.get_medium_edit(medium_id, item_id).await?;
+    let edit = service
+        .get_medium_file(medium_id, MediumFileSubItem::Edit(item_id))
+        .await?;
 
-    stream_medium_item(edit).await
+    stream_file_item(edit).await
 }
 
 pub async fn get_medium_preview_raw(
     State(service): State<Arc<fotonic::Service>>,
     Path(medium_id): Path<ObjectId>,
 ) -> Result<(HeaderMap, Body)> {
-    let edit = service.get_medium_preview(medium_id).await?;
+    let edit = service
+        .get_medium_file(medium_id, MediumFileSubItem::Preview)
+        .await?;
 
-    stream_medium_item(edit).await
+    stream_file_item(edit).await
 }
 
-async fn stream_medium_item(
-    medium_item: MediumItem,
+pub async fn get_medium_sidecar_raw(
+    State(service): State<Arc<fotonic::Service>>,
+    Path((medium_id, item_id)): Path<(ObjectId, ObjectId)>,
 ) -> Result<(HeaderMap, Body)> {
+    let edit = service
+        .get_medium_file(medium_id, MediumFileSubItem::Sidecar(item_id))
+        .await?;
+
+    stream_file_item(edit).await
+}
+
+async fn stream_file_item(file_item: FileItem) -> Result<(HeaderMap, Body)> {
     let mut headers = HeaderMap::new();
     headers.append(
         header::CONTENT_TYPE,
-        HeaderValue::from_str(medium_item.mime.as_ref())
+        HeaderValue::from_str(file_item.mime.as_ref())
             .whatever_context::<&str, Whatever>("Could not parse header")?,
     );
 
-    let file = fs::File::open(&medium_item.path)
+    let file = fs::File::open(&file_item.path)
         .await
         .with_whatever_context::<_, String, Whatever>(|err| {
-            format!("Could not open file {:?}: {:?}", medium_item.path, err)
+            format!("Could not open file {:?}: {:?}", file_item.path, err)
         })?;
     let stream = ReaderStream::new(file);
     Ok((headers, Body::from_stream(stream)))

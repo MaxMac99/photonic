@@ -4,7 +4,7 @@ use snafu::{ResultExt, Whatever};
 
 pub use create_medium::{CreateMediumError, CreateMediumInput};
 pub use find_all::FindAllMediaInput;
-pub use raw::RawMediumError;
+pub use raw::{MediumFileSubItem, RawMediumError};
 
 pub use crate::repository::MediumRepoError;
 use crate::{config::Config, repository::Repository, store::Store};

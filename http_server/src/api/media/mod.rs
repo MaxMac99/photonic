@@ -4,6 +4,7 @@ pub use create_medium::create_medium;
 pub use find_all::find_all;
 pub use raw::{
     get_medium_edit_raw, get_medium_original_raw, get_medium_preview_raw,
+    get_medium_sidecar_raw,
 };
 
 mod create_medium;

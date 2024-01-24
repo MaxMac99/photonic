@@ -17,27 +17,35 @@ pub enum MediumType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MediumItem {
+pub enum StoreLocation {
+    Originals,
+    Cache,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FileItem {
     pub id: ObjectId,
     #[serde(rename = "type", with = "mime_serde_shim")]
     pub mime: Mime,
     pub filename: String,
     pub path: PathBuf,
-    pub width: u32,
-    pub height: u32,
     pub filesize: u64,
     #[serde(
         rename = "lastSaved",
         with = "mongodb::bson::serde_helpers::chrono_datetime_as_bson_datetime"
     )]
     pub last_saved: DateTime<Utc>,
-    #[serde(rename = "originalStore")]
-    pub original_store: bool,
-    pub priority: u32,
+    #[serde(rename = "location")]
+    pub location: StoreLocation,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Sidecar {}
+pub struct MediumItem {
+    pub file: FileItem,
+    pub width: u32,
+    pub height: u32,
+    pub priority: u32,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Medium {
@@ -56,6 +64,6 @@ pub struct Medium {
     pub tags: Vec<String>,
     pub preview: Option<MediumItem>,
     pub edits: Vec<MediumItem>,
-    pub sidecars: Vec<Sidecar>,
+    pub sidecars: Vec<FileItem>,
     pub additional_data: HashMap<String, String>,
 }

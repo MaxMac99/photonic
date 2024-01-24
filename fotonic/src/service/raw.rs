@@ -2,9 +2,7 @@ use std::backtrace::Backtrace;
 
 use snafu::{OptionExt, Snafu};
 
-use crate::{
-    model::MediumItem, repository::MediumRepoError, ObjectId, Service,
-};
+use crate::{model::FileItem, repository::MediumRepoError, ObjectId, Service};
 
 #[derive(Debug, Snafu)]
 pub enum RawMediumError {
@@ -18,73 +16,58 @@ pub enum RawMediumError {
         medium_id: ObjectId,
         backtrace: Backtrace,
     },
-    #[snafu(display("Could not find item in medium with id {item_id}"))]
+    #[snafu(display("Could not find {item:#?} in medium"))]
     ItemNotFound {
-        item_id: ObjectId,
+        item: MediumFileSubItem,
         backtrace: Backtrace,
     },
-    #[snafu(display("Preview in medium does not exist"))]
-    PreviewNotFound { backtrace: Backtrace },
+}
+
+#[derive(Debug)]
+pub enum MediumFileSubItem {
+    Original(ObjectId),
+    Edit(ObjectId),
+    Preview,
+    Sidecar(ObjectId),
 }
 
 impl Service {
-    pub async fn get_medium_original(
+    pub async fn get_medium_file(
         &self,
         medium_id: ObjectId,
-        item_id: ObjectId,
-    ) -> Result<MediumItem, RawMediumError> {
+        medium_file_sub_type: MediumFileSubItem,
+    ) -> Result<FileItem, RawMediumError> {
         let medium = self
             .repo
             .get_medium(medium_id)
             .await?
             .context(MediumNotFoundSnafu { medium_id })?;
 
-        let mut original = medium
-            .originals
-            .into_iter()
-            .filter(|original| original.id == item_id)
-            .next()
-            .context(ItemNotFoundSnafu { item_id })?;
-        original.path = self.store.get_full_path(&original);
+        let mut file_item = match medium_file_sub_type {
+            MediumFileSubItem::Original(item_id) => medium
+                .originals
+                .into_iter()
+                .filter(|item| item.file.id == item_id)
+                .next()
+                .map(|item| item.file),
+            MediumFileSubItem::Edit(item_id) => medium
+                .edits
+                .into_iter()
+                .filter(|item| item.file.id == item_id)
+                .next()
+                .map(|item| item.file),
+            MediumFileSubItem::Preview => medium.preview.map(|item| item.file),
+            MediumFileSubItem::Sidecar(item_id) => medium
+                .sidecars
+                .into_iter()
+                .filter(|item| item.id == item_id)
+                .next(),
+        }
+        .context(ItemNotFoundSnafu {
+            item: medium_file_sub_type,
+        })?;
+        file_item.path = self.store.get_full_path(&file_item);
 
-        Ok(original)
-    }
-
-    pub async fn get_medium_edit(
-        &self,
-        medium_id: ObjectId,
-        item_id: ObjectId,
-    ) -> Result<MediumItem, RawMediumError> {
-        let medium = self
-            .repo
-            .get_medium(medium_id)
-            .await?
-            .context(MediumNotFoundSnafu { medium_id })?;
-
-        let mut edit = medium
-            .edits
-            .into_iter()
-            .filter(|edit| edit.id == item_id)
-            .next()
-            .context(ItemNotFoundSnafu { item_id })?;
-        edit.path = self.store.get_full_path(&edit);
-
-        Ok(edit)
-    }
-
-    pub async fn get_medium_preview(
-        &self,
-        medium_id: ObjectId,
-    ) -> Result<MediumItem, RawMediumError> {
-        let medium = self
-            .repo
-            .get_medium(medium_id)
-            .await?
-            .context(MediumNotFoundSnafu { medium_id })?;
-
-        let mut edit = medium.preview.context(PreviewNotFoundSnafu)?;
-        edit.path = self.store.get_full_path(&edit);
-
-        Ok(edit)
+        Ok(file_item)
     }
 }

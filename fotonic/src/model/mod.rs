@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 pub use album::Album;
-pub use medium::{Medium, MediumItem, MediumType};
+pub use medium::{FileItem, Medium, MediumItem, MediumType, StoreLocation};
 
 mod album;
 mod medium;

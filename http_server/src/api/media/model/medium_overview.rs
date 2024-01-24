@@ -67,12 +67,12 @@ impl From<Medium> for MediumOverview {
 impl From<MediumItem> for MediumItemOverview {
     fn from(value: MediumItem) -> Self {
         Self {
-            id: value.id,
-            mime: value.mime,
-            filename: value.filename,
+            id: value.file.id,
+            mime: value.file.mime,
+            filename: value.file.filename,
             width: value.width,
             height: value.height,
-            filesize: value.filesize,
+            filesize: value.file.filesize,
             priority: value.priority,
         }
     }
