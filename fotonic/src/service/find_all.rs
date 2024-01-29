@@ -2,8 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use crate::{
+    error::Result,
     model::{DateDirection, Medium},
-    repository::MediumRepoError,
     service::Service,
     ObjectId,
 };
@@ -24,7 +24,7 @@ impl Service {
     pub async fn find_all_media(
         &self,
         opts: &FindAllMediaInput,
-    ) -> Result<Vec<Medium>, MediumRepoError> {
+    ) -> Result<Vec<Medium>> {
         self.repo
             .find_media(
                 opts.per_page.unwrap_or(100) as i64,

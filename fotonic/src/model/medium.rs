@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use mime::Mime;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MediumType {
@@ -22,6 +23,15 @@ pub enum StoreLocation {
     Cache,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum MediumItemType {
+    Original(ObjectId),
+    Edit(ObjectId),
+    Preview,
+    Sidecar(ObjectId),
+}
+
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileItem {
     pub id: ObjectId,
@@ -30,10 +40,8 @@ pub struct FileItem {
     pub filename: String,
     pub path: PathBuf,
     pub filesize: u64,
-    #[serde(
-        rename = "lastSaved",
-        with = "mongodb::bson::serde_helpers::chrono_datetime_as_bson_datetime"
-    )]
+    #[serde_as(as = "bson::DateTime")]
+    #[serde(rename = "lastSaved")]
     pub last_saved: DateTime<Utc>,
     #[serde(rename = "location")]
     pub location: StoreLocation,
@@ -42,21 +50,20 @@ pub struct FileItem {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MediumItem {
     pub file: FileItem,
-    pub width: u32,
-    pub height: u32,
+    pub width: u64,
+    pub height: u64,
     pub priority: u32,
 }
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Medium {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     #[serde(rename = "mediumType")]
     pub medium_type: MediumType,
-    #[serde(
-        rename = "dateTaken",
-        with = "mongodb::bson::serde_helpers::chrono_datetime_as_bson_datetime"
-    )]
+    #[serde_as(as = "bson::DateTime")]
+    #[serde(rename = "dateTaken")]
     pub date_taken: DateTime<Utc>,
     pub timezone: i32,
     pub originals: Vec<MediumItem>,

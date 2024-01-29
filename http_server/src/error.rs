@@ -8,8 +8,6 @@ use axum::{
 use snafu::{AsErrorSource, ErrorCompat, Snafu, Whatever};
 use tracing::log::error;
 
-use fotonic::service::{CreateMediumError, MediumRepoError, RawMediumError};
-
 pub type Result<T, E = ResponseError> = std::result::Result<T, E>;
 
 pub(crate) trait BacktraceError:
@@ -38,49 +36,51 @@ pub(crate) enum ResponseError {
     },
 }
 
-impl From<CreateMediumError> for ResponseError {
-    fn from(err: CreateMediumError) -> Self {
+impl From<fotonic::error::Error> for ResponseError {
+    fn from(err: fotonic::error::Error) -> Self {
         match err {
-            CreateMediumError::NoDateTaken { .. } => {
+            fotonic::error::Error::MongoDb { .. } => ResponseError::Internal {
+                message: "".to_string(),
+                source: Box::new(err),
+            },
+            fotonic::error::Error::Io { .. } => ResponseError::Internal {
+                message: "".to_string(),
+                source: Box::new(err),
+            },
+            fotonic::error::Error::Metadata { .. } => ResponseError::Internal {
+                message: "".to_string(),
+                source: Box::new(err),
+            },
+            fotonic::error::Error::FindMediumById { .. } => {
+                ResponseError::NotFound {
+                    message: err.to_string(),
+                }
+            }
+            fotonic::error::Error::FindMediumItemById { .. } => {
+                ResponseError::NotFound {
+                    message: err.to_string(),
+                }
+            }
+            fotonic::error::Error::FindAlbumById { .. } => {
+                ResponseError::NotFound {
+                    message: err.to_string(),
+                }
+            }
+            fotonic::error::Error::OutsideBaseStorage { .. } => {
                 ResponseError::BadRequest {
                     message: err.to_string(),
                 }
             }
-            CreateMediumError::WrongAlbum { .. } => ResponseError::NotFound {
-                message: err.to_string(),
-            },
-            _ => ResponseError::Internal {
-                message: "".to_string(),
-                source: Box::new(err),
-            },
-        }
-    }
-}
-
-impl From<MediumRepoError> for ResponseError {
-    fn from(err: MediumRepoError) -> Self {
-        match err {
-            _ => ResponseError::Internal {
-                message: "".to_string(),
-                source: Box::new(err),
-            },
-        }
-    }
-}
-
-impl From<RawMediumError> for ResponseError {
-    fn from(err: RawMediumError) -> Self {
-        match err {
-            RawMediumError::MediumNotFound { .. } => ResponseError::NotFound {
-                message: err.to_string(),
-            },
-            RawMediumError::ItemNotFound { .. } => ResponseError::NotFound {
-                message: err.to_string(),
-            },
-            _ => ResponseError::Internal {
-                message: "".to_string(),
-                source: Box::new(err),
-            },
+            fotonic::error::Error::NoFileExtension { .. } => {
+                ResponseError::BadRequest {
+                    message: err.to_string(),
+                }
+            }
+            fotonic::error::Error::NoDateTaken { .. } => {
+                ResponseError::BadRequest {
+                    message: err.to_string(),
+                }
+            }
         }
     }
 }

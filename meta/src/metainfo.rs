@@ -13,6 +13,8 @@ pub struct MetaInfo {
     pub camera_make: Option<String>,
     pub camera_model: Option<String>,
     pub mimetype: Mime,
+    pub width: u64,
+    pub height: u64,
     pub additional_data: HashMap<String, String>,
 }
 
@@ -45,6 +47,8 @@ impl MetaInfo {
             camera_make: make,
             camera_model: model,
             mimetype,
+            width: 0,
+            height: 0,
             additional_data: HashMap::new(),
         })
     }

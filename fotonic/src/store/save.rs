@@ -1,74 +1,32 @@
-use std::{
-    backtrace::Backtrace,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use chrono::{Datelike, Timelike};
 use path_clean::PathClean;
-use snafu::{ResultExt, Snafu};
-use tokio::{fs, io};
+use tokio::fs;
 
-use crate::store::{path::PathOptions, Store};
-
-#[derive(Snafu, Debug)]
-pub enum ImportError {
-    #[snafu(display("The given file is outside the base storage"))]
-    OutsideBaseStorage { backtrace: Backtrace },
-    #[snafu(display("Could not find a file extension"))]
-    NoFileExtension { backtrace: Backtrace },
-    #[snafu(display(
-        "Could not move file from {source_path:?} to {destination_path:?}"
-    ))]
-    Move {
-        source_path: PathBuf,
-        destination_path: PathBuf,
-        source: io::Error,
-        backtrace: Backtrace,
-    },
-    #[snafu(display("Could not create file at {path:?}"))]
-    CreateFile {
-        path: PathBuf,
-        source: io::Error,
-        backtrace: Backtrace,
-    },
-    #[snafu(display("Could not write to file at {path:?}"))]
-    WriteFile {
-        path: PathBuf,
-        source: io::Error,
-        backtrace: Backtrace,
-    },
-    #[snafu(display("Could not create path at {path:?}"))]
-    CreatePath {
-        path: PathBuf,
-        source: io::Error,
-        backtrace: Backtrace,
-    },
-}
+use crate::{
+    error::{NoFileExtensionSnafu, OutsideBaseStorageSnafu, Result},
+    store::{path::PathOptions, Store},
+};
 
 impl Store {
     pub async fn import_file<P>(
         &self,
         options: &PathOptions,
         path: P,
-    ) -> Result<PathBuf, ImportError>
+    ) -> Result<PathBuf>
     where
         P: AsRef<Path>,
     {
         let dest_path = self.to_path(options);
         let destination = self.prepare_destination(&dest_path).await?;
 
-        fs::rename(&path, &destination).await.context(MoveSnafu {
-            source_path: path.as_ref().to_path_buf(),
-            destination_path: destination,
-        })?;
+        fs::rename(&path, &destination).await?;
 
         Ok(dest_path)
     }
 
-    async fn prepare_destination(
-        &self,
-        path: &PathBuf,
-    ) -> Result<PathBuf, ImportError> {
+    async fn prepare_destination(&self, path: &PathBuf) -> Result<PathBuf> {
         let destination = self.config.storage.base_path.join(&path).clean();
         if !destination.starts_with(&self.config.storage.base_path) {
             return OutsideBaseStorageSnafu.fail();
@@ -76,9 +34,7 @@ impl Store {
         if destination.extension().is_none() {
             return NoFileExtensionSnafu.fail();
         }
-        fs::create_dir_all(&destination.parent().unwrap())
-            .await
-            .context(CreatePathSnafu { path: path.clone() })?;
+        fs::create_dir_all(&destination.parent().unwrap()).await?;
         Ok(destination)
     }
 

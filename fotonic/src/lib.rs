@@ -6,6 +6,7 @@ pub use config::Config;
 pub use service::Service;
 
 pub mod config;
+pub mod error;
 pub mod model;
 mod repository;
 pub mod service;

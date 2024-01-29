@@ -1,5 +1,4 @@
 use std::{
-    backtrace::Backtrace,
     fmt::Debug,
     path::{Path, PathBuf},
 };
@@ -10,18 +9,18 @@ use futures::TryFutureExt;
 use futures_util::{io, Stream, TryStreamExt};
 use mime::Mime;
 use mongodb::bson::oid::ObjectId;
-use snafu::{OptionExt, ResultExt, Snafu};
+use snafu::OptionExt;
 use tokio::{fs, fs::File, io::BufWriter, join};
 use tokio_util::io::StreamReader;
 use tracing::debug;
 
-use meta::{MetaError, MetaInfo};
+use meta::MetaInfo;
 
 use crate::{
+    error::{NoDateTakenSnafu, Result},
     model::{Album, FileItem, Medium, MediumItem, MediumType, StoreLocation},
-    repository::MediumRepoError,
     service::Service,
-    store::{ImportError, PathOptions},
+    store::PathOptions,
 };
 
 #[derive(Debug, Clone)]
@@ -34,64 +33,14 @@ pub struct CreateMediumInput {
     pub mime: Mime,
 }
 
-#[derive(Snafu, Debug)]
-pub enum CreateMediumError {
-    #[snafu(display(
-        "Could not create file for stream at {path:?}: {source}"
-    ))]
-    StreamCreateFile {
-        path: PathBuf,
-        source: io::Error,
-        backtrace: Backtrace,
-    },
-    #[snafu(display("Could not stream to file: {source}"))]
-    StreamWriteFile {
-        source: io::Error,
-        backtrace: Backtrace,
-    },
-    #[snafu(display("Could not get metadata for file at {path:?}: {source}"))]
-    FileMetadata {
-        path: PathBuf,
-        source: io::Error,
-        backtrace: Backtrace,
-    },
-    #[snafu(display("Could not get meta information"), context(false))]
-    MetaError {
-        #[snafu(backtrace)]
-        source: MetaError,
-    },
-    #[snafu(display("Could not import file"), context(false))]
-    Import {
-        #[snafu(backtrace)]
-        source: ImportError,
-    },
-    #[snafu(display("Could not save medium"), context(false))]
-    SaveMedium {
-        #[snafu(backtrace)]
-        source: MediumRepoError,
-    },
-    #[snafu(display("Could not find the date when this medium was taken"))]
-    NoDateTaken { backtrace: Backtrace },
-    #[snafu(display("Could not get album"), context(false))]
-    GetAlbum {
-        source: mongodb::error::Error,
-        backtrace: Backtrace,
-    },
-    #[snafu(display("Could not find album with id {album_id}"))]
-    WrongAlbum {
-        album_id: ObjectId,
-        backtrace: Backtrace,
-    },
-}
-
 impl Service {
     pub async fn store_stream_temporarily<S, E>(
         &self,
         extension: &str,
         stream: S,
-    ) -> Result<PathBuf, CreateMediumError>
+    ) -> Result<PathBuf>
     where
-        S: Stream<Item = Result<Bytes, E>>,
+        S: Stream<Item = std::result::Result<Bytes, E>>,
         E: Into<BoxError>,
     {
         let temp_path = self.store.get_temp_file_path(extension);
@@ -100,17 +49,10 @@ impl Service {
         let body_reader = StreamReader::new(body_with_error);
         futures::pin_mut!(body_reader);
 
-        let file =
-            File::create(&temp_path)
-                .await
-                .context(StreamCreateFileSnafu {
-                    path: temp_path.clone(),
-                })?;
+        let file = File::create(&temp_path).await?;
         let mut buffer = BufWriter::new(file);
 
-        tokio::io::copy(&mut body_reader, &mut buffer)
-            .await
-            .context(StreamWriteFileSnafu)?;
+        tokio::io::copy(&mut body_reader, &mut buffer).await?;
 
         debug!("Uploaded file temporarily to {}", temp_path.display());
 
@@ -121,7 +63,7 @@ impl Service {
         &self,
         input: CreateMediumInput,
         path: P,
-    ) -> Result<ObjectId, CreateMediumError>
+    ) -> Result<ObjectId>
     where
         P: AsRef<Path> + Debug,
     {
@@ -129,7 +71,6 @@ impl Service {
             self.create_path_options(&input, &path).await?;
 
         let target_path = self.store.import_file(&path_opts, &path).await?;
-
         let medium = Medium {
             id: None,
             medium_type: MediumType::Photo,
@@ -145,8 +86,8 @@ impl Service {
                     last_saved: Utc::now(),
                     location: StoreLocation::Originals,
                 },
-                width: 0,
-                height: 0,
+                width: meta_info.width,
+                height: meta_info.height,
                 priority: 10,
             }],
             album: None,
@@ -176,7 +117,7 @@ impl Service {
         &self,
         input: &CreateMediumInput,
         path: P,
-    ) -> Result<(u64, MetaInfo, PathOptions), CreateMediumError>
+    ) -> Result<(u64, MetaInfo, PathOptions)>
     where
         P: AsRef<Path> + Debug,
     {
@@ -185,11 +126,7 @@ impl Service {
             self.meta.read_file(&path, true),
             self.get_album(input)
         );
-        let size = size
-            .context(FileMetadataSnafu {
-                path: path.as_ref().to_path_buf(),
-            })?
-            .len();
+        let size = size?.len();
         let meta_info = meta_info?;
 
         let date_taken = input
@@ -221,13 +158,10 @@ impl Service {
     async fn get_album(
         &self,
         input: &CreateMediumInput,
-    ) -> Result<Option<Album>, CreateMediumError> {
+    ) -> Result<Option<Album>> {
         let mut album: Option<Album> = None;
         if let Some(album_id) = input.album_id {
-            album = self.repo.get_album_by_id(album_id).await?;
-            if album.is_none() {
-                return WrongAlbumSnafu { album_id }.fail();
-            }
+            album = Some(self.repo.get_album_by_id(album_id).await?);
         }
         Ok(album)
     }

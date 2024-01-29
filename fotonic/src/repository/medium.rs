@@ -5,29 +5,20 @@ use mongodb::{
     options::FindOptions,
     results::InsertOneResult,
 };
-use snafu::{ResultExt, Snafu};
+use snafu::OptionExt;
 
 use crate::{
+    error::{FindMediumByIdSnafu, Result},
     model::{DateDirection, Medium},
     repository::Repository,
     ObjectId,
 };
 
-#[derive(Snafu, Debug)]
-pub enum MediumRepoError {
-    #[snafu(display("Could not create medium"))]
-    Insert { source: mongodb::error::Error },
-    #[snafu(display("Could not find media"))]
-    Find { source: mongodb::error::Error },
-    #[snafu(display("Could not collect media"))]
-    Collect { source: mongodb::error::Error },
-}
-
 impl Repository {
     pub async fn create_medium(
         &self,
         new_medium: Medium,
-    ) -> Result<InsertOneResult, MediumRepoError> {
+    ) -> Result<InsertOneResult> {
         let new_doc = Medium {
             id: None,
             medium_type: new_medium.medium_type,
@@ -41,11 +32,7 @@ impl Repository {
             sidecars: new_medium.sidecars,
             additional_data: new_medium.additional_data,
         };
-        let medium = self
-            .medium_col
-            .insert_one(new_doc, None)
-            .await
-            .context(InsertSnafu)?;
+        let medium = self.medium_col.insert_one(new_doc, None).await?;
         Ok(medium)
     }
 
@@ -59,7 +46,7 @@ impl Repository {
         album_id: Option<ObjectId>,
         include_no_album: bool,
         date_direction: DateDirection,
-    ) -> Result<Vec<Medium>, MediumRepoError> {
+    ) -> Result<Vec<Medium>> {
         let direction_val = match date_direction {
             DateDirection::NewestFirst => -1,
             DateDirection::OldestFirst => 1,
@@ -141,22 +128,14 @@ impl Repository {
                 "$and": filters
             })
         };
-        let cursor = self
-            .medium_col
-            .find(filter, find_opts)
-            .await
-            .context(FindSnafu)?;
+        let cursor = self.medium_col.find(filter, find_opts).await?;
 
-        let result: Vec<Medium> =
-            cursor.try_collect().await.context(CollectSnafu)?;
+        let result: Vec<Medium> = cursor.try_collect().await?;
 
         Ok(result)
     }
 
-    pub async fn get_medium(
-        &self,
-        id: ObjectId,
-    ) -> Result<Option<Medium>, MediumRepoError> {
+    pub async fn get_medium(&self, id: ObjectId) -> Result<Medium> {
         self.medium_col
             .find_one(
                 doc! {
@@ -164,7 +143,7 @@ impl Repository {
                 },
                 None,
             )
-            .await
-            .context(FindSnafu)
+            .await?
+            .context(FindMediumByIdSnafu { id })
     }
 }

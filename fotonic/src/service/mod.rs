@@ -2,15 +2,15 @@ use std::sync::Arc;
 
 use snafu::{ResultExt, Whatever};
 
-pub use create_medium::{CreateMediumError, CreateMediumInput};
+pub use create_medium::CreateMediumInput;
 pub use find_all::FindAllMediaInput;
-pub use raw::{MediumFileSubItem, RawMediumError};
+pub use raw::MediumFileSubItem;
 
-pub use crate::repository::MediumRepoError;
 use crate::{config::Config, repository::Repository, store::Store};
 
 mod create_medium;
 mod find_all;
+mod move_to_trash;
 mod raw;
 
 #[derive(Debug)]

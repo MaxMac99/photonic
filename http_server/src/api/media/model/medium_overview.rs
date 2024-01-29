@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, FixedOffset};
 use mime::Mime;
 use serde::{Deserialize, Serialize};
 
@@ -16,8 +16,8 @@ pub struct MediumItemOverview {
     #[serde(rename = "type", with = "mime_serde_shim")]
     pub mime: Mime,
     pub filename: String,
-    pub width: u32,
-    pub height: u32,
+    pub width: u64,
+    pub height: u64,
     pub filesize: u64,
     pub priority: u32,
 }
@@ -31,8 +31,7 @@ pub struct MediumOverview {
     #[serde(rename = "mediumType")]
     pub medium_type: MediumType,
     #[serde(rename = "dateTaken")]
-    pub date_taken: DateTime<Utc>,
-    pub timezone: i32,
+    pub date_taken: DateTime<FixedOffset>,
     pub originals: Vec<MediumItemOverview>,
     pub album: Option<ObjectId>,
     pub tags: Vec<String>,
@@ -42,11 +41,13 @@ pub struct MediumOverview {
 
 impl From<Medium> for MediumOverview {
     fn from(value: Medium) -> Self {
+        let date_taken = value
+            .date_taken
+            .with_timezone(&FixedOffset::east_opt(value.timezone).unwrap());
         Self {
             id: value.id.unwrap(),
             medium_type: value.medium_type,
-            date_taken: value.date_taken,
-            timezone: value.timezone,
+            date_taken,
             originals: value
                 .originals
                 .into_iter()

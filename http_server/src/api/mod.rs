@@ -1,12 +1,16 @@
 use std::sync::Arc;
 
-use axum::{routing::get, Router};
+use axum::{
+    routing::{delete, get},
+    Router,
+};
 
 mod media;
 
 pub fn app() -> Router<Arc<fotonic::Service>> {
     Router::new()
         .route("/media", get(media::find_all).post(media::create_medium))
+        .route("/media/:medium_id", delete(media::delete_medium))
         .route(
             "/media/:medium_id/originals/:item_id/raw",
             get(media::get_medium_original_raw),

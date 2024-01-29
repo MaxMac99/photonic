@@ -7,7 +7,10 @@ use snafu::OptionExt;
 
 use exiftool::{Exiftool, Metadata};
 
-use crate::{error::ExtractMimetypeSnafu, MetaError, MetaInfo};
+use crate::{
+    error::{ExtractFieldSnafu, ExtractMimetypeSnafu},
+    MetaError, MetaInfo,
+};
 
 #[derive(Debug)]
 pub struct Service {
@@ -47,6 +50,18 @@ impl Service {
             .and_then(|value| value.value.as_str())
             .and_then(|value| Mime::from_str(value).ok())
             .context(ExtractMimetypeSnafu)?;
+        let height = metadata
+            .get("ExifImageHeight")
+            .and_then(|val| val.value.as_u64())
+            .context(ExtractFieldSnafu {
+                field_name: "ExifImageHeight",
+            })?;
+        let width = metadata
+            .get("ExifImageWidth")
+            .and_then(|val| val.value.as_u64())
+            .context(ExtractFieldSnafu {
+                field_name: "ExifImageWidth",
+            })?;
 
         let date = Self::extract_date_time(&metadata);
         let mut additional_data = HashMap::new();
@@ -76,6 +91,8 @@ impl Service {
             camera_make,
             camera_model,
             mimetype,
+            width,
+            height,
             additional_data,
         };
         Ok(meta_info)

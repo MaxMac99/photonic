@@ -7,20 +7,21 @@ use mongodb::{
 };
 use snafu::{ResultExt, Whatever};
 
-pub use medium::MediumRepoError;
-
 use crate::{
     config::Config,
-    model::{Album, Medium},
+    model::{Album, Medium, TrashItem},
 };
 
 mod album;
 mod medium;
+mod to_trash;
 
 #[derive(Debug)]
 pub struct Repository {
+    client: Client,
     medium_col: Collection<Medium>,
     album_col: Collection<Album>,
+    trash_col: Collection<TrashItem>,
 }
 
 impl Repository {
@@ -45,10 +46,13 @@ impl Repository {
             .whatever_context("Could not ping mongo DB")?;
         let medium_col: Collection<Medium> = db.collection("medium");
         let album_col: Collection<Album> = db.collection("album");
+        let trash_col: Collection<TrashItem> = db.collection("trash");
 
         Ok(Self {
+            client,
             medium_col,
             album_col,
+            trash_col,
         })
     }
 }
