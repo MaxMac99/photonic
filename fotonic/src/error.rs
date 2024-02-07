@@ -1,5 +1,6 @@
 use std::backtrace::Backtrace;
 
+use bson::Uuid;
 use snafu::Snafu;
 
 use meta::MetaError;
@@ -36,10 +37,16 @@ pub enum Error {
     },
     #[snafu(display("Could not find album with id {id}"))]
     FindAlbumById { id: ObjectId, backtrace: Backtrace },
+    #[snafu(display("Could not find user with id {id}"))]
+    FindUserById { id: Uuid, backtrace: Backtrace },
+    #[snafu(display("There is not enough quota left"))]
+    NoQuotaLeft { backtrace: Backtrace },
     #[snafu(display("The given file is outside the base storage"))]
     OutsideBaseStorage { backtrace: Backtrace },
     #[snafu(display("Could not find a file extension"))]
     NoFileExtension { backtrace: Backtrace },
+    #[snafu(display("The given file already exists"))]
+    FileAlreadyExists { backtrace: Backtrace },
     #[snafu(display("Could not find the date when this medium was taken"))]
     NoDateTaken { backtrace: Backtrace },
 }

@@ -6,6 +6,8 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
+use crate::model::access::Access;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MediumType {
     Photo,
@@ -60,6 +62,7 @@ pub struct MediumItem {
 pub struct Medium {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
+    pub access: Access,
     #[serde(rename = "mediumType")]
     pub medium_type: MediumType,
     #[serde_as(as = "bson::DateTime")]

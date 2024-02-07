@@ -5,6 +5,7 @@ use snafu::{ResultExt, Whatever};
 pub use create_medium::CreateMediumInput;
 pub use find_all::FindAllMediaInput;
 pub use raw::MediumFileSubItem;
+pub use user::CreateUserInput;
 
 use crate::{config::Config, repository::Repository, store::Store};
 
@@ -12,6 +13,7 @@ mod create_medium;
 mod find_all;
 mod move_to_trash;
 mod raw;
+mod user;
 
 #[derive(Debug)]
 pub struct Service {

@@ -2,6 +2,7 @@
 /cache
 /target
 /gen
+/docker
 .idea
 .env
 

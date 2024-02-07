@@ -6,20 +6,22 @@ use axum::{
     http::{header, HeaderMap, HeaderValue},
 };
 use bson::oid::ObjectId;
+use jwt_authorizer::JwtClaims;
 use snafu::{ResultExt, Whatever};
 use tokio::fs;
 use tokio_util::io::ReaderStream;
 
 use fotonic::{model::FileItem, service::MediumFileSubItem};
 
-use crate::error::Result;
+use crate::{api::user::User, error::Result};
 
 pub async fn get_medium_original_raw(
     State(service): State<Arc<fotonic::Service>>,
+    JwtClaims(user): JwtClaims<User>,
     Path((medium_id, item_id)): Path<(ObjectId, ObjectId)>,
 ) -> Result<(HeaderMap, Body)> {
     let original = service
-        .get_medium_file(medium_id, MediumFileSubItem::Original(item_id))
+        .get_medium_file(user.sub, medium_id, MediumFileSubItem::Original(item_id))
         .await?;
 
     stream_file_item(original).await
@@ -27,10 +29,11 @@ pub async fn get_medium_original_raw(
 
 pub async fn get_medium_edit_raw(
     State(service): State<Arc<fotonic::Service>>,
+    JwtClaims(user): JwtClaims<User>,
     Path((medium_id, item_id)): Path<(ObjectId, ObjectId)>,
 ) -> Result<(HeaderMap, Body)> {
     let edit = service
-        .get_medium_file(medium_id, MediumFileSubItem::Edit(item_id))
+        .get_medium_file(user.sub, medium_id, MediumFileSubItem::Edit(item_id))
         .await?;
 
     stream_file_item(edit).await
@@ -38,10 +41,11 @@ pub async fn get_medium_edit_raw(
 
 pub async fn get_medium_preview_raw(
     State(service): State<Arc<fotonic::Service>>,
+    JwtClaims(user): JwtClaims<User>,
     Path(medium_id): Path<ObjectId>,
 ) -> Result<(HeaderMap, Body)> {
     let edit = service
-        .get_medium_file(medium_id, MediumFileSubItem::Preview)
+        .get_medium_file(user.sub, medium_id, MediumFileSubItem::Preview)
         .await?;
 
     stream_file_item(edit).await
@@ -49,10 +53,11 @@ pub async fn get_medium_preview_raw(
 
 pub async fn get_medium_sidecar_raw(
     State(service): State<Arc<fotonic::Service>>,
+    JwtClaims(user): JwtClaims<User>,
     Path((medium_id, item_id)): Path<(ObjectId, ObjectId)>,
 ) -> Result<(HeaderMap, Body)> {
     let edit = service
-        .get_medium_file(medium_id, MediumFileSubItem::Sidecar(item_id))
+        .get_medium_file(user.sub, medium_id, MediumFileSubItem::Sidecar(item_id))
         .await?;
 
     stream_file_item(edit).await

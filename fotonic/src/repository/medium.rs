@@ -1,26 +1,27 @@
+use bson::Uuid;
 use chrono::{DateTime, Utc};
-use futures_util::TryStreamExt;
+use futures_util::{FutureExt, TryStreamExt};
 use mongodb::{
     bson::{doc, Document},
+    error::ErrorKind,
     options::FindOptions,
     results::InsertOneResult,
+    ClientSession,
 };
 use snafu::OptionExt;
 
 use crate::{
-    error::{FindMediumByIdSnafu, Result},
+    error::{Error, FindMediumByIdSnafu, FindUserByIdSnafu, NoQuotaLeftSnafu, Result},
     model::{DateDirection, Medium},
     repository::Repository,
     ObjectId,
 };
 
 impl Repository {
-    pub async fn create_medium(
-        &self,
-        new_medium: Medium,
-    ) -> Result<InsertOneResult> {
+    pub async fn create_medium(&self, new_medium: Medium) -> Result<InsertOneResult> {
         let new_doc = Medium {
             id: None,
+            access: new_medium.access,
             medium_type: new_medium.medium_type,
             date_taken: new_medium.date_taken,
             timezone: new_medium.timezone,
@@ -32,12 +33,58 @@ impl Repository {
             sidecars: new_medium.sidecars,
             additional_data: new_medium.additional_data,
         };
-        let medium = self.medium_col.insert_one(new_doc, None).await?;
+
+        let mut session = self.client.start_session(None).await?;
+        session
+            .with_transaction(
+                (new_doc, &self),
+                |session, (new_doc, repo)| repo.create_medium_transacted(new_doc, session).boxed(),
+                None,
+            )
+            .await
+            .map_err(|err| -> Error {
+                if let ErrorKind::Custom(custom_err) = err.kind.as_ref() {
+                    if let Ok(crate_err) = custom_err.clone().downcast::<Error>() {
+                        return match *crate_err {
+                            Error::FindUserById { ref id, .. } => {
+                                FindUserByIdSnafu { id: id.clone() }.build()
+                            }
+                            Error::NoQuotaLeft { .. } => NoQuotaLeftSnafu.build(),
+                            _ => Error::from(err),
+                        };
+                    }
+                }
+                return Error::from(err);
+            })
+    }
+
+    async fn create_medium_transacted(
+        &self,
+        new_doc: &Medium,
+        session: &mut ClientSession,
+    ) -> mongodb::error::Result<InsertOneResult> {
+        let medium = self
+            .medium_col
+            .insert_one_with_session(new_doc, None, session)
+            .await?;
+        let additional_quota = new_doc
+            .originals
+            .iter()
+            .chain(new_doc.edits.iter())
+            .chain(new_doc.preview.iter())
+            .map(|item| &item.file)
+            .chain(new_doc.sidecars.iter())
+            .map(|item| item.filesize)
+            .sum();
+
+        self.update_user_used_quota(new_doc.access.owner, additional_quota, session)
+            .await?;
         Ok(medium)
     }
 
     pub async fn find_media(
         &self,
+        user_id: Uuid,
         page_size: i64,
         last_date: Option<DateTime<Utc>>,
         last_id: Option<ObjectId>,
@@ -63,7 +110,11 @@ impl Repository {
             })
             .build();
 
-        let mut filters: Vec<Document> = Vec::new();
+        let mut filters: Vec<Document> = vec![doc! {
+            "access.owner": {
+                "$eq": user_id
+            }
+        }];
         if let Some(last_date) = last_date {
             filters.push(doc! {
                 "date_taken": {
@@ -121,25 +172,27 @@ impl Repository {
             }
         }
 
-        let filter: Option<Document> = if filters.is_empty() {
-            None
-        } else {
-            Some(doc! {
-                "$and": filters
-            })
-        };
-        let cursor = self.medium_col.find(filter, find_opts).await?;
+        let cursor = self
+            .medium_col
+            .find(
+                doc! {
+                    "$and": filters
+                },
+                find_opts,
+            )
+            .await?;
 
         let result: Vec<Medium> = cursor.try_collect().await?;
 
         Ok(result)
     }
 
-    pub async fn get_medium(&self, id: ObjectId) -> Result<Medium> {
+    pub async fn get_medium(&self, id: ObjectId, user_id: Uuid) -> Result<Medium> {
         self.medium_col
             .find_one(
                 doc! {
-                    "_id": id
+                    "_id": id,
+                    "access.owner": user_id,
                 },
                 None,
             )

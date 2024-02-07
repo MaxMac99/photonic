@@ -9,13 +9,14 @@ use axum::{
 use axum_extra::{headers::ContentType, TypedHeader};
 use chrono::{DateTime, FixedOffset};
 use futures::TryFutureExt;
+use jwt_authorizer::JwtClaims;
 use serde::Deserialize;
 use tokio::fs;
-use tracing::log::info;
+use tracing::{error, log::info};
 
 use fotonic::ObjectId;
 
-use crate::error::Result;
+use crate::{api::user::User, error::Result};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateMediumInput {
@@ -31,8 +32,11 @@ pub async fn create_medium(
     State(service): State<Arc<fotonic::Service>>,
     content_type: TypedHeader<ContentType>,
     opts: Query<CreateMediumInput>,
+    JwtClaims(user): JwtClaims<User>,
     body: Body,
 ) -> Result<(StatusCode, Json<String>)> {
+    service.create_or_update_user(user.clone().into()).await?;
+
     let opts = opts.0;
 
     let temp_path = service
@@ -48,10 +52,17 @@ pub async fn create_medium(
         mime: content_type.0.into(),
     };
     let id = service
-        .create_medium(create_medium, &temp_path)
+        .create_medium(
+            user.sub,
+            user.get_username().unwrap(),
+            create_medium,
+            &temp_path,
+        )
         .or_else(|err| async {
             // Try remove temporary file if it could not be stored
-            let _ = fs::remove_file(&temp_path).await;
+            if let Err(remove_err) = fs::remove_file(&temp_path).await {
+                error!("Could not delete file for rollback: {}", remove_err);
+            }
             Err(err)
         })
         .await?;

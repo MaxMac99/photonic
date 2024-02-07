@@ -9,12 +9,13 @@ use snafu::{ResultExt, Whatever};
 
 use crate::{
     config::Config,
-    model::{Album, Medium, TrashItem},
+    model::{Album, Medium, TrashItem, User},
 };
 
 mod album;
 mod medium;
 mod to_trash;
+mod user;
 
 #[derive(Debug)]
 pub struct Repository {
@@ -22,15 +23,14 @@ pub struct Repository {
     medium_col: Collection<Medium>,
     album_col: Collection<Album>,
     trash_col: Collection<TrashItem>,
+    user_col: Collection<User>,
 }
 
 impl Repository {
     pub async fn init(config: Arc<Config>) -> Result<Self, Whatever> {
         let mut opts = ClientOptions::parse(config.mongo.url.clone())
             .await
-            .with_whatever_context(|_| {
-                format!("Mongo url error with {}", config.mongo.url)
-            })?;
+            .with_whatever_context(|_| format!("Mongo url error with {}", config.mongo.url))?;
         opts.credential = Some(
             Credential::builder()
                 .username(config.mongo.username.clone())
@@ -38,8 +38,7 @@ impl Repository {
                 .build(),
         );
 
-        let client = Client::with_options(opts)
-            .whatever_context("Mongo options error")?;
+        let client = Client::with_options(opts).whatever_context("Mongo options error")?;
         let db = client.database("fotonic");
         db.run_command(doc! {"ping": 1}, None)
             .await
@@ -47,12 +46,14 @@ impl Repository {
         let medium_col: Collection<Medium> = db.collection("medium");
         let album_col: Collection<Album> = db.collection("album");
         let trash_col: Collection<TrashItem> = db.collection("trash");
+        let user_col: Collection<User> = db.collection("user");
 
         Ok(Self {
             client,
             medium_col,
             album_col,
             trash_col,
+            user_col,
         })
     }
 }

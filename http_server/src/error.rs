@@ -10,10 +10,7 @@ use tracing::log::error;
 
 pub type Result<T, E = ResponseError> = std::result::Result<T, E>;
 
-pub(crate) trait BacktraceError:
-    ErrorCompat + Error + AsErrorSource + Debug
-{
-}
+pub(crate) trait BacktraceError: ErrorCompat + Error + AsErrorSource + Debug {}
 
 impl<T: ErrorCompat + Error + AsErrorSource + Debug> BacktraceError for T {}
 
@@ -29,6 +26,8 @@ pub(crate) enum ResponseError {
     NotFound { message: String },
     #[snafu(display("{message}"))]
     AlreadyExists { message: String },
+    #[snafu(display("{message}"))]
+    OutOfStorage { message: String },
     #[snafu(display("Internal error"))]
     Internal {
         message: String,
@@ -51,36 +50,31 @@ impl From<fotonic::error::Error> for ResponseError {
                 message: "".to_string(),
                 source: Box::new(err),
             },
-            fotonic::error::Error::FindMediumById { .. } => {
-                ResponseError::NotFound {
-                    message: err.to_string(),
-                }
-            }
-            fotonic::error::Error::FindMediumItemById { .. } => {
-                ResponseError::NotFound {
-                    message: err.to_string(),
-                }
-            }
-            fotonic::error::Error::FindAlbumById { .. } => {
-                ResponseError::NotFound {
-                    message: err.to_string(),
-                }
-            }
-            fotonic::error::Error::OutsideBaseStorage { .. } => {
-                ResponseError::BadRequest {
-                    message: err.to_string(),
-                }
-            }
-            fotonic::error::Error::NoFileExtension { .. } => {
-                ResponseError::BadRequest {
-                    message: err.to_string(),
-                }
-            }
-            fotonic::error::Error::NoDateTaken { .. } => {
-                ResponseError::BadRequest {
-                    message: err.to_string(),
-                }
-            }
+            fotonic::error::Error::FindMediumById { .. } => ResponseError::NotFound {
+                message: err.to_string(),
+            },
+            fotonic::error::Error::FindMediumItemById { .. } => ResponseError::NotFound {
+                message: err.to_string(),
+            },
+            fotonic::error::Error::FindUserById { .. } => ResponseError::AuthenticationRequired,
+            fotonic::error::Error::NoQuotaLeft { .. } => ResponseError::OutOfStorage {
+                message: err.to_string(),
+            },
+            fotonic::error::Error::FindAlbumById { .. } => ResponseError::NotFound {
+                message: err.to_string(),
+            },
+            fotonic::error::Error::FileAlreadyExists { .. } => ResponseError::AlreadyExists {
+                message: err.to_string(),
+            },
+            fotonic::error::Error::OutsideBaseStorage { .. } => ResponseError::BadRequest {
+                message: err.to_string(),
+            },
+            fotonic::error::Error::NoFileExtension { .. } => ResponseError::BadRequest {
+                message: err.to_string(),
+            },
+            fotonic::error::Error::NoDateTaken { .. } => ResponseError::BadRequest {
+                message: err.to_string(),
+            },
         }
     }
 }
@@ -100,9 +94,7 @@ impl IntoResponse for ResponseError {
             ResponseError::NotFound { message } => {
                 (StatusCode::NOT_FOUND, Json(message)).into_response()
             }
-            ResponseError::AuthenticationRequired => {
-                StatusCode::UNAUTHORIZED.into_response()
-            }
+            ResponseError::AuthenticationRequired => StatusCode::UNAUTHORIZED.into_response(),
             ResponseError::PermissionDenied { message } => {
                 create_response(StatusCode::FORBIDDEN, &message, None)
             }
@@ -112,14 +104,13 @@ impl IntoResponse for ResponseError {
             ResponseError::AlreadyExists { message } => {
                 create_response(StatusCode::CONFLICT, &message, None)
             }
+            ResponseError::OutOfStorage { message } => {
+                create_response(StatusCode::PAYLOAD_TOO_LARGE, &message, None)
+            }
             ResponseError::Internal {
                 ref message,
                 ref source,
-            } => create_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                message,
-                Some(source),
-            ),
+            } => create_response(StatusCode::INTERNAL_SERVER_ERROR, message, Some(source)),
         }
     }
 }

@@ -4,6 +4,7 @@ use std::{
 };
 
 use axum::{body::Bytes, BoxError};
+use bson::Uuid;
 use chrono::{DateTime, Datelike, FixedOffset, Utc};
 use futures::TryFutureExt;
 use futures_util::{io, Stream, TryStreamExt};
@@ -12,13 +13,13 @@ use mongodb::bson::oid::ObjectId;
 use snafu::OptionExt;
 use tokio::{fs, fs::File, io::BufWriter, join};
 use tokio_util::io::StreamReader;
-use tracing::debug;
+use tracing::{debug, error};
 
 use meta::MetaInfo;
 
 use crate::{
     error::{NoDateTakenSnafu, Result},
-    model::{Album, FileItem, Medium, MediumItem, MediumType, StoreLocation},
+    model::{Access, Album, FileItem, Medium, MediumItem, MediumType, StoreLocation},
     service::Service,
     store::PathOptions,
 };
@@ -44,8 +45,7 @@ impl Service {
         E: Into<BoxError>,
     {
         let temp_path = self.store.get_temp_file_path(extension);
-        let body_with_error =
-            stream.map_err(|err| io::Error::new(io::ErrorKind::Other, err));
+        let body_with_error = stream.map_err(|err| io::Error::new(io::ErrorKind::Other, err));
         let body_reader = StreamReader::new(body_with_error);
         futures::pin_mut!(body_reader);
 
@@ -61,6 +61,8 @@ impl Service {
 
     pub async fn create_medium<P>(
         &self,
+        user_id: Uuid,
+        username: String,
         input: CreateMediumInput,
         path: P,
     ) -> Result<ObjectId>
@@ -68,11 +70,12 @@ impl Service {
         P: AsRef<Path> + Debug,
     {
         let (file_size, meta_info, path_opts) =
-            self.create_path_options(&input, &path).await?;
+            self.create_path_options(&input, &path, username).await?;
 
         let target_path = self.store.import_file(&path_opts, &path).await?;
         let medium = Medium {
             id: None,
+            access: Access { owner: user_id },
             medium_type: MediumType::Photo,
             date_taken: path_opts.date,
             timezone: path_opts.timezone,
@@ -103,7 +106,12 @@ impl Service {
             .create_medium(medium)
             .or_else(|err| async {
                 // Remove file if it could not store metadata
-                let _ = fs::remove_file(&target_path).await;
+                let full_path = self
+                    .store
+                    .get_full_path_from_relative(StoreLocation::Originals, &target_path);
+                if let Err(remove_err) = fs::remove_file(&full_path).await {
+                    error!("Could not delete file for rollback: {}", remove_err);
+                }
                 Err(err)
             })
             .await?
@@ -117,6 +125,7 @@ impl Service {
         &self,
         input: &CreateMediumInput,
         path: P,
+        username: String,
     ) -> Result<(u64, MetaInfo, PathOptions)>
     where
         P: AsRef<Path> + Debug,
@@ -143,6 +152,7 @@ impl Service {
             .and_then(|album| album.first_date)
             .map(|date| date.year() as u32);
         let path_opts = PathOptions {
+            username,
             album: name,
             album_year: year,
             date: date_taken,
@@ -155,10 +165,7 @@ impl Service {
         Ok((size, meta_info, path_opts))
     }
 
-    async fn get_album(
-        &self,
-        input: &CreateMediumInput,
-    ) -> Result<Option<Album>> {
+    async fn get_album(&self, input: &CreateMediumInput) -> Result<Option<Album>> {
         let mut album: Option<Album> = None;
         if let Some(album_id) = input.album_id {
             album = Some(self.repo.get_album_by_id(album_id).await?);

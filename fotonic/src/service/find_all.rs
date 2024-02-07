@@ -1,3 +1,4 @@
+use bson::Uuid;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
@@ -23,10 +24,12 @@ pub struct FindAllMediaInput {
 impl Service {
     pub async fn find_all_media(
         &self,
+        user_id: Uuid,
         opts: &FindAllMediaInput,
     ) -> Result<Vec<Medium>> {
         self.repo
             .find_media(
+                user_id,
                 opts.per_page.unwrap_or(100) as i64,
                 opts.page_last_date,
                 opts.page_last_id,

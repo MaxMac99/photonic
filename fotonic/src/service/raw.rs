@@ -1,3 +1,4 @@
+use bson::Uuid;
 use snafu::OptionExt;
 
 use crate::{
@@ -17,10 +18,11 @@ pub enum MediumFileSubItem {
 impl Service {
     pub async fn get_medium_file(
         &self,
+        user_id: Uuid,
         medium_id: ObjectId,
         medium_file_sub_type: MediumFileSubItem,
     ) -> Result<FileItem> {
-        let medium = self.repo.get_medium(medium_id).await?;
+        let medium = self.repo.get_medium(medium_id, user_id).await?;
 
         let mut file_item = match medium_file_sub_type {
             MediumFileSubItem::Original(item_id) => medium
@@ -41,12 +43,14 @@ impl Service {
                 .context(FindMediumItemByIdSnafu {
                     medium_type: MediumItemType::Edit(item_id),
                 }),
-            MediumFileSubItem::Preview => medium
-                .preview
-                .map(|item| item.file)
-                .context(FindMediumItemByIdSnafu {
-                    medium_type: MediumItemType::Preview,
-                }),
+            MediumFileSubItem::Preview => {
+                medium
+                    .preview
+                    .map(|item| item.file)
+                    .context(FindMediumItemByIdSnafu {
+                        medium_type: MediumItemType::Preview,
+                    })
+            }
             MediumFileSubItem::Sidecar(item_id) => medium
                 .sidecars
                 .into_iter()
