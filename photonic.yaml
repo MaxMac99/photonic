@@ -1080,7 +1080,7 @@ paths:
       tags:
         - System
       responses:
-        "200":
+        "204":
           description: OK
         "500":
           $ref: "#/components/responses/InternalServerError"

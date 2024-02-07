@@ -9,6 +9,7 @@ use jwt_authorizer::{Authorizer, IntoLayer};
 use crate::api::user::User;
 
 mod media;
+mod ping;
 pub(crate) mod user;
 
 pub fn app(auth: Authorizer<User>) -> Router<Arc<fotonic::Service>> {
@@ -32,4 +33,5 @@ pub fn app(auth: Authorizer<User>) -> Router<Arc<fotonic::Service>> {
             get(media::get_medium_sidecar_raw),
         )
         .layer(auth.into_layer())
+        .route("/ping", get(ping::ping))
 }
