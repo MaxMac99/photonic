@@ -1086,6 +1086,18 @@ paths:
           $ref: "#/components/responses/InternalServerError"
       operationId: ping
       description: Pings the http_server
+  /info:
+    get:
+      summary: Info
+      tags:
+        - System
+      responses:
+        "200":
+          description: The info about the system
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Info"
 components:
   schemas:
     Medium:
@@ -1223,6 +1235,19 @@ components:
         - code
         - message
         - type
+    Info:
+      title: Info
+      type: object
+      properties:
+        clientId:
+          type: string
+          description: The OAuth2 cliend id
+        authorizeUrl:
+          type: string
+          description: The OAuth2 authorize url
+        tokenUrl:
+          type: string
+          description: The OAuth2 token url
     PaginatedResult:
       title: PaginatedResult
       type: object
