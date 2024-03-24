@@ -7,7 +7,7 @@ use tokio::{net::TcpListener, signal};
 use tower_http::trace::TraceLayer;
 use tracing::log::{debug, info};
 
-use fotonic::{config::Config, service::Service};
+use photonic::{config::Config, service::Service};
 
 use crate::{api::user::User, config::ServerConfig};
 
@@ -31,7 +31,7 @@ pub async fn run() -> Result<(), Whatever> {
         .await
         .whatever_context("Could not bind to address")?;
     info!(
-        "Starting fotonic server at {}",
+        "Starting photonic server at {}",
         listener.local_addr().unwrap()
     );
 

@@ -14,7 +14,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - fotonic_data:/var/lib/postgresql/data
+      - photonic_data:/var/lib/postgresql/data
 volumes:
-  fotonic_data:
-  fotonic_config:
+  photonic_data:
+  photonic_config:

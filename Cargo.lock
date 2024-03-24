@@ -407,9 +407,9 @@ dependencies = [
  "clap",
  "dotenv",
  "exiftool",
- "fotonic",
  "http_server",
  "meta",
+ "photonic",
  "snafu",
  "tokio",
  "tracing",
@@ -764,37 +764,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fotonic"
-version = "0.1.0"
-dependencies = [
- "axum",
- "chrono",
- "deadpool-diesel",
- "derive_more",
- "derive_setters",
- "diesel",
- "diesel-derive-enum",
- "diesel_migrations",
- "filenamify",
- "futures",
- "futures-util",
- "itertools",
- "log",
- "meta",
- "mime",
- "mime_serde_shim",
- "path-clean",
- "serde",
- "serde_json",
- "serde_with",
- "snafu",
- "tokio",
- "tokio-util",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1078,12 +1047,12 @@ dependencies = [
  "byte-unit",
  "chrono",
  "env_logger",
- "fotonic",
  "futures",
  "hyper 1.2.0",
  "jwt-authorizer",
  "mime",
  "mime_serde_shim",
+ "photonic",
  "serde",
  "snafu",
  "tokio",
@@ -1662,6 +1631,37 @@ name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
+
+[[package]]
+name = "photonic"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "deadpool-diesel",
+ "derive_more",
+ "derive_setters",
+ "diesel",
+ "diesel-derive-enum",
+ "diesel_migrations",
+ "filenamify",
+ "futures",
+ "futures-util",
+ "itertools",
+ "log",
+ "meta",
+ "mime",
+ "mime_serde_shim",
+ "path-clean",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "snafu",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
 
 [[package]]
 name = "pin-project"

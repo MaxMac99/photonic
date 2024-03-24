@@ -2,7 +2,7 @@ use byte_unit::Byte;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use fotonic::service::CreateUserInput;
+use photonic::service::CreateUserInput;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct User {

@@ -8,7 +8,7 @@ name = "cli"
 path = "src/main.rs"
 
 [dependencies]
-fotonic = { path = "../fotonic" }
+photonic = { path = "../photonic" }
 http_server = { path = "../http_server" }
 exiftool = { path = "../exiftool" }
 meta = { path = "../meta" }

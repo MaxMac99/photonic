@@ -3,7 +3,7 @@ use mime::Mime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use fotonic::model::{FileItem, Medium, MediumItem, MediumType};
+use photonic::model::{FileItem, Medium, MediumItem, MediumType};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MediumItemOverview {

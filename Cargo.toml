@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "cli",
-    "fotonic",
+    "photonic",
     "meta",
     "http_server",
     "exiftool"

@@ -2,8 +2,8 @@ use std::{error::Error, fmt::Debug};
 
 use axum::{
     http::StatusCode,
-    response::{IntoResponse, Response},
     Json,
+    response::{IntoResponse, Response},
 };
 use snafu::{AsErrorSource, ErrorCompat, Snafu, Whatever};
 use tracing::log::error;
@@ -35,55 +35,55 @@ pub(crate) enum ResponseError {
     },
 }
 
-impl From<fotonic::error::Error> for ResponseError {
-    fn from(err: fotonic::error::Error) -> Self {
+impl From<photonic::error::Error> for ResponseError {
+    fn from(err: photonic::error::Error) -> Self {
         match err {
-            fotonic::error::Error::Database { .. } => ResponseError::Internal {
+            photonic::error::Error::Database { .. } => ResponseError::Internal {
                 message: "".to_string(),
                 source: Box::new(err),
             },
-            fotonic::error::Error::Deadpool { .. } => ResponseError::Internal {
+            photonic::error::Error::Deadpool { .. } => ResponseError::Internal {
                 message: "".to_string(),
                 source: Box::new(err),
             },
-            fotonic::error::Error::Interact { .. } => ResponseError::Internal {
+            photonic::error::Error::Interact { .. } => ResponseError::Internal {
                 message: "".to_string(),
                 source: Box::new(err),
             },
-            fotonic::error::Error::Io { .. } => ResponseError::Internal {
+            photonic::error::Error::Io { .. } => ResponseError::Internal {
                 message: "".to_string(),
                 source: Box::new(err),
             },
-            fotonic::error::Error::Metadata { .. } => ResponseError::Internal {
+            photonic::error::Error::Metadata { .. } => ResponseError::Internal {
                 message: "".to_string(),
                 source: Box::new(err),
             },
-            fotonic::error::Error::FindMediumById { .. } => ResponseError::NotFound {
+            photonic::error::Error::FindMediumById { .. } => ResponseError::NotFound {
                 message: err.to_string(),
             },
-            fotonic::error::Error::FindMediumItemById { .. } => ResponseError::NotFound {
+            photonic::error::Error::FindMediumItemById { .. } => ResponseError::NotFound {
                 message: err.to_string(),
             },
-            fotonic::error::Error::FindSidecarById { .. } => ResponseError::NotFound {
+            photonic::error::Error::FindSidecarById { .. } => ResponseError::NotFound {
                 message: err.to_string(),
             },
-            fotonic::error::Error::FindUserById { .. } => ResponseError::AuthenticationRequired,
-            fotonic::error::Error::NoQuotaLeft { .. } => ResponseError::OutOfStorage {
+            photonic::error::Error::FindUserById { .. } => ResponseError::AuthenticationRequired,
+            photonic::error::Error::NoQuotaLeft { .. } => ResponseError::OutOfStorage {
                 message: err.to_string(),
             },
-            fotonic::error::Error::FindAlbumById { .. } => ResponseError::NotFound {
+            photonic::error::Error::FindAlbumById { .. } => ResponseError::NotFound {
                 message: err.to_string(),
             },
-            fotonic::error::Error::FileAlreadyExists { .. } => ResponseError::AlreadyExists {
+            photonic::error::Error::FileAlreadyExists { .. } => ResponseError::AlreadyExists {
                 message: err.to_string(),
             },
-            fotonic::error::Error::OutsideBaseStorage { .. } => ResponseError::BadRequest {
+            photonic::error::Error::OutsideBaseStorage { .. } => ResponseError::BadRequest {
                 message: err.to_string(),
             },
-            fotonic::error::Error::NoFileExtension { .. } => ResponseError::BadRequest {
+            photonic::error::Error::NoFileExtension { .. } => ResponseError::BadRequest {
                 message: err.to_string(),
             },
-            fotonic::error::Error::NoDateTaken { .. } => ResponseError::BadRequest {
+            photonic::error::Error::NoDateTaken { .. } => ResponseError::BadRequest {
                 message: err.to_string(),
             },
         }

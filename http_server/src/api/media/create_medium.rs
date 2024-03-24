@@ -40,7 +40,7 @@ pub async fn create_medium(
         .store_stream_temporarily(&opts.extension, body.into_data_stream())
         .await?;
 
-    let create_medium = fotonic::service::CreateMediumInput {
+    let create_medium = photonic::service::CreateMediumInput {
         album_id: opts.album_id,
         filename: opts.filename,
         extension: opts.extension,

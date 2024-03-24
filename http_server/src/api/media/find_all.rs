@@ -5,7 +5,7 @@ use axum::{
 };
 use jwt_authorizer::JwtClaims;
 
-use fotonic::service::FindAllMediaInput;
+use photonic::service::FindAllMediaInput;
 
 use crate::{
     api::{media::model::MediumOverview, user::User},

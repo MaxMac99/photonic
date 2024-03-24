@@ -9,7 +9,7 @@ use tokio::fs;
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
-use fotonic::{model::FileItem, service::MediumFileSubItem};
+use photonic::{model::FileItem, service::MediumFileSubItem};
 
 use crate::{api::user::User, AppState, error::Result};
 
