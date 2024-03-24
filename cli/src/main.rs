@@ -3,13 +3,12 @@ use std::path::PathBuf;
 use clap::{command, Command};
 use snafu::{ResultExt, Whatever};
 use tracing::log::debug;
-use tracing_subscriber::{
-    fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter,
-};
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 mod cli;
 
 #[tokio::main]
+#[snafu::report]
 async fn main() -> Result<(), Whatever> {
     dotenv::dotenv().whatever_context("Could not initialize dotenv")?;
 
@@ -19,9 +18,7 @@ async fn main() -> Result<(), Whatever> {
         .init();
 
     let matches = command!()
-        .subcommand(
-            Command::new(cli::SERVER_SUBCOMMAND).about(cli::SERVER_DESCRIPTION),
-        )
+        .subcommand(Command::new(cli::SERVER_SUBCOMMAND).about(cli::SERVER_DESCRIPTION))
         .subcommand(Command::new("exif"))
         .get_matches();
 

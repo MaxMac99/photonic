@@ -1,6 +1,6 @@
-use bson::Uuid;
 use byte_unit::Byte;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use fotonic::service::CreateUserInput;
 

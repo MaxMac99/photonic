@@ -15,6 +15,12 @@ mod api;
 mod config;
 mod error;
 
+#[derive(Clone)]
+pub(crate) struct AppState {
+    pub service: Arc<Service>,
+    pub server_config: Arc<ServerConfig>,
+}
+
 pub async fn run() -> Result<(), Whatever> {
     let config = Arc::new(Config::load().await?);
     let server_config = Arc::new(ServerConfig::load()?);
@@ -44,7 +50,10 @@ pub async fn run() -> Result<(), Whatever> {
 
     let app = Router::new()
         .nest("/api/v1", api::app(auth))
-        .with_state(service)
+        .with_state(AppState {
+            service,
+            server_config,
+        })
         .layer(TraceLayer::new_for_http());
 
     axum::serve(listener, app.into_make_service())

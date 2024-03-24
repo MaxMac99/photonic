@@ -1,18 +1,17 @@
-use std::sync::Arc;
-
 use axum::{
-    routing::{delete, get},
     Router,
+    routing::{delete, get},
 };
 use jwt_authorizer::{Authorizer, IntoLayer};
 
-use crate::api::user::User;
+use crate::{api::user::User, AppState};
 
+mod info;
 mod media;
 mod ping;
 pub(crate) mod user;
 
-pub fn app(auth: Authorizer<User>) -> Router<Arc<fotonic::Service>> {
+pub fn app(auth: Authorizer<User>) -> Router<AppState> {
     Router::new()
         .route("/media", get(media::find_all).post(media::create_medium))
         .route("/media/:medium_id", delete(media::delete_medium))
@@ -34,4 +33,5 @@ pub fn app(auth: Authorizer<User>) -> Router<Arc<fotonic::Service>> {
         )
         .layer(auth.into_layer())
         .route("/ping", get(ping::ping))
+        .route("/info", get(info::info))
 }

@@ -1,53 +1,52 @@
 use chrono::{DateTime, FixedOffset};
 use mime::Mime;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use fotonic::{
-    model::{Medium, MediumItem, MediumType},
-    ObjectId,
-};
+use fotonic::model::{FileItem, Medium, MediumItem, MediumType};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MediumItemOverview {
-    #[serde(
-        serialize_with = "bson::serde_helpers::serialize_object_id_as_hex_string"
-    )]
-    pub id: ObjectId,
+    pub id: Uuid,
     #[serde(rename = "type", with = "mime_serde_shim")]
     pub mime: Mime,
     pub filename: String,
-    pub width: u64,
-    pub height: u64,
+    #[serde(rename = "dateTaken")]
+    pub date_taken: DateTime<FixedOffset>,
+    pub width: u32,
+    pub height: u32,
     pub filesize: u64,
-    pub priority: u32,
+    pub priority: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SidecarOverview {
+    pub id: Uuid,
+    #[serde(rename = "type", with = "mime_serde_shim")]
+    pub mime: Mime,
+    pub filename: String,
+    pub filesize: u64,
+    pub priority: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MediumOverview {
-    #[serde(
-        serialize_with = "bson::serde_helpers::serialize_object_id_as_hex_string"
-    )]
-    pub id: ObjectId,
+    pub id: Uuid,
     #[serde(rename = "mediumType")]
     pub medium_type: MediumType,
-    #[serde(rename = "dateTaken")]
-    pub date_taken: DateTime<FixedOffset>,
     pub originals: Vec<MediumItemOverview>,
-    pub album: Option<ObjectId>,
+    pub album: Option<Uuid>,
     pub tags: Vec<String>,
     pub preview: Option<MediumItemOverview>,
     pub edits: Vec<MediumItemOverview>,
+    pub sidecars: Vec<SidecarOverview>,
 }
 
 impl From<Medium> for MediumOverview {
     fn from(value: Medium) -> Self {
-        let date_taken = value
-            .date_taken
-            .with_timezone(&FixedOffset::east_opt(value.timezone).unwrap());
         Self {
-            id: value.id.unwrap(),
+            id: value.id,
             medium_type: value.medium_type,
-            date_taken,
             originals: value
                 .originals
                 .into_iter()
@@ -61,6 +60,11 @@ impl From<Medium> for MediumOverview {
                 .into_iter()
                 .map(MediumItemOverview::from)
                 .collect(),
+            sidecars: value
+                .sidecars
+                .into_iter()
+                .map(SidecarOverview::from)
+                .collect(),
         }
     }
 }
@@ -71,9 +75,22 @@ impl From<MediumItem> for MediumItemOverview {
             id: value.file.id,
             mime: value.file.mime,
             filename: value.file.filename,
+            date_taken: value.date_taken,
             width: value.width,
             height: value.height,
             filesize: value.file.filesize,
+            priority: value.file.priority,
+        }
+    }
+}
+
+impl From<FileItem> for SidecarOverview {
+    fn from(value: FileItem) -> Self {
+        Self {
+            id: value.id,
+            mime: value.mime,
+            filename: value.filename,
+            filesize: value.filesize,
             priority: value.priority,
         }
     }

@@ -15,7 +15,6 @@ mod move_to_trash;
 mod raw;
 mod user;
 
-#[derive(Debug)]
 pub struct Service {
     repo: Repository,
     store: Store,

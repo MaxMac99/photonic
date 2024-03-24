@@ -1,59 +1,47 @@
 use std::sync::Arc;
 
-use mongodb::{
-    bson::doc,
-    options::{ClientOptions, Credential},
-    Client, Collection,
+use deadpool_diesel::{
+    postgres::{Manager, Pool},
+    Runtime::Tokio1,
 };
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use snafu::{ResultExt, Whatever};
 
-use crate::{
-    config::Config,
-    model::{Album, Medium, TrashItem, User},
-};
+use crate::config::Config;
 
 mod album;
+mod dto;
 mod medium;
 mod to_trash;
 mod user;
 
-#[derive(Debug)]
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
+
 pub struct Repository {
-    client: Client,
-    medium_col: Collection<Medium>,
-    album_col: Collection<Album>,
-    trash_col: Collection<TrashItem>,
-    user_col: Collection<User>,
+    pool: Pool,
 }
 
 impl Repository {
     pub async fn init(config: Arc<Config>) -> Result<Self, Whatever> {
-        let mut opts = ClientOptions::parse(config.mongo.url.clone())
-            .await
-            .with_whatever_context(|_| format!("Mongo url error with {}", config.mongo.url))?;
-        opts.credential = Some(
-            Credential::builder()
-                .username(config.mongo.username.clone())
-                .password(config.mongo.password.clone())
-                .build(),
-        );
+        let manager = Manager::new(&config.database.url, Tokio1);
+        let pool = Pool::builder(manager)
+            .build()
+            .whatever_context("Could not create build pool")?;
 
-        let client = Client::with_options(opts).whatever_context("Mongo options error")?;
-        let db = client.database("fotonic");
-        db.run_command(doc! {"ping": 1}, None)
-            .await
-            .whatever_context("Could not ping mongo DB")?;
-        let medium_col: Collection<Medium> = db.collection("medium");
-        let album_col: Collection<Album> = db.collection("album");
-        let trash_col: Collection<TrashItem> = db.collection("trash");
-        let user_col: Collection<User> = db.collection("user");
+        run_migrations(&pool).await?;
 
-        Ok(Self {
-            client,
-            medium_col,
-            album_col,
-            trash_col,
-            user_col,
-        })
+        Ok(Self { pool })
     }
+}
+
+async fn run_migrations(pool: &Pool) -> Result<(), Whatever> {
+    let conn = pool
+        .get()
+        .await
+        .whatever_context("Could not get connection")?;
+    let _ = conn
+        .interact(|conn| conn.run_pending_migrations(MIGRATIONS).map(|_| ()))
+        .await
+        .whatever_context("Could not run migrations")?;
+    Ok(())
 }

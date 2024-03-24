@@ -82,7 +82,7 @@ impl From<Field> for Metadata {
 
 impl Exiftool {
     pub async fn new() -> Result<Self, ExifError> {
-        let mut process = Command::new("exiftool")
+        let mut process = Command::new("/opt/homebrew/bin/exiftool")
             .args(["-stay_open", "true", "-@", "-"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -120,8 +120,7 @@ impl Exiftool {
     ) {
         tokio::spawn(async move {
             while let Some(line) = reader.next_line().await.unwrap_or(None) {
-                match transmitter.send((error, String::from(line.trim()))).await
-                {
+                match transmitter.send((error, String::from(line.trim()))).await {
                     Err(_) => return,
                     _ => (),
                 }
@@ -154,8 +153,7 @@ impl Exiftool {
         let mut err_result = String::new();
         let mut status_code: i16 = -1;
         let mut ready_count = 0;
-        while let Some((error, line)) = self.receiver.lock().await.recv().await
-        {
+        while let Some((error, line)) = self.receiver.lock().await.recv().await {
             if line == ready {
                 ready_count += 1;
             } else if line.starts_with(&ready) {
@@ -196,11 +194,11 @@ impl Exiftool {
             .into_os_string()
             .into_string()
             .map_err(|_| {
-            InvalidPathSnafu {
-                path: file.as_ref().to_path_buf(),
-            }
-            .build()
-        })?;
+                InvalidPathSnafu {
+                    path: file.as_ref().to_path_buf(),
+                }
+                .build()
+            })?;
         if !Path::new(&path).exists() {
             return FileNotExistsSnafu {
                 path: PathBuf::from(path),

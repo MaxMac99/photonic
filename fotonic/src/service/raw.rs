@@ -1,25 +1,25 @@
-use bson::Uuid;
 use snafu::OptionExt;
+use uuid::Uuid;
 
 use crate::{
-    error::{FindMediumItemByIdSnafu, Result},
+    error::{FindMediumItemByIdSnafu, FindSidecarByIdSnafu, Result},
     model::{FileItem, MediumItemType},
-    ObjectId, Service,
+    Service,
 };
 
 #[derive(Debug)]
 pub enum MediumFileSubItem {
-    Original(ObjectId),
-    Edit(ObjectId),
+    Original(Uuid),
+    Edit(Uuid),
     Preview,
-    Sidecar(ObjectId),
+    Sidecar(Uuid),
 }
 
 impl Service {
     pub async fn get_medium_file(
         &self,
         user_id: Uuid,
-        medium_id: ObjectId,
+        medium_id: Uuid,
         medium_file_sub_type: MediumFileSubItem,
     ) -> Result<FileItem> {
         let medium = self.repo.get_medium(medium_id, user_id).await?;
@@ -32,7 +32,7 @@ impl Service {
                 .next()
                 .map(|item| item.file)
                 .context(FindMediumItemByIdSnafu {
-                    medium_type: MediumItemType::Original(item_id),
+                    medium_type: MediumItemType::Original,
                 }),
             MediumFileSubItem::Edit(item_id) => medium
                 .edits
@@ -41,7 +41,7 @@ impl Service {
                 .next()
                 .map(|item| item.file)
                 .context(FindMediumItemByIdSnafu {
-                    medium_type: MediumItemType::Edit(item_id),
+                    medium_type: MediumItemType::Edit,
                 }),
             MediumFileSubItem::Preview => {
                 medium
@@ -56,9 +56,7 @@ impl Service {
                 .into_iter()
                 .filter(|item| item.id == item_id)
                 .next()
-                .context(FindMediumItemByIdSnafu {
-                    medium_type: MediumItemType::Sidecar(item_id),
-                }),
+                .context(FindSidecarByIdSnafu),
         }?;
         file_item.path = self.store.get_full_path(&file_item);
 

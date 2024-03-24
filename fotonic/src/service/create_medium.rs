@@ -4,29 +4,28 @@ use std::{
 };
 
 use axum::{body::Bytes, BoxError};
-use bson::Uuid;
 use chrono::{DateTime, Datelike, FixedOffset, Utc};
 use futures::TryFutureExt;
 use futures_util::{io, Stream, TryStreamExt};
 use mime::Mime;
-use mongodb::bson::oid::ObjectId;
 use snafu::OptionExt;
 use tokio::{fs, fs::File, io::BufWriter, join};
 use tokio_util::io::StreamReader;
 use tracing::{debug, error};
+use uuid::Uuid;
 
 use meta::MetaInfo;
 
 use crate::{
     error::{NoDateTakenSnafu, Result},
-    model::{Access, Album, FileItem, Medium, MediumItem, MediumType, StoreLocation},
+    model::{Album, FileItem, Medium, MediumItem, MediumType, StoreLocation},
     service::Service,
     store::PathOptions,
 };
 
 #[derive(Debug, Clone)]
 pub struct CreateMediumInput {
-    pub album_id: Option<ObjectId>,
+    pub album_id: Option<Uuid>,
     pub filename: String,
     pub extension: String,
     pub tags: Vec<String>,
@@ -65,7 +64,7 @@ impl Service {
         username: String,
         input: CreateMediumInput,
         path: P,
-    ) -> Result<ObjectId>
+    ) -> Result<Uuid>
     where
         P: AsRef<Path> + Debug,
     {
@@ -74,31 +73,32 @@ impl Service {
 
         let target_path = self.store.import_file(&path_opts, &path).await?;
         let medium = Medium {
-            id: None,
-            access: Access { owner: user_id },
+            id: Uuid::new_v4(),
+            owner: user_id,
             medium_type: MediumType::Photo,
-            date_taken: path_opts.date,
-            timezone: path_opts.timezone,
             originals: vec![MediumItem {
                 file: FileItem {
-                    id: ObjectId::new(),
+                    id: Uuid::new_v4(),
                     mime: input.mime,
                     filename: String::from(path_opts.filename),
                     path: target_path.clone(),
                     filesize: file_size,
-                    last_saved: Utc::now(),
+                    last_saved: Utc::now().naive_utc(),
                     location: StoreLocation::Originals,
+                    priority: 10,
                 },
-                width: meta_info.width,
-                height: meta_info.height,
-                priority: 10,
+                width: meta_info.width as u32,
+                height: meta_info.height as u32,
+                date_taken: path_opts
+                    .date
+                    .with_timezone(&FixedOffset::east_opt(path_opts.timezone).unwrap()),
             }],
             album: None,
             tags: input.tags.clone(),
             preview: None,
             edits: vec![],
             sidecars: vec![],
-            additional_data: meta_info.additional_data,
+            // additional_data: meta_info.additional_data,
         };
 
         let id = self
@@ -114,10 +114,7 @@ impl Service {
                 }
                 Err(err)
             })
-            .await?
-            .inserted_id
-            .as_object_id()
-            .expect("Could not interpret inserted id as object id");
+            .await?;
         Ok(id)
     }
 

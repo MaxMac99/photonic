@@ -38,7 +38,15 @@ pub(crate) enum ResponseError {
 impl From<fotonic::error::Error> for ResponseError {
     fn from(err: fotonic::error::Error) -> Self {
         match err {
-            fotonic::error::Error::MongoDb { .. } => ResponseError::Internal {
+            fotonic::error::Error::Database { .. } => ResponseError::Internal {
+                message: "".to_string(),
+                source: Box::new(err),
+            },
+            fotonic::error::Error::Deadpool { .. } => ResponseError::Internal {
+                message: "".to_string(),
+                source: Box::new(err),
+            },
+            fotonic::error::Error::Interact { .. } => ResponseError::Internal {
                 message: "".to_string(),
                 source: Box::new(err),
             },
@@ -54,6 +62,9 @@ impl From<fotonic::error::Error> for ResponseError {
                 message: err.to_string(),
             },
             fotonic::error::Error::FindMediumItemById { .. } => ResponseError::NotFound {
+                message: err.to_string(),
+            },
+            fotonic::error::Error::FindSidecarById { .. } => ResponseError::NotFound {
                 message: err.to_string(),
             },
             fotonic::error::Error::FindUserById { .. } => ResponseError::AuthenticationRequired,

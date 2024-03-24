@@ -9,21 +9,12 @@ services:
     ports:
       - "8080:8080"
   db:
-    image: mongo:7.0
-    command: "--replSet rs0 --bind_ip_all --keyFile /opt/keyfile/keyfile"
+    image: postgres:16
     env_file: "./.env"
     ports:
-      - "27017:27017"
-    healthcheck:
-      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost'}]}) }" | mongosh --quiet -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD}
-      interval: 5s
-      timeout: 30s
-      start_period: 0s
-      retries: 30
+      - "5432:5432"
     volumes:
-      - ./docker/mongodb/:/opt/keyfile/
-      - fotonic_data:/data/db
-      - fotonic_config:/data/configdb
+      - fotonic_data:/var/lib/postgresql/data
 volumes:
   fotonic_data:
   fotonic_config:

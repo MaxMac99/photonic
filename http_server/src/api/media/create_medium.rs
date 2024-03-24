@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{
     body::Body,
     extract::{Query, State},
@@ -13,14 +11,13 @@ use jwt_authorizer::JwtClaims;
 use serde::Deserialize;
 use tokio::fs;
 use tracing::{error, log::info};
+use uuid::Uuid;
 
-use fotonic::ObjectId;
-
-use crate::{api::user::User, error::Result};
+use crate::{api::user::User, AppState, error::Result};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateMediumInput {
-    pub album_id: Option<ObjectId>,
+    pub album_id: Option<Uuid>,
     pub filename: String,
     pub extension: String,
     #[serde(default)]
@@ -29,7 +26,7 @@ pub struct CreateMediumInput {
 }
 
 pub async fn create_medium(
-    State(service): State<Arc<fotonic::Service>>,
+    State(AppState { service, .. }): State<AppState>,
     content_type: TypedHeader<ContentType>,
     opts: Query<CreateMediumInput>,
     JwtClaims(user): JwtClaims<User>,
@@ -68,5 +65,5 @@ pub async fn create_medium(
         .await?;
 
     info!("Successfully uploaded file with id {}", &id);
-    Ok((StatusCode::CREATED, Json(id.to_hex())))
+    Ok((StatusCode::CREATED, Json(id.to_string())))
 }

@@ -8,14 +8,12 @@ const ENV_STORAGE_BASE_DIRECTORY: &str = "STORAGE_BASE_DIRECTORY";
 const ENV_STORAGE_PATTERN: &str = "STORAGE_PATTERN";
 const ENV_STORAGE_CACHE_DIRECTORY: &str = "STORAGE_CACHE_DIRECTORY";
 
-const ENV_MONGO_URL: &str = "MONGO_URL";
-const ENV_MONGO_USERNAME: &str = "MONGO_USER";
-const ENV_MONGO_PASSWORD: &str = "MONGO_PASSWORD";
+const ENV_DATABASE_URL: &str = "DATABASE_URL";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub storage: Storage,
-    pub mongo: Mongo,
+    pub database: Database,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,22 +25,21 @@ pub struct Storage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Mongo {
+pub struct Database {
     pub url: String,
-    pub username: String,
-    pub password: String,
 }
 
 const DEFAULT_STORAGE_BASE_DIRECTORY: &str = "/storage";
-const DEFAULT_STORAGE_PATTERN: &str = "/<album_year>/<album>/<month><day>/<camera_make>_<camera_model>/<filename>.<extension>";
+const DEFAULT_STORAGE_PATTERN: &str =
+    "/<album_year>/<album>/<month><day>/<camera_make>_<camera_model>/<filename>.<extension>";
 const DEFAULT_STORAGE_CACHE_DIRECTORY: &str = "/cache";
 
 impl Config {
     pub async fn load() -> Result<Self, Whatever> {
         let storage = Config::create_storage().await?;
-        let mongo = Config::create_mongo()?;
+        let database = Config::create_database()?;
 
-        let config = Self { storage, mongo };
+        let config = Self { storage, database };
 
         Ok(config)
     }
@@ -53,18 +50,15 @@ impl Config {
             DEFAULT_STORAGE_BASE_DIRECTORY,
         )
         .await?;
-        let pattern = std::env::var(ENV_STORAGE_PATTERN)
-            .unwrap_or(String::from(DEFAULT_STORAGE_PATTERN));
+        let pattern =
+            std::env::var(ENV_STORAGE_PATTERN).unwrap_or(String::from(DEFAULT_STORAGE_PATTERN));
         let cache_path = Self::get_or_create_directory(
             ENV_STORAGE_CACHE_DIRECTORY,
             DEFAULT_STORAGE_CACHE_DIRECTORY,
         )
         .await?;
-        let tmp_path = Self::get_or_create_directory(
-            "",
-            cache_path.join("tmp").to_str().unwrap(),
-        )
-        .await?;
+        let tmp_path =
+            Self::get_or_create_directory("", cache_path.join("tmp").to_str().unwrap()).await?;
 
         Ok(Storage {
             base_path,
@@ -74,32 +68,20 @@ impl Config {
         })
     }
 
-    fn create_mongo() -> Result<Mongo, Whatever> {
-        let url = std::env::var(ENV_MONGO_URL)
-            .whatever_context("Could not get mongo url")?;
-        let username = std::env::var(ENV_MONGO_USERNAME)
-            .whatever_context("Could not get mongo username")?;
-        let password = std::env::var(ENV_MONGO_PASSWORD)
-            .whatever_context("Could not get mongo password")?;
+    fn create_database() -> Result<Database, Whatever> {
+        let url = std::env::var(ENV_DATABASE_URL).whatever_context("Could not get database url")?;
 
-        Ok(Mongo {
-            url,
-            username,
-            password,
-        })
+        Ok(Database { url })
     }
 
-    async fn get_or_create_directory(
-        env_var: &str,
-        default: &str,
-    ) -> Result<PathBuf, Whatever> {
+    async fn get_or_create_directory(env_var: &str, default: &str) -> Result<PathBuf, Whatever> {
         let mut base_path = std::env::var(env_var)
             .map(|val| PathBuf::from(val))
             .unwrap_or(PathBuf::from(default));
 
         if !base_path.starts_with("/") {
-            let cwd = std::env::current_dir()
-                .whatever_context("Could not get current directory")?;
+            let cwd =
+                std::env::current_dir().whatever_context("Could not get current directory")?;
             base_path = cwd.join(base_path);
         }
 
@@ -114,6 +96,12 @@ impl Config {
             })?;
         fs::canonicalize(&base_path)
             .await
-            .with_whatever_context(|_| format!("Could not canonicalize directory at path {:?} fo env var {}", base_path.clone(), env_var))
+            .with_whatever_context(|_| {
+                format!(
+                    "Could not canonicalize directory at path {:?} fo env var {}",
+                    base_path.clone(),
+                    env_var
+                )
+            })
     }
 }

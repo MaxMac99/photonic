@@ -1,9 +1,9 @@
-use bson::oid::ObjectId;
+use uuid::Uuid;
 
 use crate::{error::Result, Service};
 
 impl Service {
-    pub async fn move_to_trash(&self, id: ObjectId) -> Result<()> {
+    pub async fn move_to_trash(&self, id: Uuid) -> Result<()> {
         self.repo.move_to_trash(id).await
     }
 }

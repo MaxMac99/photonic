@@ -109,29 +109,20 @@ fn field_to_date(
     exif_datetime_to_chrono(&date)
 }
 
-fn exif_datetime_to_chrono(
-    exif: &exif::DateTime,
-) -> Option<DateTime<FixedOffset>> {
-    let chrono_date = NaiveDate::from_ymd_opt(
-        exif.year as i32,
-        exif.month as u32,
-        exif.day as u32,
-    )
-    .or(None)?
-    .and_hms_nano_opt(
-        exif.hour as u32,
-        exif.minute as u32,
-        exif.second as u32,
-        exif.nanosecond.unwrap_or(0),
-    )
-    .or(None)?;
+fn exif_datetime_to_chrono(exif: &exif::DateTime) -> Option<DateTime<FixedOffset>> {
+    let chrono_date = NaiveDate::from_ymd_opt(exif.year as i32, exif.month as u32, exif.day as u32)
+        .or(None)?
+        .and_hms_nano_opt(
+            exif.hour as u32,
+            exif.minute as u32,
+            exif.second as u32,
+            exif.nanosecond.unwrap_or(0),
+        )
+        .or(None)?;
     let tz = exif
         .offset
         .and_then(|offset| FixedOffset::east_opt(offset as i32 * 60))
-        .unwrap_or(
-            FixedOffset::east_opt(Local::now().offset().local_minus_utc())
-                .unwrap(),
-        );
+        .unwrap_or(FixedOffset::east_opt(Local::now().offset().local_minus_utc()).unwrap());
     chrono_date.and_local_timezone(tz).earliest()
 }
 
@@ -147,8 +138,7 @@ mod test {
 
     #[test]
     fn exif_heic() -> Result<(), MetaError> {
-        let file = std::fs::File::open("../test/IMG_4598.HEIC")
-            .map_err(|err| Io(err))?;
+        let file = std::fs::File::open("../test/IMG_4598.HEIC").map_err(|err| Io(err))?;
         let mut reader = BufReader::new(file);
         let mut buffer = Vec::new();
         reader.read_to_end(&mut buffer).map_err(|err| Io(err))?;
@@ -162,9 +152,7 @@ mod test {
                     .unwrap()
                     .and_hms_milli_opt(8, 58, 40, 825)
                     .unwrap()
-                    .and_local_timezone(
-                        FixedOffset::east_opt(2 * 60 * 60).unwrap()
-                    )
+                    .and_local_timezone(FixedOffset::east_opt(2 * 60 * 60).unwrap())
                     .earliest()
                     .unwrap()
             )
@@ -177,8 +165,7 @@ mod test {
 
     #[test]
     fn exif_dng() -> Result<(), MetaError> {
-        let file = std::fs::File::open("../test/IMG_4597.DNG")
-            .map_err(|err| Io(err))?;
+        let file = std::fs::File::open("../test/IMG_4597.DNG").map_err(|err| Io(err))?;
         let mut reader = BufReader::new(file);
         let mut buffer = Vec::new();
         reader.read_to_end(&mut buffer).map_err(|err| Io(err))?;
@@ -191,9 +178,7 @@ mod test {
                     .unwrap()
                     .and_hms_milli_opt(8, 58, 15, 779)
                     .unwrap()
-                    .and_local_timezone(
-                        FixedOffset::east_opt(2 * 60 * 60).unwrap()
-                    )
+                    .and_local_timezone(FixedOffset::east_opt(2 * 60 * 60).unwrap())
                     .earliest()
                     .unwrap()
             )

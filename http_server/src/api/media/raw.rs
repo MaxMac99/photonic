@@ -1,24 +1,22 @@
-use std::sync::Arc;
-
 use axum::{
     body::Body,
     extract::{Path, State},
     http::{header, HeaderMap, HeaderValue},
 };
-use bson::oid::ObjectId;
 use jwt_authorizer::JwtClaims;
 use snafu::{ResultExt, Whatever};
 use tokio::fs;
 use tokio_util::io::ReaderStream;
+use uuid::Uuid;
 
 use fotonic::{model::FileItem, service::MediumFileSubItem};
 
-use crate::{api::user::User, error::Result};
+use crate::{api::user::User, AppState, error::Result};
 
 pub async fn get_medium_original_raw(
-    State(service): State<Arc<fotonic::Service>>,
+    State(AppState { service, .. }): State<AppState>,
     JwtClaims(user): JwtClaims<User>,
-    Path((medium_id, item_id)): Path<(ObjectId, ObjectId)>,
+    Path((medium_id, item_id)): Path<(Uuid, Uuid)>,
 ) -> Result<(HeaderMap, Body)> {
     let original = service
         .get_medium_file(user.sub, medium_id, MediumFileSubItem::Original(item_id))
@@ -28,9 +26,9 @@ pub async fn get_medium_original_raw(
 }
 
 pub async fn get_medium_edit_raw(
-    State(service): State<Arc<fotonic::Service>>,
+    State(AppState { service, .. }): State<AppState>,
     JwtClaims(user): JwtClaims<User>,
-    Path((medium_id, item_id)): Path<(ObjectId, ObjectId)>,
+    Path((medium_id, item_id)): Path<(Uuid, Uuid)>,
 ) -> Result<(HeaderMap, Body)> {
     let edit = service
         .get_medium_file(user.sub, medium_id, MediumFileSubItem::Edit(item_id))
@@ -40,9 +38,9 @@ pub async fn get_medium_edit_raw(
 }
 
 pub async fn get_medium_preview_raw(
-    State(service): State<Arc<fotonic::Service>>,
+    State(AppState { service, .. }): State<AppState>,
     JwtClaims(user): JwtClaims<User>,
-    Path(medium_id): Path<ObjectId>,
+    Path(medium_id): Path<Uuid>,
 ) -> Result<(HeaderMap, Body)> {
     let edit = service
         .get_medium_file(user.sub, medium_id, MediumFileSubItem::Preview)
@@ -52,9 +50,9 @@ pub async fn get_medium_preview_raw(
 }
 
 pub async fn get_medium_sidecar_raw(
-    State(service): State<Arc<fotonic::Service>>,
+    State(AppState { service, .. }): State<AppState>,
     JwtClaims(user): JwtClaims<User>,
-    Path((medium_id, item_id)): Path<(ObjectId, ObjectId)>,
+    Path((medium_id, item_id)): Path<(Uuid, Uuid)>,
 ) -> Result<(HeaderMap, Body)> {
     let edit = service
         .get_medium_file(user.sub, medium_id, MediumFileSubItem::Sidecar(item_id))

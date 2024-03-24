@@ -98,9 +98,7 @@ impl Service {
         Ok(meta_info)
     }
 
-    fn extract_date_time(
-        metadata: &HashMap<String, Metadata>,
-    ) -> Option<DateTime<FixedOffset>> {
+    fn extract_date_time(metadata: &HashMap<String, Metadata>) -> Option<DateTime<FixedOffset>> {
         metadata
             .get("SubSecDateTimeOriginal")
             .or_else(|| metadata.get("DateTimeOriginal"))

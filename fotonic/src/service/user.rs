@@ -1,4 +1,4 @@
-use bson::Uuid;
+use uuid::Uuid;
 
 use crate::{error::Result, Service};
 

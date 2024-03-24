@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -11,11 +9,12 @@ use fotonic::service::FindAllMediaInput;
 
 use crate::{
     api::{media::model::MediumOverview, user::User},
+    AppState,
     error::Result,
 };
 
 pub async fn find_all(
-    State(service): State<Arc<fotonic::Service>>,
+    State(AppState { service, .. }): State<AppState>,
     JwtClaims(user): JwtClaims<User>,
     opts: Query<FindAllMediaInput>,
 ) -> Result<(StatusCode, Json<Vec<MediumOverview>>)> {
