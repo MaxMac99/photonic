@@ -8,12 +8,19 @@
 # Create a stage for building the application.
 
 ARG RUST_VERSION=1.75.0
-ARG APP_NAME=photonic
+ARG APP_NAME=cli
 FROM rust:${RUST_VERSION}-slim-bullseye AS build
 ARG APP_NAME
 WORKDIR /app
 
 ADD . .
+
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean \
+    && apt-get update \
+    && apt-get -y --no-install-recommends install \
+        pkg-config libssl-dev libpq-dev
 
 # Build the application.
 # Leverage a cache mount to /usr/local/cargo/registry/
