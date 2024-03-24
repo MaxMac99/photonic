@@ -3,14 +3,14 @@ use std::path::PathBuf;
 use clap::{command, Command};
 use snafu::{ResultExt, Whatever};
 use tracing::log::debug;
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 mod cli;
 
 #[tokio::main]
 #[snafu::report]
 async fn main() -> Result<(), Whatever> {
-    dotenv::dotenv().whatever_context("Could not initialize dotenv")?;
+    dotenv::dotenv().ok();
 
     tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())
