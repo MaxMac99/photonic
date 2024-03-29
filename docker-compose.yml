@@ -2,12 +2,16 @@ version: '3.8'
 
 services:
   server:
-    build:
-      context: .
-      target: final
+    #    build:
+    #      context: .
+    #      target: final
+    image: photonic:latest
     env_file: "./.env"
     ports:
       - "8080:8080"
+    volumes:
+      - photonic_data:/storage/
+      - photonic_cache:/cache/
   db:
     image: postgres:16
     env_file: "./.env"
@@ -17,4 +21,5 @@ services:
       - photonic_data:/var/lib/postgresql/data
 volumes:
   photonic_data:
+  photonic_cache:
   photonic_config:

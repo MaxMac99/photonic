@@ -82,7 +82,7 @@ impl From<Field> for Metadata {
 
 impl Exiftool {
     pub async fn new() -> Result<Self, ExifError> {
-        let mut process = Command::new("/opt/homebrew/bin/exiftool")
+        let mut process = Command::new("exiftool")
             .args(["-stay_open", "true", "-@", "-"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
