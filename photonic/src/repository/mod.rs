@@ -4,6 +4,7 @@ use deadpool_diesel::{
     postgres::{Manager, Pool},
     Runtime::Tokio1,
 };
+use diesel::Connection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use snafu::{ResultExt, Whatever};
 

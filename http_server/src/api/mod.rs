@@ -1,6 +1,6 @@
 use axum::{
-    Router,
     routing::{delete, get},
+    Router,
 };
 use jwt_authorizer::{Authorizer, IntoLayer};
 
@@ -16,20 +16,8 @@ pub fn app(auth: Authorizer<User>) -> Router<AppState> {
         .route("/media", get(media::find_all).post(media::create_medium))
         .route("/media/:medium_id", delete(media::delete_medium))
         .route(
-            "/media/:medium_id/originals/:item_id/raw",
-            get(media::get_medium_original_raw),
-        )
-        .route(
-            "/media/:medium_id/edits/:item_id/raw",
-            get(media::get_medium_edit_raw),
-        )
-        .route(
-            "/media/:medium_id/preview/raw",
-            get(media::get_medium_preview_raw),
-        )
-        .route(
-            "/media/:medium_id/sidecars/:item_id/raw",
-            get(media::get_medium_sidecar_raw),
+            "/media/:medium_id/:format/:item_id/raw",
+            get(media::get_medium_item_raw).post(media::add_raw),
         )
         .layer(auth.into_layer())
         .route("/ping", get(ping::ping))

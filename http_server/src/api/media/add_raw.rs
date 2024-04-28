@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     Json,
 };
@@ -13,17 +13,19 @@ use tokio::fs;
 use tracing::{error, log::info};
 use uuid::Uuid;
 
-use crate::{api::user::User, AppState, error::Result};
+use photonic::service::AddMediumItemType;
+
+use crate::{
+    api::{media::create_medium::CreateMediumInput, user::User},
+    AppState,
+};
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct CreateMediumInput {
-    pub album_id: Option<Uuid>,
+pub struct AddRawInput {
     pub filename: String,
     pub extension: String,
     #[serde(default = "default_prio")]
     pub priority: i32,
-    #[serde(default)]
-    pub tags: Vec<String>,
     pub date_taken: Option<DateTime<FixedOffset>>,
 }
 
@@ -31,13 +33,22 @@ fn default_prio() -> i32 {
     10
 }
 
-pub async fn create_medium(
+#[derive(Debug, Clone, Deserialize)]
+pub enum MediumItemFormat {
+    Originals,
+    Edits,
+    Previews,
+    Sidecars,
+}
+
+pub async fn add_raw(
     State(AppState { service, .. }): State<AppState>,
     content_type: TypedHeader<ContentType>,
-    opts: Query<CreateMediumInput>,
+    Path((medium_id, format)): Path<(Uuid, MediumItemFormat)>,
+    opts: Query<AddRawInput>,
     JwtClaims(user): JwtClaims<User>,
     body: Body,
-) -> Result<(StatusCode, Json<String>)> {
+) -> crate::error::Result<(StatusCode, Json<String>)> {
     service.create_or_update_user(user.clone().into()).await?;
 
     let opts = opts.0;
@@ -46,19 +57,24 @@ pub async fn create_medium(
         .store_stream_temporarily(&opts.extension, body.into_data_stream())
         .await?;
 
-    let create_medium = photonic::service::CreateMediumInput {
+    let input = photonic::service::AddMediumItemInput {
         user_id: user.sub,
         username: user.get_username().unwrap(),
-        album_id: opts.album_id,
+        item_type: match format {
+            MediumItemFormat::Originals => AddMediumItemType::Original,
+            MediumItemFormat::Edits => AddMediumItemType::Edit,
+            MediumItemFormat::Previews => AddMediumItemType::Preview,
+            MediumItemFormat::Sidecars => AddMediumItemType::Sidecar,
+        },
+        medium_id,
         filename: opts.filename,
         extension: opts.extension,
-        tags: opts.tags,
         date_taken: opts.date_taken,
         mime: content_type.0.into(),
         priority: opts.priority,
     };
     let id = service
-        .create_medium(create_medium, &temp_path)
+        .add_raw_file(input, &temp_path)
         .or_else(|err| async {
             // Try remove temporary file if it could not be stored
             if let Err(remove_err) = fs::remove_file(&temp_path).await {

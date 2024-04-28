@@ -2,17 +2,17 @@ use std::sync::Arc;
 
 use snafu::{ResultExt, Whatever};
 
-pub use create_medium::CreateMediumInput;
+pub use create_medium::{AddMediumItemInput, AddMediumItemType, CreateMediumInput};
 pub use find_all::FindAllMediaInput;
-pub use raw::MediumFileSubItem;
+pub use get_raw::GetMediumFileType;
 pub use user::CreateUserInput;
 
 use crate::{config::Config, repository::Repository, store::Store};
 
 mod create_medium;
 mod find_all;
+mod get_raw;
 mod move_to_trash;
-mod raw;
 mod user;
 
 pub struct Service {

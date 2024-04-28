@@ -79,8 +79,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
-                description: The new id
+                $ref: '#/components/schemas/ObjectId'
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -130,11 +129,16 @@ paths:
           in: query
           name: tags
         - schema:
+            type: integer
+            default: 10
+          in: query
+          name: priority
+        - schema:
             type: string
             format: date-time
           in: query
           name: dateTaken
-          description: Overrides the date the medium was taken from meta informaiton
+          description: Overrides the date the medium item was taken from meta information
     parameters: [ ]
   "/media/{id}":
     get:
@@ -189,9 +193,9 @@ paths:
       parameters: [ ]
       tags:
         - Media
-  "/media/{id}/originals/{item_id}/raw":
+  "/media/{id}/{format}/{item_id}/raw":
     get:
-      summary: Gets original file
+      summary: Gets file
       responses:
         "200":
           description: OK
@@ -210,16 +214,63 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalServerError"
-      operationId: getRawOriginal
+      operationId: getRaw
       description: Gets the raw medium by its id. The content-type indicates the format of the medium.
       security:
         - Authentik: [ ]
       parameters: [ ]
       tags:
         - Media
+    delete:
+      summary: Deletes item
+      operationId: deleteItem
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters:
+        - schema:
+            type: boolean
+          in: query
+          name: delete
+          description: Fully deletes it instead of moving to trash
+      tags:
+        - Media
+      description: Moves the item to trash. The medium will be automatically delete if it was the last original
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+      - in: path
+        name: format
+        required: true
+        schema:
+          type: string
+          enum:
+            - originals
+            - edits
+            - previews
+            - sidecars
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/ObjectId"
+  "/media/{id}/{format}/raw":
     post:
-      summary: Adds original
-      operationId: addOriginal
+      summary: Adds file
+      operationId: addFile
       responses:
         "201":
           description: Created
@@ -260,357 +311,36 @@ paths:
           in: query
           name: filename
         - schema:
-            type: integer
-          in: query
-          name: priority
-    delete:
-      summary: Deletes original
-      operationId: deleteOriginal
-      responses:
-        "204":
-          description: No Content
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      parameters:
-        - schema:
-            type: boolean
-          in: query
-          name: delete
-          description: Fully deletes it instead of moving to trash
-      tags:
-        - Media
-      description: Moves the original version of the medium to trash. The medium will be automatically delete if it was the last original
-    parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          $ref: "#/components/schemas/ObjectId"
-      - name: item_id
-        in: path
-        required: true
-        schema:
-          $ref: "#/components/schemas/ObjectId"
-  "/media/{id}/edits/{item_id}/raw":
-    get:
-      summary: Gets edited file
-      responses:
-        "200":
-          description: OK
-          content:
-            image:
-              schema:
-                type: string
-                format: binary
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      operationId: getRawEdit
-      description: Gets the raw medium by its id. The content-type indicates the format of the medium.
-      security:
-        - Authentik: [ ]
-      parameters: [ ]
-      tags:
-        - Media
-    post:
-      summary: Adds edited version
-      operationId: addEdit
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MediumItem"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "409":
-          description: Conflict
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      security:
-        - Authentik: [ ]
-      requestBody:
-        content:
-          image:
-            schema:
-              type: string
-              format: binary
-      tags:
-        - Media
-      description: Adds a new type to an existing medium.
-      parameters:
-        - schema:
-            type: boolean
-          in: query
-          name: original
-          description: "If true, stores the medium in /originals. Needs a filename"
-        - schema:
             type: string
           in: query
-          name: filename
+          name: extension
         - schema:
             type: integer
+            default: 10
           in: query
           name: priority
-    delete:
-      summary: Deletes edited version
-      operationId: deleteEdit
-      responses:
-        "204":
-          description: No Content
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      parameters:
         - schema:
-            type: boolean
+            type: string
+            format: date-time
           in: query
-          name: delete
-          description: Fully deletes it instead of moving to trash
-      tags:
-        - Media
-      description: Moves the edited version of the medium to trash. The medium will be automatically delete if it was the last original
+          name: dateTaken
+          description: Overrides the date the medium item was taken from meta information
     parameters:
       - in: path
         name: id
         required: true
         schema:
           $ref: "#/components/schemas/ObjectId"
-      - name: item_id
-        in: path
-        required: true
-        schema:
-          $ref: "#/components/schemas/ObjectId"
-  "/media/{id}/preview/raw":
-    get:
-      summary: Gets preview
-      responses:
-        "200":
-          description: OK
-          content:
-            image:
-              schema:
-                type: string
-                format: binary
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      operationId: getPreview
-      description: Gets the raw medium by its id. The content-type indicates the format of the medium.
-      security:
-        - Authentik: [ ]
-      parameters: [ ]
-      tags:
-        - Media
-    post:
-      summary: Adds preview
-      operationId: addPreview
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MediumItem"
-        "400":
-          description: |-
-            Bad Request
-            Preview type not supported
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "409":
-          description: |-
-            Conflict
-            There is already a preview.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      security:
-        - Authentik: [ ]
-      requestBody:
-        content:
-          image:
-            schema:
-              type: string
-              format: binary
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ObjectId"
-        description: Make an original or edited version to the preview.
-      tags:
-        - Media
-      description: Adds a preview of the medium. Only jpegs and pngs are allowed.
-      parameters:
-        - schema:
-            type: boolean
-          in: query
-          name: original
-          description: "If true, stores the medium in /originals. Needs a filename"
-        - schema:
-            type: string
-          in: query
-          name: filename
-    delete:
-      summary: Deletes the type
-      operationId: deletePreview
-      responses:
-        "204":
-          description: No Content
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      parameters:
-        - schema:
-            type: boolean
-          in: query
-          name: delete
-          description: Fully deletes it instead of moving to trash
-      tags:
-        - Media
-      description: Moves the edited version of the medium to trash. The medium will be automatically delete if it was the last original
-    parameters:
       - in: path
-        name: id
+        name: format
         required: true
         schema:
-          $ref: "#/components/schemas/ObjectId"
-    put:
-      summary: Puts preview
-      operationId: putPreview
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MediumItem"
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      description: Overwrites the preview of a medium.
-      parameters:
-        - schema:
-            type: string
-          in: query
-          name: delete
-          description: Deletes the previous version instead of moving it to trash
-        - schema:
-            type: string
-          in: query
-          name: filename
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ObjectId"
-          image:
-            schema:
-              type: string
-              format: binary
-        description: ""
-      tags:
-        - Media
+          type: string
+          enum:
+            - originals
+            - edits
+            - previews
   "/media/{id}/sidecars/{sidecar_id}/raw":
-    get:
-      summary: Get medium
-      responses:
-        "200":
-          description: OK
-          content:
-            image:
-              schema:
-                type: string
-                format: binary
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      operationId: getRawSidecar
-      description: Gets the raw sidecar file by its id and type. The content-type indicates the format of the medium.
-      security:
-        - Authentik: [ ]
-      parameters: [ ]
-      tags:
-        - Media
     post:
       summary: Add medium
       operationId: addSidecar
@@ -653,7 +383,7 @@ paths:
             type: boolean
           in: query
           name: original
-          description: "If true, stores the medium in /originals. Needs a filename"
+          description: "If true, stores the medium in /Originals. Needs a filename"
         - schema:
             type: string
           in: query
@@ -693,180 +423,6 @@ paths:
         name: sidecar_id
         in: path
         required: true
-  "/media/{id}/originals/{original_id}/move/{source_id}":
-    put:
-      summary: Move medium
-      operationId: moveMediumType
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "409":
-          description: Conflict
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      security:
-        - Authentik: [ ]
-      tags:
-        - Media
-      description: Adds a new type to an existing medium.
-      parameters: [ ]
-    parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          $ref: "#/components/schemas/ObjectId"
-      - schema:
-          $ref: "#/components/schemas/ObjectId"
-        name: original_id
-        in: path
-        required: true
-      - schema:
-          $ref: "#/components/schemas/ObjectId"
-        name: source_id
-        in: path
-        required: true
-  /trash:
-    get:
-      summary: Get trash
-      responses:
-        "200":
-          description: ""
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/PaginatedResult"
-                  - type: object
-                    properties:
-                      results:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/TrashItem"
-        "204":
-          description: No Content
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      operationId: getTrash
-      description: Gets all media in the trash
-      security:
-        - Authentik: [ ]
-      parameters:
-        - $ref: "#/components/parameters/per_page"
-      tags:
-        - Media
-    parameters: [ ]
-  "/trash/{id}":
-    get:
-      summary: Get trash
-      responses:
-        "200":
-          description: OK
-          content:
-            image:
-              schema:
-                type: string
-                format: binary
-        "303":
-          description: |-
-            See Other
-            Deleted mediums still can be found under /media/{id}
-          content:
-            application/json:
-              schema:
-                type: string
-                format: uri
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      operationId: getTrashItem
-      description: Gets raw from MediumItem in the trash.
-      security:
-        - Authentik: [ ]
-      parameters: [ ]
-      tags:
-        - Media
-    parameters:
-      - schema:
-          $ref: "#/components/schemas/ObjectId"
-        name: id
-        in: path
-        required: true
-        description: MediumItem or Sidecar
-    delete:
-      summary: Deletes trash item
-      operationId: deleteTrashItem
-      responses:
-        "204":
-          description: No Content
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties: { }
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      description: Removes item in the trash.
-      tags:
-        - Media
-    put:
-      summary: Puts back trash item
-      operationId: putBackFromTrash
-      responses:
-        "204":
-          description: No Content
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      description: Puts the item in trash back to its original place.
-      tags:
-        - Media
   /albums:
     get:
       summary: Get albums
@@ -1107,18 +663,7 @@ components:
         id:
           $ref: "#/components/schemas/ObjectId"
         type:
-          type: string
-          enum:
-            - photo
-            - video
-            - live-photo
-            - vector
-            - sequence
-            - gif
-            - other
-        dateTaken:
-          type: string
-          format: date-time
+          $ref: "#/components/schemas/MediumType"
         album:
           $ref: "#/components/schemas/ObjectId"
         tags:
@@ -1143,7 +688,6 @@ components:
       required:
         - id
         - type
-        - dateTaken
         - originals
     MediumItem:
       title: MediumItem
@@ -1153,36 +697,19 @@ components:
           $ref: "#/components/schemas/ObjectId"
         type:
           type: string
-          enum:
-            - raw-photo
-            - photo
-            - video
-            - vector
-            - gif
           description: MIME content-type
         filename:
           type: string
-        path:
+        dateTaken:
           type: string
+          format: date-time
         width:
           type: integer
         height:
           type: integer
-        size:
+        filesize:
           type: integer
           description: size in bytes
-        lastSaved:
-          type: string
-          format: date-time
-        originalStore:
-          type: boolean
-          description: Stored in /originals
-        meta:
-          type: object
-          description: Meta information either manually added or from other datasource. Prioritised over meta.
-        exif:
-          type: object
-          description: Original EXIF information
         priority:
           type: integer
           default: 10
@@ -1190,11 +717,10 @@ components:
         - id
         - type
         - filename
+        - dateTaken
         - width
         - height
-        - size
-        - lastSaved
-        - originalStore
+        - filesize
         - priority
     Album:
       title: Album
@@ -1264,25 +790,40 @@ components:
     ObjectId:
       title: ObjectId
       type: string
+      format: uuid
+    MediumType:
+      type: string
+      enum:
+        - photo
+        - video
+        - live-photo
+        - vector
+        - sequence
+        - gif
+        - other
     Sidecar:
       title: Sidecar
       type: object
       properties:
         id:
           type: string
-        lastDate:
+        type:
           type: string
-          format: date-time
+          description: The MIME type
         filename:
           type: string
-        path:
-          type: string
-        meta:
-          type: object
+        filesize:
+          type: integer
+          description: size in bytes
+        priority:
+          type: integer
+          default: 10
       required:
         - id
-        - lastDate
+        - type
         - filename
+        - filesize
+        - priority
     TrashItem:
       title: TrashItem
       type: object

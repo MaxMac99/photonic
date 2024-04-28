@@ -47,7 +47,7 @@ CREATE TABLE media_tags (
     CONSTRAINT fk_tag FOREIGN KEY (tag_id) REFERENCES tags(id)
 );
 
-CREATE TYPE store_location_enum AS ENUM ('originals', 'cache');
+CREATE TYPE store_location_enum AS ENUM ('Originals', 'cache');
 CREATE TYPE medium_item_type_enum AS ENUM ('original', 'preview', 'edit');
 CREATE TABLE medium_items (
     id uuid DEFAULT gen_random_uuid(),

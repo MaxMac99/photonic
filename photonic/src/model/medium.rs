@@ -68,8 +68,7 @@ pub struct Medium {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub album: Option<Uuid>,
     pub tags: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub preview: Option<MediumItem>,
+    pub previews: Vec<MediumItem>,
     pub edits: Vec<MediumItem>,
     pub sidecars: Vec<FileItem>,
 }
