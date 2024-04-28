@@ -15,6 +15,8 @@ tags:
   - name: Album
   - name: Media
   - name: System
+security: 
+  - Authentik: []
 paths:
   /media:
     get:
@@ -852,9 +854,11 @@ components:
         - type
   securitySchemes:
     Authentik:
-      type: openIdConnect
-      openIdConnectUrl: "https://auth.vissing.ddnss.de/application/o/photonic"
-      description: Authentik endpoint
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: "https://auth.vissing.ddnss.de/application/o/authorize/"
+          tokenUrl: "https://auth.vissing.ddnss.de/application/o/token/"
   parameters:
     start_date:
       name: start_date
