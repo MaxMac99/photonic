@@ -854,11 +854,9 @@ components:
         - type
   securitySchemes:
     Authentik:
-      type: oauth2
-      flows:
-        authorizationCode:
-          authorizationUrl: "https://auth.vissing.ddnss.de/application/o/authorize/"
-          tokenUrl: "https://auth.vissing.ddnss.de/application/o/token/"
+      type: openIdConnect
+      openIdConnectUrl: "https://auth.vissing.ddnss.de/application/o/photonic/.well-known/openid-configuration"
+      description: Authentik endpoint
   parameters:
     start_date:
       name: start_date
