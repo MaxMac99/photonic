@@ -172,7 +172,7 @@ impl Exiftool {
 
         if status_code != 0 {
             return ParseSnafu {
-                message: err_result,
+                message: format!("Err: {}\n{}", err_result, result),
             }
             .fail();
         }

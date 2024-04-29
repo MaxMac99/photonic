@@ -15,8 +15,8 @@ tags:
   - name: Album
   - name: Media
   - name: System
-security: 
-  - Authentik: []
+security:
+  - Authentik: [ ]
 paths:
   /media:
     get:
@@ -677,7 +677,7 @@ components:
           minItems: 1
           items:
             $ref: "#/components/schemas/MediumItem"
-        preview:
+        previews:
           $ref: "#/components/schemas/MediumItem"
         edits:
           type: array

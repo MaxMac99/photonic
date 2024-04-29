@@ -37,7 +37,7 @@ pub struct MediumOverview {
     pub originals: Vec<MediumItemOverview>,
     pub album: Option<Uuid>,
     pub tags: Vec<String>,
-    pub preview: Vec<MediumItemOverview>,
+    pub previews: Vec<MediumItemOverview>,
     pub edits: Vec<MediumItemOverview>,
     pub sidecars: Vec<SidecarOverview>,
 }
@@ -54,7 +54,7 @@ impl From<Medium> for MediumOverview {
                 .collect(),
             album: value.album,
             tags: value.tags,
-            preview: value
+            previews: value
                 .previews
                 .into_iter()
                 .map(MediumItemOverview::from)
