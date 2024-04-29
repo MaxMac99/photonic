@@ -106,7 +106,7 @@ paths:
         - Authentik: [ ]
       requestBody:
         content:
-          image:
+          image/*:
             schema:
               type: string
               format: binary
@@ -202,7 +202,7 @@ paths:
         "200":
           description: OK
           content:
-            image:
+            image/*:
               schema:
                 type: string
                 format: binary
@@ -300,7 +300,7 @@ paths:
         - Authentik: [ ]
       requestBody:
         content:
-          image:
+          image/*:
             schema:
               type: string
               format: binary
@@ -373,7 +373,7 @@ paths:
         - Authentik: [ ]
       requestBody:
         content:
-          image:
+          image/*:
             schema:
               type: string
               format: binary
@@ -760,7 +760,6 @@ components:
         param:
           type: string
       required:
-        - code
         - message
         - type
     Info:
@@ -786,8 +785,7 @@ components:
           type: array
           items: { }
       required:
-        - page
-        - per_page
+        - next
         - results
     ObjectId:
       title: ObjectId
