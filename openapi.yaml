@@ -772,6 +772,9 @@ components:
         openidConfigurationUrl:
           type: string
           description: The OpenID Connect configuration url
+      required:
+        - version
+        - openidConfigurationUrl
     PaginatedResult:
       title: PaginatedResult
       type: object
