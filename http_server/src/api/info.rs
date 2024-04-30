@@ -1,16 +1,15 @@
 use axum::{extract::State, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
 
-use crate::{AppState, error::Result};
+use crate::{error::Result, AppState};
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Info {
-    #[serde(rename = "clientId")]
-    pub client_id: String,
-    #[serde(rename = "authorizeUrl")]
-    pub authorize_url: String,
-    #[serde(rename = "tokenUrl")]
-    pub token_url: String,
+    pub version: String,
+    pub openid_configuration_url: String,
 }
 
 pub async fn info(
@@ -19,9 +18,8 @@ pub async fn info(
     Ok((
         StatusCode::OK,
         Json::from(Info {
-            client_id: server_config.client_id.clone(),
-            authorize_url: server_config.authorize_url.clone(),
-            token_url: server_config.token_url.clone(),
+            version: String::from(VERSION),
+            openid_configuration_url: server_config.openid_configuration_url.clone(),
         }),
     ))
 }

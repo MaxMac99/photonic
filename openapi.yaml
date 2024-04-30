@@ -766,15 +766,12 @@ components:
       title: Info
       type: object
       properties:
-        clientId:
+        version:
           type: string
-          description: The OAuth2 cliend id
-        authorizeUrl:
+          description: The current server version
+        openidConfigurationUrl:
           type: string
-          description: The OAuth2 authorize url
-        tokenUrl:
-          type: string
-          description: The OAuth2 token url
+          description: The OpenID Connect configuration url
     PaginatedResult:
       title: PaginatedResult
       type: object
