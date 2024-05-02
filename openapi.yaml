@@ -771,7 +771,11 @@ components:
           description: The current server version
         openidConfigurationUrl:
           type: string
+          format: uri
           description: The OpenID Connect configuration url
+        clientId:
+          type: string
+          description: The OAuth 2.0 client id
       required:
         - version
         - openidConfigurationUrl

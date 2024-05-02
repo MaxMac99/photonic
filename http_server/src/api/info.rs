@@ -10,6 +10,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub struct Info {
     pub version: String,
     pub openid_configuration_url: String,
+    pub client_id: String,
 }
 
 pub async fn info(
@@ -20,6 +21,7 @@ pub async fn info(
         Json::from(Info {
             version: String::from(VERSION),
             openid_configuration_url: server_config.openid_configuration_url.clone(),
+            client_id: server_config.client_id.clone(),
         }),
     ))
 }
