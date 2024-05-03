@@ -776,38 +776,9 @@ components:
         clientId:
           type: string
           description: The OAuth 2.0 client id
-        authorizeUrl:
-          type: string
-          description: The OAuth2 authorize url
-        tokenUrl:
-          type: string
-          description: The OAuth2 token url
-        responseTypesSupported:
-          type: array
-          items:
-            type: string
-          description: The OAuth2 supported response types
-        scopesSupported:
-          type: array
-          items:
-            type: string
-          description: The OAuth2 supported scopes
-        claimsSupported:
-          type: array
-          items:
-            type: string
-          description: The OAuth2 supported claims
-        codeChallengeMethodsSupported:
-          type: array
-          items:
-            type: string
-          description: The OAuth2 supported code challenge methods
       required:
         - version
         - openidConfigurationUrl
-        - clientId
-        - authorizeUrl
-        - tokenUrl
     PaginatedResult:
       title: PaginatedResult
       type: object

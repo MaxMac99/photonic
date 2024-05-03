@@ -23,7 +23,7 @@ pub(crate) struct AppState {
 
 pub async fn run() -> Result<(), Whatever> {
     let config = Arc::new(Config::load().await?);
-    let server_config = Arc::new(ServerConfig::load().await?);
+    let server_config = Arc::new(ServerConfig::load()?);
     let service = Arc::new(Service::new(config.clone()).await?);
 
     let address = "0.0.0.0:8080";
@@ -36,7 +36,7 @@ pub async fn run() -> Result<(), Whatever> {
     );
 
     let validation = Validation::new().aud(&[server_config.client_id.clone()]);
-    let auth = JwtAuthorizer::from_jwks_url(server_config.openid_configuration.jwks_uri.as_str())
+    let auth = JwtAuthorizer::from_jwks_url(server_config.jwks_url.as_str())
         .validation(validation)
         .check(|user: &User| {
             user.given_name.is_some()

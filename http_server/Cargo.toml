@@ -25,4 +25,3 @@ snafu = "0.8.2"
 mime = "0.3.17"
 jwt-authorizer = "0.14.0"
 byte-unit = { version = "5.1.4", features = ["serde"] }
-reqwest = { version = "0.12.4", features = ["json"] }
