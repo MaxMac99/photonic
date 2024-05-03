@@ -776,9 +776,18 @@ components:
         clientId:
           type: string
           description: The OAuth 2.0 client id
+        authorizeUrl:
+          type: string
+          description: The OAuth2 authorize url
+        tokenUrl:
+          type: string
+          description: The OAuth2 token url
       required:
         - version
         - openidConfigurationUrl
+        - clientId
+        - authorizeUrl
+        - tokenUrl
     PaginatedResult:
       title: PaginatedResult
       type: object

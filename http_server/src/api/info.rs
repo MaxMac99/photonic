@@ -11,6 +11,8 @@ pub struct Info {
     pub version: String,
     pub openid_configuration_url: String,
     pub client_id: String,
+    pub authorize_url: String,
+    pub token_url: String,
 }
 
 pub async fn info(
@@ -22,6 +24,8 @@ pub async fn info(
             version: String::from(VERSION),
             openid_configuration_url: server_config.openid_configuration_url.clone(),
             client_id: server_config.client_id.clone(),
+            authorize_url: server_config.authorize_url.clone(),
+            token_url: server_config.token_url.clone(),
         }),
     ))
 }
