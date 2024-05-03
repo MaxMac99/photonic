@@ -778,10 +778,10 @@ components:
           description: The OAuth 2.0 client id
         authorizeUrl:
           type: string
-          description: The OAuth2 authorize url
+          description: The OAuth 2.0 authorize url
         tokenUrl:
           type: string
-          description: The OAuth2 token url
+          description: The OAuth 2.0 token url
       required:
         - version
         - openidConfigurationUrl
