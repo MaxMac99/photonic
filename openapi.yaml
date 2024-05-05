@@ -826,7 +826,7 @@ components:
       in: query
       required: false
       schema:
-        type: string
+        $ref: '#/components/schemas/ObjectId'
     direction:
       name: direction
       in: query
