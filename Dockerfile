@@ -9,8 +9,10 @@
 
 ARG RUST_VERSION=1.77.2
 ARG APP_NAME=cli
+ARG PACKAGE_NAME=cli
 FROM rust:${RUST_VERSION}-slim-bullseye AS build
 ARG APP_NAME
+ARG PACKAGE_NAME
 WORKDIR /app
 
 ADD . .
@@ -33,8 +35,8 @@ RUN --mount=type=cache,target=/app/target/ \
     --mount=type=cache,target=/usr/local/cargo/registry/ \
     <<EOF
 set -e
-cargo build --locked --release
-cp ./target/release/$APP_NAME /bin/server
+cargo build --locked --release --package=$PACKAGE_NAME
+cp ./target/release/$APP_NAME /bin/app
 EOF
 
 ################################################################################
@@ -58,10 +60,10 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
         pkg-config libssl-dev libpq-dev exiftool
 
 # Copy the executable from the "build" stage.
-COPY --from=build /bin/server /bin/
+COPY --from=build /bin/app /bin/
 
 # Expose the port that the application listens on.
 EXPOSE 8080
 
 # What the container should run when it is started.
-CMD ["/bin/server", "server"]
+ENTRYPOINT ["/bin/app"]

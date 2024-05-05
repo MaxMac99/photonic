@@ -8,14 +8,12 @@ name = "cli"
 path = "src/main.rs"
 
 [dependencies]
-photonic = { path = "../photonic" }
-http_server = { path = "../http_server" }
 exiftool = { path = "../exiftool" }
 meta = { path = "../meta" }
 
 clap = { version = "4.5.4", features = ["cargo"] }
 dotenv = "0.15.0"
 tokio = "1.37.0"
-tracing = "0.1.40"
+tracing = { version = "0.1.40", features = ["log"] }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 snafu = "0.8.2"

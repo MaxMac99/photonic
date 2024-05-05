@@ -3,9 +3,7 @@ use std::path::PathBuf;
 use clap::{command, Command};
 use snafu::{ResultExt, Whatever};
 use tracing::log::debug;
-use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
-
-mod cli;
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 #[tokio::main]
 #[snafu::report]
@@ -17,14 +15,8 @@ async fn main() -> Result<(), Whatever> {
         .with(fmt::layer())
         .init();
 
-    let matches = command!()
-        .subcommand(Command::new(cli::SERVER_SUBCOMMAND).about(cli::SERVER_DESCRIPTION))
-        .subcommand(Command::new("exif"))
-        .get_matches();
+    let matches = command!().subcommand(Command::new("exif")).get_matches();
 
-    if let Some(_) = matches.subcommand_matches(cli::SERVER_SUBCOMMAND) {
-        cli::server::run().await?;
-    }
     if let Some(_) = matches.subcommand_matches("exif") {
         let meta = meta::Service::new()
             .await

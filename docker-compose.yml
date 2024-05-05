@@ -5,6 +5,9 @@ services:
     build:
       context: .
       target: final
+      args:
+        - PACKAGE_NAME=http_server
+        - APP_NAME=server
     image: photonic:latest
     env_file: "./.env"
     ports:
