@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use chrono::{DateTime, FixedOffset, Utc};
 use diesel::{
-    BelongingToDsl, Connection, debug_query, ExpressionMethods, GroupedBy, pg::sql_types,
-    PgConnection, QueryDsl, RunQueryDsl, SelectableHelper, sql_query, sql_types::Timestamptz,
+    debug_query, pg::sql_types, sql_query, sql_types::Timestamptz, BelongingToDsl, Connection,
+    ExpressionMethods, GroupedBy, PgConnection, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use itertools::Itertools;
 use snafu::OptionExt;
@@ -28,115 +28,6 @@ use crate::{
 };
 
 impl Repository {
-    pub async fn create_medium(&self, new_medium: Medium) -> Result<Uuid> {
-        let new_doc = NewMedium {
-            owner_id: new_medium.owner.into(),
-            medium_type: new_medium.medium_type,
-            album_id: new_medium.album.into(),
-        };
-
-        let conn = self.pool.get().await?;
-        let res = conn
-            .interact(move |conn| {
-                conn.transaction(|conn| {
-                    let inserted_medium_id: Uuid = diesel::insert_into(media::table)
-                        .values(&new_doc)
-                        .returning(media::id)
-                        .get_result(conn)?;
-
-                    let medium_items = new_medium
-                        .originals
-                        .into_iter()
-                        .map(|medium_item| {
-                            Self::create_new_medium_item(
-                                inserted_medium_id,
-                                MediumItemType::Original,
-                                medium_item,
-                            )
-                        })
-                        .chain(new_medium.edits.into_iter().map(|medium_item| {
-                            Self::create_new_medium_item(
-                                inserted_medium_id,
-                                MediumItemType::Edit,
-                                medium_item,
-                            )
-                        }))
-                        .chain(new_medium.previews.into_iter().map(|medium_item| {
-                            Self::create_new_medium_item(
-                                inserted_medium_id,
-                                MediumItemType::Preview,
-                                medium_item,
-                            )
-                        }))
-                        .collect::<Vec<NewMediumItem>>();
-
-                    diesel::insert_into(medium_items::table)
-                        .values(medium_items)
-                        .execute(conn)?;
-
-                    diesel::insert_into(sidecars::table)
-                        .values(
-                            new_medium
-                                .sidecars
-                                .into_iter()
-                                .map(|file_item| {
-                                    Self::create_new_sidecar(inserted_medium_id, file_item)
-                                })
-                                .collect::<Vec<NewSidecar>>(),
-                        )
-                        .execute(conn)?;
-
-                    Ok::<Uuid, Error>(inserted_medium_id)
-                })
-            })
-            .await??;
-
-        Ok(res)
-    }
-
-    pub async fn add_medium_item(
-        &self,
-        medium_id: Uuid,
-        item_type: MediumItemType,
-        medium_item: MediumItem,
-    ) -> Result<Uuid> {
-        let new_medium_item = Self::create_new_medium_item(medium_id, item_type, medium_item);
-
-        let conn = self.pool.get().await?;
-        let res = conn
-            .interact(move |conn| {
-                conn.transaction(|conn| {
-                    let inserted_id: Uuid = diesel::insert_into(medium_items::table)
-                        .values(&new_medium_item)
-                        .returning(medium_items::id)
-                        .get_result(conn)?;
-                    Ok::<Uuid, Error>(inserted_id)
-                })
-            })
-            .await??;
-
-        Ok(res)
-    }
-
-    pub async fn add_sidecar(&self, medium_id: Uuid, file_item: FileItem) -> Result<Uuid> {
-        let new_sidecar = Self::create_new_sidecar(medium_id, file_item);
-
-        let conn = self.pool.get().await?;
-        let res = conn
-            .interact(move |conn| {
-                conn.transaction(|conn| {
-                    let inserted_id: Uuid = diesel::insert_into(sidecars::table)
-                        .values(&new_sidecar)
-                        .returning(sidecars::id)
-                        .get_result(conn)?;
-                    Ok::<Uuid, Error>(inserted_id)
-                })
-            })
-            .await??;
-
-        Ok(res)
-    }
-
     pub async fn find_media(
         &self,
         user_id: Uuid,
@@ -213,46 +104,6 @@ impl Repository {
             })
         })
         .await?
-    }
-
-    fn create_new_medium_item(
-        medium_id: Uuid,
-        item_type: MediumItemType,
-        medium_item: MediumItem,
-    ) -> NewMediumItem {
-        NewMediumItem {
-            medium_id,
-            medium_item_type: item_type,
-            mime: medium_item.file.mime.to_string(),
-            filename: medium_item.file.filename,
-            path: medium_item
-                .file
-                .path
-                .into_os_string()
-                .into_string()
-                .unwrap(),
-            size: medium_item.file.filesize as i64,
-            location: medium_item.file.location,
-            priority: medium_item.file.priority,
-            timezone: medium_item.date_taken.timezone().local_minus_utc(),
-            taken_at: medium_item.date_taken.naive_utc(),
-            last_saved: medium_item.file.last_saved,
-            width: medium_item.width as i32,
-            height: medium_item.height as i32,
-        }
-    }
-
-    fn create_new_sidecar(medium_id: Uuid, file_item: FileItem) -> NewSidecar {
-        NewSidecar {
-            medium_id,
-            mime: file_item.mime.to_string(),
-            filename: file_item.filename,
-            path: file_item.path.into_os_string().into_string().unwrap(),
-            size: file_item.filesize as i64,
-            location: file_item.location,
-            priority: file_item.priority,
-            last_saved: file_item.last_saved,
-        }
     }
 
     fn fetch_and_map_medium(

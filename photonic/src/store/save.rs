@@ -2,18 +2,24 @@ use std::path::{Path, PathBuf};
 
 use chrono::{Datelike, Timelike};
 use filenamify::filenamify;
+use futures::TryFuture;
+use futures_util::TryFutureExt;
 use path_clean::PathClean;
 use tokio::fs;
+use tracing::error;
 
 use crate::{
-    error::{FileAlreadyExistsSnafu, NoFileExtensionSnafu, OutsideBaseStorageSnafu, Result},
+    error::{Error, FileAlreadyExistsSnafu, NoFileExtensionSnafu, OutsideBaseStorageSnafu, Result},
+    model::StoreLocation,
     store::{path::PathOptions, Store},
 };
 
 impl Store {
-    pub async fn import_file<P>(&self, options: &PathOptions, path: P) -> Result<PathBuf>
+    pub async fn import_file<P, T, F, Fut>(&self, options: &PathOptions, path: P, f: F) -> Result<T>
     where
         P: AsRef<Path>,
+        F: FnOnce(PathBuf) -> Fut,
+        Fut: TryFuture<Ok = T, Error = Error>,
     {
         let destination = self.to_path(options);
         let destination = self.config.storage.base_path.join(destination);
@@ -25,7 +31,15 @@ impl Store {
 
         fs::rename(&path, &destination).await?;
 
-        Ok(destination)
+        f(destination.clone())
+            .or_else(|err| async {
+                // Move back file
+                if let Err(remove_err) = fs::rename(&destination, &path).await {
+                    error!("Could not delete file for rollback: {}", remove_err);
+                }
+                Err(err)
+            })
+            .await
     }
 
     async fn prepare_destination(&self, destination: &PathBuf) -> Result<PathBuf> {

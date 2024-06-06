@@ -13,7 +13,7 @@ use tokio::fs;
 use tracing::{error, log::info};
 use uuid::Uuid;
 
-use crate::{api::user::User, AppState, error::Result};
+use crate::{api::user::User, error::Result, AppState};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateMediumInput {
@@ -38,17 +38,9 @@ pub async fn create_medium(
     JwtClaims(user): JwtClaims<User>,
     body: Body,
 ) -> Result<(StatusCode, Json<String>)> {
-    service.create_or_update_user(user.clone().into()).await?;
-
     let opts = opts.0;
-
-    let temp_path = service
-        .store_stream_temporarily(&opts.extension, body.into_data_stream())
-        .await?;
-
     let create_medium = photonic::service::CreateMediumInput {
-        user_id: user.sub,
-        username: user.get_username().unwrap(),
+        user: user.into(),
         album_id: opts.album_id,
         filename: opts.filename,
         extension: opts.extension,
@@ -58,14 +50,7 @@ pub async fn create_medium(
         priority: opts.priority,
     };
     let id = service
-        .create_medium(create_medium, &temp_path)
-        .or_else(|err| async {
-            // Try remove temporary file if it could not be stored
-            if let Err(remove_err) = fs::remove_file(&temp_path).await {
-                error!("Could not delete file for rollback: {}", remove_err);
-            }
-            Err(err)
-        })
+        .create_medium_from_stream(create_medium, body.into_data_stream())
         .await?;
 
     info!("Successfully uploaded file with id {}", &id);

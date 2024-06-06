@@ -10,9 +10,12 @@ use snafu::{ResultExt, Whatever};
 
 use crate::config::Config;
 
+mod add_medium_item;
+mod add_sidecar;
 mod album;
+mod create_medium;
 mod dto;
-mod medium;
+mod find_medium;
 mod to_trash;
 mod user;
 

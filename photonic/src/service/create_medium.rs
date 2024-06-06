@@ -4,8 +4,8 @@ use std::{
 };
 
 use axum::{body::Bytes, BoxError};
-use chrono::{Datelike, DateTime, FixedOffset, Utc};
-use futures::TryFutureExt;
+use chrono::{DateTime, Datelike, FixedOffset, Utc};
+use futures::{TryFuture, TryFutureExt};
 use futures_util::{io, Stream, TryStreamExt};
 use mime::Mime;
 use snafu::OptionExt;
@@ -17,16 +17,15 @@ use uuid::Uuid;
 use meta::MetaInfo;
 
 use crate::{
-    error::{NoDateTakenSnafu, Result},
+    error::{Error, NoDateTakenSnafu, Result},
     model::{Album, FileItem, Medium, MediumItem, MediumItemType, MediumType, StoreLocation},
-    service::Service,
+    service::{CreateUserInput, Service},
     store::PathOptions,
 };
 
 #[derive(Debug, Clone)]
 pub struct CreateMediumInput {
-    pub user_id: Uuid,
-    pub username: String,
+    pub user: CreateUserInput,
     pub album_id: Option<Uuid>,
     pub filename: String,
     pub extension: String,
@@ -36,60 +35,32 @@ pub struct CreateMediumInput {
     pub priority: i32,
 }
 
-#[derive(Debug, Clone)]
-pub struct AddMediumItemInput {
-    pub user_id: Uuid,
-    pub username: String,
-    pub item_type: AddMediumItemType,
-    pub medium_id: Uuid,
-    pub filename: String,
-    pub extension: String,
-    pub date_taken: Option<DateTime<FixedOffset>>,
-    pub mime: Mime,
-    pub priority: i32,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum AddMediumItemType {
-    Original,
-    Edit,
-    Preview,
-    Sidecar,
-}
-
 impl Service {
-    pub async fn store_stream_temporarily<S, E>(
+    pub async fn create_medium_from_stream<S, E>(
         &self,
-        extension: &str,
+        input: CreateMediumInput,
         stream: S,
-    ) -> Result<PathBuf>
+    ) -> Result<Uuid>
     where
         S: Stream<Item = std::result::Result<Bytes, E>>,
         E: Into<BoxError>,
     {
-        let temp_path = self.store.get_temp_file_path(extension);
-        let body_with_error = stream.map_err(|err| io::Error::new(io::ErrorKind::Other, err));
-        let body_reader = StreamReader::new(body_with_error);
-        futures::pin_mut!(body_reader);
-
-        let file = File::create(&temp_path).await?;
-        let mut buffer = BufWriter::new(file);
-
-        tokio::io::copy(&mut body_reader, &mut buffer).await?;
-
-        debug!("Uploaded file temporarily to {}", temp_path.display());
-
-        Ok(temp_path)
+        self.store_stream_temporarily(&input.extension.clone(), stream, |temp_path| async move {
+            self.create_medium(input, &temp_path).await
+        })
+        .await
     }
 
     pub async fn create_medium<P>(&self, input: CreateMediumInput, path: P) -> Result<Uuid>
     where
         P: AsRef<Path> + Debug,
     {
+        self.create_or_update_user(input.user.clone()).await?;
+
         let (file_size, meta_info, path_opts) = self
             .create_path_options(
                 &path,
-                input.username,
+                input.user.username.unwrap(),
                 input.album_id,
                 input.date_taken,
                 input.filename,
@@ -97,174 +68,29 @@ impl Service {
             )
             .await?;
 
-        let target_path = self.store.import_file(&path_opts, &path).await?;
-        let medium = Medium {
-            id: Uuid::new_v4(),
-            owner: input.user_id,
-            medium_type: MediumType::Photo,
-            originals: vec![MediumItem {
-                file: FileItem {
+        self.store
+            .import_file(&path_opts.clone(), &path, |target_path| async {
+                let medium = Medium {
                     id: Uuid::new_v4(),
-                    mime: input.mime,
-                    filename: String::from(path_opts.filename),
-                    path: target_path.clone(),
-                    filesize: file_size,
-                    last_saved: Utc::now().naive_utc(),
-                    location: StoreLocation::Originals,
-                    priority: input.priority,
-                },
-                width: meta_info.width as u32,
-                height: meta_info.height as u32,
-                date_taken: path_opts
-                    .date
-                    .with_timezone(&FixedOffset::east_opt(path_opts.timezone).unwrap()),
-            }],
-            album: None,
-            tags: input.tags.clone(),
-            previews: vec![],
-            edits: vec![],
-            sidecars: vec![],
-        };
+                    owner: input.user.id,
+                    medium_type: MediumType::Photo,
+                    originals: vec![Self::create_medium_item(
+                        input.mime,
+                        input.priority,
+                        file_size,
+                        meta_info,
+                        path_opts,
+                        target_path,
+                    )],
+                    album: None,
+                    tags: input.tags.clone(),
+                    previews: vec![],
+                    edits: vec![],
+                    sidecars: vec![],
+                };
 
-        let id = self
-            .repo
-            .create_medium(medium)
-            .or_else(|err| async {
-                // Remove file if it could not store metadata
-                let full_path = self
-                    .store
-                    .get_full_path_from_relative(StoreLocation::Originals, &target_path);
-                if let Err(remove_err) = fs::remove_file(&full_path).await {
-                    error!("Could not delete file for rollback: {}", remove_err);
-                }
-                Err(err)
+                self.repo.create_medium(medium).await
             })
-            .await?;
-        Ok(id)
-    }
-
-    pub async fn add_raw_file<P>(&self, input: AddMediumItemInput, path: P) -> Result<Uuid>
-    where
-        P: AsRef<Path> + Debug,
-    {
-        let medium = self.repo.get_medium(input.medium_id, input.user_id).await?;
-        let (file_size, meta_info, path_opts) = self
-            .create_path_options(
-                &path,
-                input.username,
-                medium.album,
-                input.date_taken,
-                input.filename,
-                input.extension,
-            )
-            .await?;
-
-        let target_path = self.store.import_file(&path_opts, &path).await?;
-        let medium_item = MediumItem {
-            file: FileItem {
-                id: Uuid::new_v4(),
-                mime: input.mime,
-                filename: String::from(path_opts.filename),
-                path: target_path.clone(),
-                filesize: file_size,
-                last_saved: Utc::now().naive_utc(),
-                location: StoreLocation::Originals,
-                priority: input.priority,
-            },
-            width: meta_info.width as u32,
-            height: meta_info.height as u32,
-            date_taken: path_opts
-                .date
-                .with_timezone(&FixedOffset::east_opt(path_opts.timezone).unwrap()),
-        };
-
-        let id = if let AddMediumItemType::Sidecar = input.item_type {
-            self.repo
-                .add_sidecar(input.medium_id, medium_item.file)
-                .or_else(|err| async {
-                    // Remove file if it could not store metadata
-                    let full_path = self
-                        .store
-                        .get_full_path_from_relative(StoreLocation::Originals, &target_path);
-                    if let Err(remove_err) = fs::remove_file(&full_path).await {
-                        error!("Could not delete file for rollback: {}", remove_err);
-                    }
-                    Err(err)
-                })
-                .await?
-        } else {
-            let medium_item_type = match input.item_type {
-                AddMediumItemType::Original => MediumItemType::Original,
-                AddMediumItemType::Edit => MediumItemType::Edit,
-                AddMediumItemType::Preview => MediumItemType::Preview,
-                AddMediumItemType::Sidecar => MediumItemType::Original, // Not possible
-            };
-            self.repo
-                .add_medium_item(input.medium_id, medium_item_type, medium_item)
-                .or_else(|err| async {
-                    // Remove file if it could not store metadata
-                    let full_path = self
-                        .store
-                        .get_full_path_from_relative(StoreLocation::Originals, &target_path);
-                    if let Err(remove_err) = fs::remove_file(&full_path).await {
-                        error!("Could not delete file for rollback: {}", remove_err);
-                    }
-                    Err(err)
-                })
-                .await?
-        };
-        Ok(id)
-    }
-
-    async fn create_path_options<P>(
-        &self,
-        path: P,
-        username: String,
-        album_id: Option<Uuid>,
-        date_taken: Option<DateTime<FixedOffset>>,
-        filename: String,
-        extension: String,
-    ) -> Result<(u64, MetaInfo, PathOptions)>
-    where
-        P: AsRef<Path> + Debug,
-    {
-        let (size, meta_info, album) = join!(
-            fs::metadata(&path),
-            self.meta.read_file(&path, true),
-            self.get_album(album_id)
-        );
-        let size = size?.len();
-        let meta_info = meta_info?;
-
-        let date_taken = date_taken.or(meta_info.date).context(NoDateTakenSnafu)?;
-        let timezone = date_taken.timezone().local_minus_utc();
-        let date_taken: DateTime<Utc> = date_taken.into();
-
-        let album = album?;
-        let name = album.as_ref().map(|album| album.name.clone());
-        let year = album
-            .as_ref()
-            .and_then(|album| album.first_date)
-            .map(|date| date.year() as u32);
-        let path_opts = PathOptions {
-            username,
-            album: name,
-            album_year: year,
-            date: date_taken,
-            camera_make: meta_info.camera_make.clone(),
-            camera_model: meta_info.camera_model.clone(),
-            timezone,
-            filename,
-            extension,
-        };
-        Ok((size, meta_info, path_opts))
-    }
-
-    async fn get_album(&self, album_id: Option<Uuid>) -> Result<Option<Album>> {
-        let mut album: Option<Album> = None;
-        if let Some(album_id) = album_id {
-            album = Some(self.repo.get_album_by_id(album_id).await?);
-        }
-        Ok(album)
+            .await
     }
 }

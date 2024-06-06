@@ -50,17 +50,9 @@ pub async fn add_raw(
     JwtClaims(user): JwtClaims<User>,
     body: Body,
 ) -> crate::error::Result<(StatusCode, Json<String>)> {
-    service.create_or_update_user(user.clone().into()).await?;
-
     let opts = opts.0;
-
-    let temp_path = service
-        .store_stream_temporarily(&opts.extension, body.into_data_stream())
-        .await?;
-
     let input = photonic::service::AddMediumItemInput {
-        user_id: user.sub,
-        username: user.get_username().unwrap(),
+        user: user.into(),
         item_type: match format {
             MediumItemFormat::Originals => AddMediumItemType::Original,
             MediumItemFormat::Edits => AddMediumItemType::Edit,
@@ -75,14 +67,7 @@ pub async fn add_raw(
         priority: opts.priority,
     };
     let id = service
-        .add_raw_file(input, &temp_path)
-        .or_else(|err| async {
-            // Try remove temporary file if it could not be stored
-            if let Err(remove_err) = fs::remove_file(&temp_path).await {
-                error!("Could not delete file for rollback: {}", remove_err);
-            }
-            Err(err)
-        })
+        .add_raw_file_from_stream(input, body.into_data_stream())
         .await?;
 
     info!("Successfully uploaded file with id {}", &id);

@@ -2,7 +2,7 @@ use uuid::Uuid;
 
 use crate::{error::Result, Service};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CreateUserInput {
     pub id: Uuid,
     pub username: Option<String>,

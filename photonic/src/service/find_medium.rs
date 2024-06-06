@@ -1,11 +1,23 @@
+use chrono::{DateTime, Utc};
+use serde::Deserialize;
 use snafu::OptionExt;
 use uuid::Uuid;
 
 use crate::{
     error::{FindMediumItemByIdSnafu, FindSidecarByIdSnafu, Result},
-    model::{FileItem, MediumItemType},
-    Service,
+    model::{DateDirection, FileItem, Medium, MediumItemType},
+    service::Service,
 };
+
+#[derive(Debug, Deserialize)]
+pub struct FindAllMediaInput {
+    pub per_page: Option<u16>,
+    pub start_date: Option<DateTime<Utc>>,
+    pub end_date: Option<DateTime<Utc>>,
+    pub album_id: Option<Uuid>,
+    pub show_only_unset_albums: Option<bool>,
+    pub date_direction: Option<DateDirection>,
+}
 
 #[derive(Debug)]
 pub enum GetMediumFileType {
@@ -16,6 +28,24 @@ pub enum GetMediumFileType {
 }
 
 impl Service {
+    pub async fn find_all_media(
+        &self,
+        user_id: Uuid,
+        opts: &FindAllMediaInput,
+    ) -> Result<Vec<Medium>> {
+        self.repo
+            .find_media(
+                user_id,
+                opts.per_page.unwrap_or(100) as i64,
+                opts.start_date,
+                opts.end_date,
+                opts.album_id,
+                opts.show_only_unset_albums.unwrap_or(false),
+                opts.date_direction.unwrap_or(DateDirection::NewestFirst),
+            )
+            .await
+    }
+
     pub async fn get_medium_file(
         &self,
         user_id: Uuid,

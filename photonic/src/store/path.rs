@@ -8,7 +8,7 @@ use crate::{
     store::Store,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct PathOptions {
     pub username: String,
     pub album: Option<String>,
