@@ -1,5 +1,5 @@
-/storage
-/cache
+/example/storage
+/example/cache
 /target
 /gen
 /docker
