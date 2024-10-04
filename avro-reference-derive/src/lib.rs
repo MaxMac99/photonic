@@ -4,7 +4,7 @@ use quote::quote;
 use serde_json::{from_str, Value};
 use syn::{
     parse_macro_input, spanned::Spanned, AttrStyle, Attribute, Data, DataEnum, DataStruct,
-    DeriveInput, ExprPath, Fields, Meta, Type, TypePath,
+    DeriveInput, Fields, Meta, Type, TypePath,
 };
 
 #[derive(FromAttributes)]
@@ -23,7 +23,7 @@ struct FieldOptions {
     #[darling(default)]
     reference: bool,
     #[darling(default)]
-    replace: Option<ExprPath>,
+    replace_type: Option<Type>,
 }
 
 #[derive(FromAttributes)]
@@ -92,6 +92,7 @@ fn derive_avro_schema(input: &mut DeriveInput) -> Result<TokenStream, Vec<syn::E
                     let name = apache_avro::schema::Name::new(#full_schema_name)
                         .expect(&format!("Unable to parse schema name {}", #full_schema_name)[..]);
                     avro_reference::ReferenceSchema {
+                        name: name.clone(),
                         schema: apache_avro::schema::Schema::Ref{ name },
                         references: vec![#(#references),*],
                     }
@@ -104,21 +105,28 @@ fn derive_avro_schema(input: &mut DeriveInput) -> Result<TokenStream, Vec<syn::E
 
     Ok(quote! {
         #referencable
-        impl #impl_generics avro_reference::AvroReferenceSchemaComponent for #ident #ty_generics #where_clause {
-            fn get_schema_in_ctx(named_schemas: &mut std::collections::HashMap<apache_avro::schema::Name, apache_avro::schema::Schema>, enclosing_namespace: &Option<String>) -> avro_reference::ReferenceSchema {
+        impl #impl_generics avro_reference::AvroReferenceSchema for #ident #ty_generics #where_clause {
+            fn get_reference_schema() -> avro_reference::ReferenceSchema {
+                let name = apache_avro::schema::Name::new(#full_schema_name)
+                    .expect(&format!("Unable to parse schema name {}", #full_schema_name)[..]);
+                avro_reference::ReferenceSchema {
+                    name: name.clone(),
+                    schema: <#ident as apache_avro::AvroSchema>::get_schema(),
+                    references: vec![#(#references),*],
+                }
+            }
+        }
+        impl #impl_generics apache_avro::schema::derive::AvroSchemaComponent for #ident #ty_generics #where_clause {
+            fn get_schema_in_ctxt(named_schemas: &mut std::collections::HashMap<apache_avro::schema::Name, apache_avro::schema::Schema>, enclosing_namespace: &Option<String>) -> apache_avro::schema::Schema {
                 let name = apache_avro::schema::Name::new(#full_schema_name)
                     .expect(&format!("Unable to parse schema name {}", #full_schema_name)[..])
                     .fully_qualified_name(enclosing_namespace);
                 let enclosing_namespace = &name.namespace;
-                let schema = if named_schemas.contains_key(&name) {
+                if named_schemas.contains_key(&name) {
                     apache_avro::schema::Schema::Ref{ name }
                 } else {
                     named_schemas.insert(name.clone(), apache_avro::schema::Schema::Ref{ name: name.clone() });
                     #schema_def
-                };
-                avro_reference::ReferenceSchema {
-                    schema,
-                    references: vec![#(#references),*],
                 }
             }
         }
@@ -172,24 +180,24 @@ fn get_data_struct_schema_def(
                 let aliases = preserve_vec(field_attrs.alias);
                 let position = index;
                 let schema_expr = if field_attrs.reference {
-                    references.push(field_attrs.replace.clone()
+                    references.push(field_attrs.replace_type.clone()
                         .map(|replacement| Ok(quote! {
-                            <#replacement as avro_reference::AvroReferencable>::get_referenced_schema()
+                            <#replacement as avro_reference::AvroRefereneSchema>::get_reference_schema()
                         }))
                         .unwrap_or_else(|| type_to_referenced_expr(&field.ty, false))?);
                     field_attrs
-                        .replace
+                        .replace_type
                         .map(|replacement| Ok(quote! {
                             <#replacement as avro_reference::AvroReferencable>::get_referenced_schema().schema
                         }))
                         .unwrap_or_else(|| type_to_referenced_expr(&field.ty, true))?
                 } else {
                     field_attrs
-                        .replace
+                        .replace_type
                         .clone()
                         .map(|replacement| Ok(quote! {
-                        <#replacement as avro_reference::AvroReferenceSchemaComponent>::get_schema_in_ctx(named_schemas, enclosing_namespace).schema
-                    }))
+                            <#replacement as apache_avro::schema::derive::AvroSchemaComponent>::get_schema_in_ctxt(named_schemas, enclosing_namespace)
+                        }))
                         .unwrap_or_else(|| type_to_schema_expr(&field.ty))?
                 };
                 record_field_exprs.push(quote! {
@@ -301,7 +309,7 @@ fn type_to_referenced_expr(ty: &Type, nested: bool) -> Result<TokenStream, Vec<s
                     if nested {
                         quote! {<#p as avro_reference::AvroReferencable>::get_referenced_schema().schema }
                     } else {
-                        quote! {<#p as avro_reference::AvroReferencable>::get_referenced_schema() }
+                        quote! {<#p as avro_reference::AvroReferenceSchema>::get_reference_schema() }
                     }
                 }
             };
@@ -365,10 +373,10 @@ fn type_to_schema_expr(ty: &Type) -> Result<TokenStream, Vec<syn::Error>> {
 }
 
 /// Generates the schema def expression for fully qualified type paths using the associated function
-/// - `A -> <A as avro_reference::AvroReferenceSchemaComponent>::get_schema_in_ctx()`
-/// - `A<T> -> <A<T> as avro_reference::AvroReferenceSchemaComponent>::get_schema_in_ctx()`
+/// - `A -> <A as apache_avro::schema::derive::AvroSchemaComponent>::get_schema_in_ctx()`
+/// - `A<T> -> <A<T> as apache_avro::schema::derive::AvroSchemaComponent>::get_schema_in_ctx()`
 fn type_path_schema_expr(p: &TypePath) -> TokenStream {
-    quote! {<#p as avro_reference::AvroReferenceSchemaComponent>::get_schema_in_ctx(named_schemas, enclosing_namespace).schema}
+    quote! {<#p as apache_avro::schema::derive::AvroSchemaComponent>::get_schema_in_ctxt(named_schemas, enclosing_namespace)}
 }
 
 fn default_enum_variant(

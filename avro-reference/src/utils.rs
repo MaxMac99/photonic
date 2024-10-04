@@ -1,14 +1,13 @@
-use crate::{AvroReferenceSchemaComponent, ReferenceSchema};
 use apache_avro::{
-    schema::{Name, Namespace},
+    schema::{derive::AvroSchemaComponent, Name, Namespace},
     Schema,
 };
 use std::collections::HashMap;
 
 pub struct TimestampMillis;
 
-impl AvroReferenceSchemaComponent for TimestampMillis {
-    fn get_schema_in_ctx(_: &mut HashMap<Name, Schema>, _: &Namespace) -> ReferenceSchema {
-        Schema::TimestampMillis.into()
+impl AvroSchemaComponent for TimestampMillis {
+    fn get_schema_in_ctxt(_: &mut HashMap<Name, Schema>, _: &Namespace) -> Schema {
+        Schema::TimestampMillis
     }
 }

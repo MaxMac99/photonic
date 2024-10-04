@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, AvroReferenceSchema)]
-#[avro(referencable)]
+#[avro(referencable, namespace = "de.vissing.photonic")]
 pub(super) struct DateTimeTz {
     pub datetime: i64,
     pub timezone: i32,
@@ -19,9 +19,10 @@ pub enum StorageVariant {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::FromRow, AvroReferenceSchema)]
-#[avro(referencable)]
+#[avro(referencable, namespace = "de.vissing.photonic")]
 pub struct StorageLocation {
     pub variant: StorageVariant,
+    #[avro(replace_type = "String")]
     pub path: PathBuf,
 }
 

@@ -1,5 +1,4 @@
-use super::{Event, Topic, MEDIUM_ITEM_EXIF_LOADED_SCHEMA};
-use apache_avro::Schema;
+use super::{Event, Topic};
 use avro_reference::AvroReferenceSchema;
 use chrono::{DateTime, FixedOffset};
 use derive_builder::Builder;
@@ -8,10 +7,14 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Builder, PartialEq, AvroReferenceSchema)]
+#[avro(referencable, namespace = "de.vissing.photonic")]
 pub struct MediumItemExifLoadedEvent {
     #[serde(skip)]
+    #[avro(skip)]
     pub id: Uuid,
+    #[avro(replace_type = "Option<String>")]
     pub date: Option<DateTime<FixedOffset>>,
+    #[avro(replace_type = "Option<String>")]
     pub mime: Option<Mime>,
     pub camera_make: Option<String>,
     pub camera_model: Option<String>,
@@ -22,10 +25,6 @@ pub struct MediumItemExifLoadedEvent {
 impl Event for MediumItemExifLoadedEvent {
     fn topic() -> Topic {
         Topic::MediumItemExifLoaded
-    }
-
-    fn get_schema() -> &'static Schema {
-        *MEDIUM_ITEM_EXIF_LOADED_SCHEMA
     }
 
     fn id(&self) -> String {

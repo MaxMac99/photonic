@@ -1,7 +1,8 @@
-use apache_avro::Schema;
+use apache_avro::{schema::Name, Schema};
 
 #[derive(Debug, Clone)]
 pub struct ReferenceSchema {
+    pub name: Name,
     pub schema: Schema,
     pub references: Vec<ReferenceSchema>,
 }
@@ -13,14 +14,5 @@ pub trait AvroReferenceSchema {
 impl Into<Schema> for ReferenceSchema {
     fn into(self) -> Schema {
         self.schema
-    }
-}
-
-impl From<Schema> for ReferenceSchema {
-    fn from(value: Schema) -> Self {
-        ReferenceSchema {
-            schema: value,
-            references: vec![],
-        }
     }
 }

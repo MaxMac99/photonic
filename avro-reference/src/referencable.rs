@@ -12,6 +12,7 @@ where
     fn get_referenced_schema() -> ReferenceSchema {
         let inner = T::get_referenced_schema();
         ReferenceSchema {
+            name: inner.name,
             schema: Schema::Union(UnionSchema::new(vec![Schema::Null, inner.schema]).unwrap()),
             references: inner.references,
         }
