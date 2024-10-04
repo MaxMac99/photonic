@@ -1,7 +1,5 @@
 [workspace]
 members = [
-    "photonic",
-    "http_server",
     "exif_service",
     "common",
     "importer_service",
