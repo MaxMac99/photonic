@@ -20,7 +20,7 @@ security:
 paths:
   /media:
     get:
-      summary: Get media
+      summary: Get medium
       responses:
         "200":
           description: ""
@@ -140,7 +140,7 @@ paths:
             format: date-time
           in: query
           name: dateTaken
-          description: Overrides the date the medium item was taken from meta information
+          description: Overrides the date the medium item was taken from exif information
     parameters: [ ]
   "/media/{id}":
     get:
@@ -326,7 +326,7 @@ paths:
             format: date-time
           in: query
           name: dateTaken
-          description: Overrides the date the medium item was taken from meta information
+          description: Overrides the date the medium item was taken from exif information
     parameters:
       - in: path
         name: id
@@ -794,14 +794,14 @@ components:
       schema:
         type: string
         format: date-time
-      description: Show media after date
+      description: Show medium after date
     end_date:
       name: end_date
       in: query
       schema:
         type: string
         format: date-time
-      description: Show media before date
+      description: Show medium before date
     page_last_date:
       name: page_last_date
       in: query

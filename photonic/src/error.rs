@@ -1,12 +1,17 @@
-use std::backtrace::Backtrace;
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
+use std::{backtrace::Backtrace, fmt::Debug};
 
-use deadpool_diesel::InteractError;
-use snafu::Snafu;
+use serde_json::to_string;
+use snafu::{AsErrorSource, ErrorCompat, Snafu};
+use tracing::error;
 use uuid::Uuid;
 
+use crate::medium_item::model::MediumItemType;
 use meta::MetaError;
-
-use crate::model::MediumItemType;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -15,17 +20,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[snafu(transparent)]
     Database {
-        source: diesel::result::Error,
-        backtrace: Backtrace,
-    },
-    #[snafu(transparent)]
-    Deadpool {
-        source: deadpool_diesel::PoolError,
-        backtrace: Backtrace,
-    },
-    #[snafu(transparent)]
-    Interact {
-        source: InteractError,
+        source: sqlx::error::Error,
         backtrace: Backtrace,
     },
     #[snafu(transparent)]
@@ -62,4 +57,29 @@ pub enum Error {
     FileAlreadyExists { backtrace: Backtrace },
     #[snafu(display("Could not find the date when this medium was taken"))]
     NoDateTaken { backtrace: Backtrace },
+    #[snafu(display("The function is currently under development and not implemented yet"))]
+    NotImplemented { backtrace: Backtrace },
+}
+
+impl IntoResponse for Error {
+    fn into_response(self) -> Response {
+        let status = match self {
+            Error::Database { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Io { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Metadata { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::FindMediumById { .. } => StatusCode::NOT_FOUND,
+            Error::FindMediumItemById { .. } => StatusCode::NOT_FOUND,
+            Error::FindSidecarById { .. } => StatusCode::NOT_FOUND,
+            Error::FindAlbumById { .. } => StatusCode::NOT_FOUND,
+            Error::FindUserById { .. } => StatusCode::UNAUTHORIZED,
+            Error::NoQuotaLeft { .. } => StatusCode::PAYLOAD_TOO_LARGE,
+            Error::OutsideBaseStorage { .. } => StatusCode::BAD_REQUEST,
+            Error::NoFileExtension { .. } => StatusCode::BAD_REQUEST,
+            Error::FileAlreadyExists { .. } => StatusCode::CONFLICT,
+            Error::NoDateTaken { .. } => StatusCode::BAD_REQUEST,
+            Error::NotImplemented { .. } => StatusCode::NOT_IMPLEMENTED,
+        };
+        error!("{}: {}\n{}", status, self, self.backtrace());
+        (status, Json(self.to_string())).into_response()
+    }
 }

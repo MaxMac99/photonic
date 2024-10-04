@@ -1,56 +1,15 @@
-use std::{
-    fmt::Debug,
-    path::{Path, PathBuf},
-};
+use std::{fmt::Debug, path::Path};
 
 use axum::{body::Bytes, BoxError};
-use chrono::{DateTime, Datelike, FixedOffset, Utc};
-use futures::{TryFuture, TryFutureExt};
-use futures_util::{io, Stream, TryStreamExt};
+use chrono::{DateTime, FixedOffset};
+use futures::TryFuture;
+use futures_util::Stream;
 use mime::Mime;
-use snafu::OptionExt;
-use tokio::{fs, fs::File, io::BufWriter, join};
-use tokio_util::io::StreamReader;
-use tracing::{debug, error};
 use uuid::Uuid;
 
-use meta::MetaInfo;
-
-use crate::{
-    error::{Error, NoDateTakenSnafu, Result},
-    model::{Album, FileItem, Medium, MediumItem, MediumItemType, MediumType, StoreLocation},
-    service::{CreateUserInput, Service},
-    store::PathOptions,
-};
-
-#[derive(Debug, Clone)]
-pub struct CreateMediumInput {
-    pub user: CreateUserInput,
-    pub album_id: Option<Uuid>,
-    pub filename: String,
-    pub extension: String,
-    pub tags: Vec<String>,
-    pub date_taken: Option<DateTime<FixedOffset>>,
-    pub mime: Mime,
-    pub priority: i32,
-}
+use crate::{error::Result, service::CreateUserInput};
 
 impl Service {
-    pub async fn create_medium_from_stream<S, E>(
-        &self,
-        input: CreateMediumInput,
-        stream: S,
-    ) -> Result<Uuid>
-    where
-        S: Stream<Item = std::result::Result<Bytes, E>>,
-        E: Into<BoxError>,
-    {
-        self.store_stream_temporarily(&input.extension.clone(), stream, |temp_path| async move {
-            self.create_medium(input, &temp_path).await
-        })
-        .await
-    }
-
     pub async fn create_medium<P>(&self, input: CreateMediumInput, path: P) -> Result<Uuid>
     where
         P: AsRef<Path> + Debug,

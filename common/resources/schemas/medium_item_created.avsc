@@ -1,0 +1,55 @@
+{
+  "type": "record",
+  "name": "MediumItemCreated",
+  "namespace": "de.vissing.photonic",
+  "fields": [
+    {
+      "name": "medium_id",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "location",
+      "type": "StorageLocation"
+    },
+    {
+      "name": "size",
+      "type": "long"
+    },
+    {
+      "name": "mime",
+      "type": "string"
+    },
+    {
+      "name": "filename",
+      "type": "string"
+    },
+    {
+      "name": "extension",
+      "type": "string"
+    },
+    {
+      "name": "user",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "priority",
+      "type": "int",
+      "default": 10
+    },
+    {
+      "name": "date_taken",
+      "type": [
+        "null",
+        "DateTimeTz"
+      ],
+      "default": null
+    },
+    {
+      "name": "date_added",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }
+  ]
+}

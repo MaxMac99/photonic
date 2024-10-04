@@ -1,9 +1,8 @@
 use crate::{
     error::Result,
-    model::{FileItem, MediumItem, MediumItemType, StoreLocation},
+    medium_item::model::{MediumItem, MediumItemType},
     service::CreateUserInput,
     store::PathOptions,
-    Service,
 };
 use axum::{body::Bytes, BoxError};
 use chrono::{DateTime, FixedOffset, Utc};

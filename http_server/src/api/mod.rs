@@ -13,13 +13,13 @@ pub(crate) mod user;
 
 pub fn app(auth: Authorizer<User>) -> Router<AppState> {
     Router::new()
-        .route("/media", get(media::find_all).post(media::create_medium))
-        .route("/media/:medium_id", delete(media::delete_medium))
+        .route("/medium", get(media::find_all).post(media::create_medium))
+        .route("/medium/:medium_id", delete(media::delete_medium))
         .route(
-            "/media/:medium_id/:format/:item_id/raw",
+            "/medium/:medium_id/:format/:item_id/raw",
             get(media::get_medium_item_raw),
         )
-        .route("/media/:medium_id/:format/raw", post(media::add_raw))
+        .route("/medium/:medium_id/:format/raw", post(media::add_raw))
         .layer(auth.into_layer())
         .route("/ping", get(ping::ping))
         .route("/info", get(info::info))

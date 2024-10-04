@@ -1,12 +1,9 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::{
-    model::{FileItem, StoreLocation},
-    store::Store,
-};
+use crate::{common::StoreLocation, Config};
 
 #[derive(Debug, Default, Clone)]
 pub struct PathOptions {
@@ -21,25 +18,20 @@ pub struct PathOptions {
     pub extension: String,
 }
 
-impl Store {
-    pub fn get_temp_file_path(&self, ext: &str) -> PathBuf {
-        self.config
-            .storage
-            .tmp_path
-            .join(format!("{}.{}", Uuid::new_v4().as_hyphenated(), ext))
-    }
+pub fn get_temp_file_path(config: &Arc<Config>, ext: &str) -> PathBuf {
+    config
+        .storage
+        .tmp_path
+        .join(format!("{}.{}", Uuid::new_v4().as_hyphenated(), ext))
+}
 
-    pub fn get_full_path(&self, file_item: &FileItem) -> PathBuf {
-        match file_item.location {
-            StoreLocation::Originals => self.config.storage.base_path.join(&file_item.path),
-            StoreLocation::Cache => self.config.storage.cache_path.join(&file_item.path),
-        }
-    }
-
-    pub fn get_full_path_from_relative(&self, location: StoreLocation, path: &PathBuf) -> PathBuf {
-        match location {
-            StoreLocation::Originals => self.config.storage.base_path.join(path),
-            StoreLocation::Cache => self.config.storage.cache_path.join(path),
-        }
+pub fn get_full_path_from_relative(
+    config: &Arc<Config>,
+    location: StoreLocation,
+    path: &PathBuf,
+) -> PathBuf {
+    match location {
+        StoreLocation::Originals => config.storage.base_path.join(path),
+        StoreLocation::Cache => config.storage.cache_path.join(path),
     }
 }

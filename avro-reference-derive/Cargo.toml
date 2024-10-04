@@ -1,0 +1,17 @@
+[package]
+name = "avro-reference-derive"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+darling = { workspace = true }
+syn = { workspace = true }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+apache-avro = { workspace = true }
+
+[lib]
+proc-macro = true

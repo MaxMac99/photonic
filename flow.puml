@@ -1,0 +1,30 @@
+@startuml
+
+actor user as user
+participant Server as server
+queue kafka
+participant Worker as worker
+database db as db
+
+
+group upload image
+    user -> server: Upload image
+    server --> kafka: Image created
+    user <-- server: id
+end group
+
+group metadata
+    kafka --> worker: Image created
+    activate worker
+    worker -> worker: Create metadata
+    worker -> kafka: Metadata created
+    deactivate worker
+end group
+
+group get image
+    user -> server: Get image with id
+
+    user <-- server: Raw image
+end group
+
+@enduml

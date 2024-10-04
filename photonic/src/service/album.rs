@@ -1,4 +1,3 @@
-use crate::{model::Album, Service};
 use uuid::Uuid;
 
 impl Service {

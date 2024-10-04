@@ -57,7 +57,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean \
     && apt-get update \
     && apt-get -y --no-install-recommends install \
-        pkg-config libssl-dev libpq-dev exiftool
+        pkg-config libssl-dev libpq-dev exif_service
 
 # Copy the executable from the "build" stage.
 COPY --from=build /bin/app /bin/

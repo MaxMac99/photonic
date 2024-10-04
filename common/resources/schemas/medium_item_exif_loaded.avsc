@@ -1,0 +1,55 @@
+{
+  "type": "record",
+  "name": "MediumItemExifLoaded",
+  "namespace": "de.vissing.photonic",
+  "fields": [
+    {
+      "name": "date",
+      "type": [
+        "null",
+        "DateTimeTz"
+      ],
+      "default": null
+    },
+    {
+      "name": "mime",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "camera_make",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "camera_model",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "height",
+      "type": [
+        "null",
+        "long"
+      ],
+      "default": null
+    },
+    {
+      "name": "width",
+      "type": [
+        "null",
+        "long"
+      ],
+      "default": null
+    }
+  ]
+}

@@ -3,11 +3,7 @@ use serde::Deserialize;
 use snafu::OptionExt;
 use uuid::Uuid;
 
-use crate::{
-    error::{FindMediumItemByIdSnafu, FindSidecarByIdSnafu, Result},
-    model::{DateDirection, FileItem, Medium, MediumItemType},
-    service::Service,
-};
+use crate::error::{FindMediumItemByIdSnafu, FindSidecarByIdSnafu, Result};
 
 #[derive(Debug, Deserialize)]
 pub struct FindAllMediaInput {

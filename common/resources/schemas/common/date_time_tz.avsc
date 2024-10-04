@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "DateTimeTz",
+  "namespace": "de.vissing.photonic",
+  "fields": [
+    {
+      "name": "datetime",
+      "type": "long",
+      "logicalType": "timestamp-micros"
+    },
+    {
+      "name": "timezone",
+      "type": "int"
+    }
+  ]
+}

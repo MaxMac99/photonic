@@ -1,4 +1,6 @@
 use snafu::Whatever;
+use tokio::signal;
+use tracing::log::debug;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 #[tokio::main]
