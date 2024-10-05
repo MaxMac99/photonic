@@ -1,24 +1,14 @@
-use std::sync::Arc;
-
-use axum::Router;
-use snafu::{ResultExt, Whatever};
-use tokio::{
-    net::TcpListener,
-    sync::{oneshot, oneshot::Sender},
+use crate::{config::ExifWorkerConfig, exiftool::Exiftool, file_handler::handle_file_created};
+use common::stream::{
+    consumer::KafkaConsumer,
+    events::{MediumItemCreatedEvent, Topic},
+    producer::KafkaProducer,
+    schema::register_schemata,
 };
+use snafu::{ResultExt, Whatever};
+use std::sync::Arc;
 use tracing::log::{debug, error, info};
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
-
-use crate::{config::ExifWorkerConfig, exiftool::Exiftool, file_handler::handle_file_created};
-use common::{
-    server::shutdown_signal_with_external_signal,
-    stream::{
-        consumer::KafkaConsumer,
-        events::{MediumItemCreatedEvent, Topic},
-        producer::KafkaProducer,
-        schema::register_schemata,
-    },
-};
 
 mod config;
 mod exiftool;
@@ -41,12 +31,6 @@ async fn main() -> Result<(), Whatever> {
             .whatever_context("Could not create exiftool")?,
     );
 
-    let app = Router::new();
-
-    let listener = TcpListener::bind(format!("{}:{}", config.server.host, config.server.port))
-        .await
-        .whatever_context("Could not bind to address")?;
-
     register_schemata(
         &config.stream,
         vec![Topic::MediumItemCreated, Topic::MediumItemExifLoaded],
@@ -62,20 +46,8 @@ async fn main() -> Result<(), Whatever> {
     )
     .whatever_context("Could not create consumer")?;
 
-    let (died_sender, died_receiver) = oneshot::channel();
-    tokio::spawn(start_consumer(
-        exiftool,
-        consumer,
-        producer,
-        config,
-        died_sender,
-    ));
-
     info!("Starting Exif API");
-    axum::serve(listener, app.into_make_service())
-        .with_graceful_shutdown(shutdown_signal_with_external_signal(died_receiver))
-        .await
-        .whatever_context("Could not start server")?;
+    start_consumer(exiftool, consumer, producer, config).await;
 
     Ok(())
 }
@@ -85,7 +57,6 @@ async fn start_consumer(
     consumer: KafkaConsumer,
     producer: KafkaProducer,
     config: Arc<ExifWorkerConfig>,
-    died_sender: Sender<bool>,
 ) {
     info!("Start FileCreated consumer");
     if let Some(err) = consumer
@@ -95,7 +66,9 @@ async fn start_consumer(
             let config = config.clone();
             async move {
                 debug!("Handle file created message: {:?}", message);
-                let _ = handle_file_created(exiftool, producer, message, config).await?;
+                if let Err(err) = handle_file_created(exiftool, producer, message, config).await {
+                    error!("Error handling file created event: {}", err);
+                }
                 Ok(())
             }
         })
@@ -104,5 +77,4 @@ async fn start_consumer(
     {
         error!("Consumer stopped unexpectedly: {}", err);
     }
-    died_sender.send(true).unwrap();
 }

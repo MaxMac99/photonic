@@ -816,7 +816,6 @@ dependencies = [
 name = "exif_service"
 version = "0.1.0"
 dependencies = [
- "axum",
  "chrono",
  "common",
  "confique",
@@ -829,8 +828,6 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "utoipa",
- "utoipa-swagger-ui",
  "uuid",
 ]
 

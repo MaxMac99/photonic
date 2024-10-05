@@ -1,4 +1,4 @@
-use common::config::{ServerConfig, StorageConfig, StreamConfig};
+use common::config::{StorageConfig, StreamConfig};
 use confique::Config;
 use snafu::{ResultExt, Whatever};
 use tracing::log::debug;
@@ -7,8 +7,6 @@ use tracing::log::debug;
 pub struct ExifWorkerConfig {
     #[config(nested)]
     pub stream: StreamConfig,
-    #[config(nested)]
-    pub server: ServerConfig,
     #[config(nested)]
     pub storage: StorageConfig,
 }

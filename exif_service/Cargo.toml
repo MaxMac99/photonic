@@ -19,9 +19,6 @@ serde_json = { workspace = true }
 mime_serde_shim = { workspace = true }
 confique = { workspace = true }
 dotenv = { workspace = true }
-axum = { workspace = true }
 mime = { workspace = true }
 chrono = { workspace = true }
-utoipa = { workspace = true }
-utoipa-swagger-ui = { workspace = true }
 uuid = { workspace = true }
