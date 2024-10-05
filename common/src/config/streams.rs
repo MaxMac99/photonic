@@ -6,6 +6,6 @@ pub struct StreamConfig {
     pub schema_registry_url: String,
     #[config(default = "localhost:9092", env = "BROKER_URL")]
     pub broker_url: String,
-    #[config(default = "localhost:8087", env = "KSQLDB_URL")]
+    #[config(default = "http://localhost:8087", env = "KSQLDB_URL")]
     pub ksqldb_url: String,
 }

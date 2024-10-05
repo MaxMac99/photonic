@@ -5,6 +5,7 @@ use common::{
     ksqldb::KsqlDb,
     server::shutdown_signal,
     stream::{events::Topic, producer::KafkaProducer, schema::register_schemata},
+    user::setup_streams_and_tables,
 };
 use snafu::{ResultExt, Whatever};
 use std::sync::Arc;
@@ -37,6 +38,7 @@ async fn main() -> Result<(), Whatever> {
     .await?;
     let producer = KafkaProducer::new(&config.stream)?;
     let ksql_db = Arc::new(KsqlDb::new(config.stream.ksqldb_url.clone()));
+    setup_streams_and_tables(ksql_db.clone()).await?;
 
     let state = AppState {
         config: config.clone(),
