@@ -1,9 +1,9 @@
 use crate::{config::ExifWorkerConfig, exiftool::Exiftool, file_handler::handle_file_created};
-use common::stream::{
-    consumer::KafkaConsumer,
-    events::{MediumItemCreatedEvent, Topic},
-    producer::KafkaProducer,
-    schema::register_schemata,
+use common::{
+    medium_item::MediumItemCreatedEvent,
+    stream::{
+        consumer::KafkaConsumer, events::Topic, producer::KafkaProducer, schema::register_schemata,
+    },
 };
 use snafu::{ResultExt, Whatever};
 use std::sync::Arc;

@@ -1,12 +1,9 @@
-mod avro_serializations;
+pub(crate) mod avro_serializations;
 mod common;
-mod medium_item_created;
-mod medium_item_exif_loaded;
 
 pub use common::{StorageLocation, StorageVariant};
-pub use medium_item_created::*;
-pub use medium_item_exif_loaded::*;
 
+use crate::medium_item::{MediumItemCreatedEvent, MediumItemExifLoadedEvent};
 use avro_reference::{AvroReferenceSchema, ReferenceSchema};
 use strum::Display;
 

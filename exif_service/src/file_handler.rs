@@ -5,10 +5,8 @@ use crate::{
 use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone};
 use common::{
     error::Result,
-    stream::{
-        events::{MediumItemCreatedEvent, MediumItemExifLoadedEvent},
-        producer::KafkaProducer,
-    },
+    medium_item::{MediumItemCreatedEvent, MediumItemExifLoadedEvent},
+    stream::producer::KafkaProducer,
 };
 use mime_serde_shim::Wrapper as Mime;
 use std::{collections::HashMap, str::FromStr, sync::Arc};

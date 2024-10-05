@@ -3,8 +3,8 @@ use byte_unit::Byte;
 use chrono::Utc;
 use common::{
     error::{QuotaExceededSnafu, Result},
-    medium_item::MediumItemType,
-    stream::events::{MediumItemCreatedEvent, StorageLocation},
+    medium_item::{MediumItemCreatedEvent, MediumItemType},
+    stream::events::StorageLocation,
     user::{get_current_quota_usage, User},
 };
 use mime_serde_shim::Wrapper as Mime;

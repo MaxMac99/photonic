@@ -5,10 +5,11 @@ extern crate core;
 
 pub mod config;
 pub mod db;
+mod domain;
 pub mod error;
 pub mod ksqldb;
-pub mod medium;
-pub mod medium_item;
+
 pub mod server;
 pub mod stream;
-pub mod user;
+
+pub use domain::*;

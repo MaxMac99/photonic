@@ -1,3 +1,9 @@
+mod created_event;
+mod exif_loaded_event;
+
+pub use created_event::*;
+pub use exif_loaded_event::*;
+
 use avro_reference::AvroReferenceSchema;
 use serde::{Deserialize, Serialize};
 
