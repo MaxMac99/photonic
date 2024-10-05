@@ -1,5 +1,6 @@
 /example/storage
 /example/cache
+/example/tmp
 /target
 /gen
 /docker
