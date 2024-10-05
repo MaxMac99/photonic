@@ -1,6 +1,6 @@
 extern crate core;
 
-use crate::{api::create_app, config::StorageWorkerConfig, state::AppState};
+use crate::{api::create_app, config::ImporterWorkerConfig, state::AppState};
 use common::{
     ksqldb::KsqlDb,
     server::shutdown_signal,
@@ -30,7 +30,7 @@ async fn main() -> Result<(), Whatever> {
         .with(fmt::layer())
         .init();
 
-    let config = Arc::new(StorageWorkerConfig::load().await?);
+    let config = Arc::new(ImporterWorkerConfig::load().await?);
     register_schemata(
         &config.stream,
         vec![Topic::MediumItemCreated, Topic::MediumItemExifLoaded],
@@ -52,7 +52,7 @@ async fn main() -> Result<(), Whatever> {
         .await
         .whatever_context("Could not bind to address")?;
 
-    info!("Starting storage API");
+    info!("Starting importer API");
     axum::serve(listener, app.into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await

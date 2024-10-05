@@ -1,4 +1,4 @@
-use crate::{config::StorageWorkerConfig, medium, state::AppState};
+use crate::{config::ImporterWorkerConfig, medium, state::AppState};
 use axum::Router;
 use common::{medium::MediumType, server::setup_auth};
 use snafu::Whatever;
@@ -22,7 +22,7 @@ use utoipa_swagger_ui::SwaggerUi;
 pub struct ApiDoc;
 
 pub async fn create_app(
-    config: &Arc<StorageWorkerConfig>,
+    config: &Arc<ImporterWorkerConfig>,
     state: AppState,
 ) -> Result<Router, Whatever> {
     let auth = setup_auth(&config.clone().server).await?;

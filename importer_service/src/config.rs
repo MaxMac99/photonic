@@ -4,7 +4,7 @@ use snafu::{ResultExt, Whatever};
 use tracing::log::debug;
 
 #[derive(Debug, Config)]
-pub struct StorageWorkerConfig {
+pub struct ImporterWorkerConfig {
     #[config(nested)]
     pub stream: StreamConfig,
     #[config(nested)]
@@ -13,9 +13,9 @@ pub struct StorageWorkerConfig {
     pub storage: StorageConfig,
 }
 
-impl StorageWorkerConfig {
+impl ImporterWorkerConfig {
     pub async fn load() -> Result<Self, Whatever> {
-        let mut config = StorageWorkerConfig::builder()
+        let mut config = ImporterWorkerConfig::builder()
             .env()
             .load()
             .whatever_context("Could not build config")?;
