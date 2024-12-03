@@ -1,9 +1,21 @@
+mod updated_event;
+
+pub use updated_event::*;
+
 use avro_reference::AvroReferenceSchema;
 use mime::Mime;
 use serde::{Deserialize, Serialize};
 
 #[derive(
-    Debug, Copy, Clone, Serialize, Deserialize, sqlx::Type, utoipa::ToSchema, AvroReferenceSchema,
+    Debug,
+    Copy,
+    Clone,
+    Serialize,
+    Deserialize,
+    sqlx::Type,
+    utoipa::ToSchema,
+    AvroReferenceSchema,
+    PartialEq,
 )]
 #[sqlx(type_name = "medium_type_enum", rename_all = "lowercase")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]

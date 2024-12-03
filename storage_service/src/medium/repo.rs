@@ -1,5 +1,5 @@
 use crate::medium::model::MediumType;
-use common::error::Result;
+use common::{error::Result, medium::MediumType};
 use sqlx::PgExecutor;
 use uuid::Uuid;
 

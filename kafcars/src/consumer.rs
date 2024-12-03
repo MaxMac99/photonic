@@ -1,10 +1,9 @@
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
-use apache_avro::from_value;
 use futures::{TryFuture, TryStreamExt};
 use futures_util::TryFutureExt;
 use rdkafka::{
-    consumer::{CommitMode, Consumer, StreamConsumer},
+    consumer::{CommitMode, Consumer as RdKafkaConsumer, StreamConsumer},
     message::BorrowedMessage,
     ClientConfig, Message,
 };
@@ -14,32 +13,37 @@ use schema_registry_converter::async_impl::{
 use serde::Deserialize;
 
 use crate::{
-    config::StreamConfig,
+    config::KafkaConfig,
     error::{Error, Result},
-    stream::events::{Event, Topic},
+    event::Event,
 };
 
-pub struct KafkaConsumer {
+pub struct Consumer<E: Event> {
     consumer: StreamConsumer,
     decoder: EasyAvroDecoder,
 }
 
-impl KafkaConsumer {
-    pub fn new(config: &StreamConfig, group_id: String, topics: &Vec<Topic>) -> Result<Self> {
-        let consumer: StreamConsumer = ClientConfig::new()
+impl<E: Event> Consumer<E> {
+    pub fn new(
+        config: &KafkaConfig,
+        group_id: String,
+        additional_opts: &HashMap<String, String>,
+    ) -> Result<Self> {
+        let mut client_config = ClientConfig::new()
             .set("group.id", group_id)
             .set("bootstrap.servers", config.broker_url.clone())
             .set("session.timeout.ms", "6000")
             .set("enable.auto.commit", "false")
-            .set("allow.auto.create.topics", "true")
-            .create()?;
+            .set("allow.auto.create.topics", "true");
+        additional_opts
+            .iter()
+            .for_each(|(key, value)| client_config = client_config.set(key, value));
+        let consumer: StreamConsumer = client_config.create()?;
         let sr_settings = SrSettings::new(config.schema_registry_url.clone());
         let decoder = EasyAvroDecoder::new(sr_settings);
-        let topics: Vec<String> = topics.iter().map(|topic| topic.subject_name()).collect();
-        let topics: Vec<&str> = topics.iter().map(AsRef::as_ref).collect();
-        let topics: &[&str] = topics.as_slice();
+        let topics: &[&str] = &[E::topic()];
         consumer.subscribe(topics)?;
-        Ok(KafkaConsumer { consumer, decoder })
+        Ok(Consumer { consumer, decoder })
     }
 
     pub async fn stream<T, F, Fut>(&self, f: F) -> Result<()>

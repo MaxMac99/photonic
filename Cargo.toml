@@ -5,7 +5,8 @@ members = [
     "importer_service",
     "storage_service",
     "avro-reference-derive",
-    "avro-reference"
+    "avro-reference",
+    "kafcars",
 ]
 resolver = "2"
 

@@ -1,4 +1,4 @@
-use crate::stream::events::{Event, Topic};
+use crate::stream::events::Event;
 use avro_reference::AvroReferenceSchema;
 use chrono::{DateTime, FixedOffset};
 use derive_builder::Builder;
@@ -23,8 +23,8 @@ pub struct MediumItemExifLoadedEvent {
 }
 
 impl Event for MediumItemExifLoadedEvent {
-    fn topic() -> Topic {
-        Topic::MediumItemExifLoaded
+    fn topic() -> &'static str {
+        "MediumItemExifLoaded"
     }
 
     fn id(&self) -> String {

@@ -1,10 +1,11 @@
 use crate::config::StorageWorkerConfig;
-use common::{ksqldb::KsqlDb, stream::producer::KafkaProducer};
+use common::stream::producer::KafkaProducer;
+use sqlx::PgPool;
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AppState {
     pub config: Arc<StorageWorkerConfig>,
     pub producer: KafkaProducer,
-    pub ksql_db: Arc<KsqlDb>,
+    pub db_pool: PgPool,
 }

@@ -1,0 +1,14 @@
+[package]
+name = "kafcars"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+avro-reference = { path = "../avro-reference" }
+
+futures = "0.3.31"
+futures-util = "0.3.31"
+kafka = "0.10.0"
+schema_registry_converter = { version = "4.1.0", features = ["easy", "avro", "tokio"] }
+serde = { version = "1.0.210", features = ["derive", "serde_derive"] }
+snafu = { version = "0.8.2", features = ["backtrace"] }
