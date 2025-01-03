@@ -820,7 +820,7 @@ components:
       in: query
       required: false
       schema:
-        type: string
+        type: integer
     album_id:
       name: album_id
       in: query

@@ -7,9 +7,9 @@
 ################################################################################
 # Create a stage for building the application.
 
-ARG RUST_VERSION=1.77.2
-ARG APP_NAME=cli
-ARG PACKAGE_NAME=cli
+ARG RUST_VERSION=1.83.0
+ARG APP_NAME=photonic
+ARG PACKAGE_NAME=photonic
 FROM rust:${RUST_VERSION}-slim-bullseye AS build
 ARG APP_NAME
 ARG PACKAGE_NAME
@@ -22,8 +22,9 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean \
     && apt-get update \
     && apt-get -y --no-install-recommends install \
-        pkg-config libssl-dev libpq-dev
+        pkg-config libssl-dev libpq-dev curl
 
+ENV SQLX_OFFLINE true
 # Build the application.
 # Leverage a cache mount to /usr/local/cargo/registry/
 # for downloaded dependencies and a cache mount to /app/target/ for 
@@ -57,7 +58,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean \
     && apt-get update \
     && apt-get -y --no-install-recommends install \
-        pkg-config libssl-dev libpq-dev exif_service
+        pkg-config libssl-dev libpq-dev exif
 
 # Copy the executable from the "build" stage.
 COPY --from=build /bin/app /bin/

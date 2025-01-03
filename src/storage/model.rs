@@ -1,0 +1,29 @@
+use crate::config::StorageConfig;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, sqlx::Type, utoipa::ToSchema)]
+#[sqlx(type_name = "store_location_enum", rename_all = "lowercase")]
+pub enum StorageVariant {
+    Originals,
+    Cache,
+    Temp,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::FromRow, utoipa::ToSchema)]
+pub struct StorageLocation {
+    pub variant: StorageVariant,
+    #[schema(value_type = String)]
+    pub path: PathBuf,
+}
+
+impl StorageLocation {
+    pub fn full_path(&self, config: &StorageConfig) -> PathBuf {
+        let path = self.path.clone();
+        match self.variant {
+            StorageVariant::Originals => config.base_path.join(path),
+            StorageVariant::Cache => config.cache_path.join(path),
+            StorageVariant::Temp => config.tmp_path.join(path),
+        }
+    }
+}

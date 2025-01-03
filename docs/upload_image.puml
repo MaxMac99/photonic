@@ -1,29 +1,36 @@
 @startuml
 actor User
-participant Server
-participant Fotostore as ps
+participant "Import" as import
 participant "Metadata Extractor" as meta
+participant "Storage" as store
 database Filesystem as fs
-database DB as db
+queue EventStore as events
+database KSQLDB as ksql
 
-User -> Server++: Upload image
-
-Server -> fs++: Store image at temp path
+User -> import++: Upload image
+import -> ksql++: Get current quota
+return Quota
+import -> import: Validate quota
+opt Quota exceeded
+    import --> User: 413 Quota exceeded
+end opt
+import -> fs++: Store image at temp path
 return Saved
-Server -> ps++: Store image
+import ->> events: ImageUploadedEvent
+return 201 (with ID)
 
-ps -> meta++: Extract minimal metadata
-meta -> fs++: Read file
-return File
-return Metadata
+events ->> ksql++: ImageUploadedEvent
+ksql -> ksql--: Calculate new quota
 
-ps -> db++: Save metadata
-return Metadata
-ps -> fs++: Move file
-return Success
+events ->> meta++: ImageUploadedEvent
+meta -> fs++: Extract metadata
+return
+meta ->> events--: MetadataSavedEvent
 
-return Image metadata
-
-return 201 (Metadata)
+events ->> store++: MetadataSavedEvent
+store -> store: Calculate new path
+store -> fs++: Move image to new path
+return
+store ->> events--: ImageMovedEvent
 
 @enduml
