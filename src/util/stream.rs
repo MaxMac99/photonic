@@ -1,8 +1,5 @@
 use futures::Stream;
-use futures_util::{
-    stream::{Fuse, FusedStream},
-    StreamExt,
-};
+use futures_util::stream::{Fuse, FusedStream};
 use pin_project_lite::pin_project;
 use std::{
     collections::HashMap,
@@ -40,13 +37,6 @@ where
     L: Stream<Item = KL>,
     R: Stream<Item = KR>,
 {
-    pub fn new(left: L, right: R) -> Self {
-        Self {
-            left: left.fuse(),
-            right: right.fuse(),
-            events: HashMap::new(),
-        }
-    }
 }
 
 impl<L, R, KL, KR, V> FusedStream for JoinStream<L, R, KL, KR, V>
