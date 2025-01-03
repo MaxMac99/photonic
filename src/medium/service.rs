@@ -197,3 +197,12 @@ async fn create_medium_item_response(
         last_saved: item.last_saved,
     })
 }
+
+pub async fn delete_medium(
+    transaction: &mut Transaction,
+    user: UserInput,
+    medium_id: Uuid,
+) -> Result<()> {
+    repo::delete_medium(transaction, user.sub, medium_id).await?;
+    Ok(())
+}

@@ -76,3 +76,18 @@ pub async fn find_media(
         .await?;
     Ok(media)
 }
+
+pub async fn delete_medium(
+    transaction: &mut Transaction,
+    owner_id: Uuid,
+    medium_id: Uuid,
+) -> Result<()> {
+    sqlx::query!(
+        "DELETE FROM media WHERE owner_id = $1 AND id = $2",
+        owner_id,
+        medium_id,
+    )
+    .execute(&mut **transaction)
+    .await?;
+    Ok(())
+}

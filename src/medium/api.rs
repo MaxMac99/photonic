@@ -11,7 +11,7 @@ use crate::{
 use axum::{
     body::Body,
     debug_handler,
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     Json,
 };
@@ -27,7 +27,7 @@ use uuid::Uuid;
 
 pub fn router(state: AppState, authorization: AuthorizationLayer<UserInput>) -> OpenApiRouter {
     OpenApiRouter::new()
-        .routes(routes!(create_medium, find_all_media))
+        .routes(routes!(create_medium, find_all_media, delete_medium))
         .layer(authorization)
         .with_state(state)
 }
@@ -106,4 +106,30 @@ async fn find_all_media(
     let response = service::find_media(&mut transaction, user, opts).await?;
     transaction.commit().await?;
     Ok((StatusCode::CREATED, Json::from(response)))
+}
+
+#[debug_handler]
+#[utoipa::path(
+    delete,
+    path = "/{id}",
+    tag = "medium",
+    responses(
+        (status = 204, content_type = "application/json", description = "Deletes the medium"),
+    ),
+    params(
+        ("id" = Uuid, Path, description = "The id of the medium to delete"),
+    ),
+)]
+async fn delete_medium(
+    Path(id): Path<Uuid>,
+    State(state): State<AppState>,
+    JwtClaims(user): JwtClaims<UserInput>,
+) -> Result<StatusCode> {
+    let mut transaction = state.begin_transaction().await?;
+    create_or_update_user(&mut transaction, user.clone().into()).await?;
+
+    service::delete_medium(&mut transaction, user, id).await?;
+
+    transaction.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
 }
