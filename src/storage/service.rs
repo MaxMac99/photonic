@@ -68,7 +68,7 @@ pub async fn move_medium_item_to_permanent(
     transaction: &mut Transaction,
     created: MediumItemCreatedEvent,
     exif: Option<MediumItemExifLoadedEvent>,
-) -> Result<()> {
+) -> Result<MediumItemMovedEvent> {
     let user = get_user(transaction, created.user).await?;
     let date_taken = created
         .date_taken
@@ -107,13 +107,8 @@ pub async fn move_medium_item_to_permanent(
     )
     .await?;
 
-    state
-        .event_bus
-        .publish(MediumItemMovedEvent {
-            id: created.id,
-            new_location,
-        })
-        .await?;
-
-    Ok(())
+    Ok(MediumItemMovedEvent {
+        id: created.id,
+        new_location,
+    })
 }

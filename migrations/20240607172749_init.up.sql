@@ -34,6 +34,8 @@ CREATE TABLE medium_item_info (
     id uuid PRIMARY KEY REFERENCES medium_items(id),
     taken_at TIMESTAMP WITH TIME ZONE,
     taken_at_timezone INTEGER,
+    camera_make VARCHAR(100),
+    camera_model VARCHAR(100),
     width INTEGER,
     height INTEGER
 );

@@ -1,5 +1,5 @@
 use crate::{
-    error::Result, exif, medium::MediumItemCreatedEvent, state::AppState, storage,
+    error::Result, exif, medium, medium::MediumItemCreatedEvent, state::AppState, storage,
     util::db::run_with_transaction,
 };
 use futures_util::{FutureExt, StreamExt};
@@ -29,14 +29,19 @@ pub fn setup_medium_created_flow(state: AppState) -> JoinHandle<()> {
 async fn run_flow(state: AppState, message: MediumItemCreatedEvent) -> Result<()> {
     let exif_event = exif::service::load_exif(state.clone(), message.clone()).await?;
 
-    try_join!(run_with_transaction(state.clone(), |state, transaction| {
-        storage::service::move_medium_item_to_permanent(
-            state,
-            transaction,
-            message,
-            Some(exif_event),
-        )
-        .boxed()
-    }))?;
+    try_join!(
+        run_with_transaction(state.clone(), |state, transaction| {
+            storage::service::move_medium_item_to_permanent(
+                state,
+                transaction,
+                message,
+                Some(exif_event.clone()),
+            )
+            .boxed()
+        }),
+        run_with_transaction(state.clone(), |_, transaction| {
+            medium::service::update_medium_item_from_exif(transaction, exif_event.clone()).boxed()
+        })
+    )?;
     Ok(())
 }

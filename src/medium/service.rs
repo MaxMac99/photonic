@@ -1,5 +1,6 @@
 use crate::{
     error::{QuotaExceededSnafu, Result},
+    exif::MediumItemExifLoadedEvent,
     medium::{
         model::CreateMediumInput,
         repo,
@@ -77,6 +78,8 @@ where
             taken_at_timezone: medium_item_opts
                 .date_taken
                 .map(|date| date.offset().local_minus_utc()),
+            camera_make: medium_item_opts.camera_make.clone(),
+            camera_model: medium_item_opts.camera_model.clone(),
             width: None,
             height: None,
         },
@@ -120,6 +123,33 @@ pub async fn find_media(
     Ok(result)
 }
 
+pub async fn update_medium_item_from_exif(
+    transaction: &mut Transaction,
+    exif: MediumItemExifLoadedEvent,
+) -> Result<()> {
+    let medium_item = repo::find_medium_item_info(transaction, exif.id)
+        .await?
+        .expect("Medium item not found");
+    repo::update_medium_item_info(
+        transaction,
+        MediumItemInfoDb {
+            id: exif.id,
+            taken_at: medium_item.taken_at.or(exif.date.map(|date| date.to_utc())),
+            taken_at_timezone: medium_item
+                .taken_at_timezone
+                .or(exif.date.map(|date| date.offset().local_minus_utc())),
+            camera_make: medium_item.camera_make.or(exif.camera_make),
+            camera_model: medium_item.camera_model.or(exif.camera_model),
+            width: medium_item.width.or(exif.width.map(|width| width as i32)),
+            height: medium_item
+                .height
+                .or(exif.height.map(|height| height as i32)),
+        },
+    )
+    .await?;
+    Ok(())
+}
+
 async fn create_medium_response(
     medium: MediumDb,
     transaction_ref: Arc<Mutex<&mut Transaction>>,
@@ -160,6 +190,10 @@ async fn create_medium_item_response(
                 date.with_timezone(&FixedOffset::east_opt(tz).expect("Invalid timezone offset"))
             })
         }),
+        camera_make: item.camera_make,
+        camera_model: item.camera_model,
+        width: item.width,
+        height: item.height,
         last_saved: item.last_saved,
     })
 }

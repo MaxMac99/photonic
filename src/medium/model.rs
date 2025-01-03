@@ -87,6 +87,14 @@ pub struct MediumItemResponse {
     pub priority: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub taken_at: Option<DateTime<FixedOffset>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub camera_make: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub camera_model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub width: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub height: Option<i32>,
     pub last_saved: NaiveDateTime,
 }
 
