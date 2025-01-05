@@ -1,6 +1,6 @@
 use crate::{
     config::DatabaseConfig,
-    state::{AppState, Transaction},
+    state::{AppState, ArcConnection},
 };
 use futures_util::future::BoxFuture;
 use snafu::{ResultExt, Whatever};
@@ -25,10 +25,10 @@ pub async fn init_db(config: &DatabaseConfig) -> Result<PgPool, Whatever> {
 
 pub async fn run_with_transaction<F, O>(state: AppState, f: F) -> crate::error::Result<O>
 where
-    F: FnOnce(AppState, &mut Transaction) -> BoxFuture<'_, crate::error::Result<O>>,
+    F: FnOnce(AppState, ArcConnection) -> BoxFuture<'_, crate::error::Result<O>>,
 {
     let mut transaction = state.begin_transaction().await?;
-    let result = f(state, &mut transaction).await?;
+    let result = f(state, ArcConnection::new(&mut transaction)).await?;
     transaction.commit().await?;
     Ok(result)
 }

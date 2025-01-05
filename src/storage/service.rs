@@ -2,7 +2,7 @@ use crate::{
     error::Result,
     exif::MediumItemExifLoadedEvent,
     medium::MediumItemCreatedEvent,
-    state::{AppState, Transaction},
+    state::AppState,
     storage::{
         events::MediumItemMovedEvent,
         pattern::{create_path, PatternFields},
@@ -15,22 +15,25 @@ use bytes::Bytes;
 use chrono::Datelike;
 use futures::Stream;
 use futures_util::{io, TryStreamExt};
+use sqlx::PgConnection;
 use std::{fs::remove_file, path::PathBuf};
 use tokio::{fs, fs::File, io::BufWriter};
 use tokio_util::io::StreamReader;
 use tracing::log::debug;
 use uuid::Uuid;
 
+#[tracing::instrument(skip(conn))]
 pub async fn find_locations_by_medium_item_id(
-    transaction: &mut Transaction,
+    conn: &mut PgConnection,
     medium_item_id: Uuid,
 ) -> Result<Vec<StorageLocation>> {
-    repo::find_locations_by_medium_item_id(transaction, medium_item_id).await
+    repo::find_locations_by_medium_item_id(conn, medium_item_id).await
 }
 
+#[tracing::instrument(skip(state, conn, stream))]
 pub async fn store_tmp_from_stream<S, E>(
     state: AppState,
-    transaction: &mut Transaction,
+    conn: &mut PgConnection,
     medium_item_id: Uuid,
     stream: S,
     extension: String,
@@ -58,18 +61,19 @@ where
             Err(err)
         })?;
 
-    repo::add_storage_location(transaction, medium_item_id, location.clone()).await?;
+    repo::add_storage_location(conn, medium_item_id, location.clone()).await?;
 
     Ok(location)
 }
 
+#[tracing::instrument(skip(state, conn))]
 pub async fn move_medium_item_to_permanent(
     state: AppState,
-    transaction: &mut Transaction,
+    conn: &mut PgConnection,
     created: MediumItemCreatedEvent,
     exif: Option<MediumItemExifLoadedEvent>,
 ) -> Result<MediumItemMovedEvent> {
-    let user = get_user(transaction, created.user).await?;
+    let user = get_user(conn, created.user).await?;
     let date_taken = created
         .date_taken
         .or(exif.clone().map(|e| e.date).flatten().clone());
@@ -99,13 +103,7 @@ pub async fn move_medium_item_to_permanent(
     fs::create_dir_all(&new_path.parent().expect("Could not get parent dir")).await?;
     fs::rename(old_path, &new_path).await?;
 
-    repo::move_location(
-        transaction,
-        created.id,
-        created.location,
-        new_location.clone(),
-    )
-    .await?;
+    repo::move_location(conn, created.id, created.location, new_location.clone()).await?;
 
     Ok(MediumItemMovedEvent {
         id: created.id,

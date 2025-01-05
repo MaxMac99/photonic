@@ -10,6 +10,7 @@ use std::{collections::HashMap, str::FromStr};
 use tracing::log::debug;
 use uuid::Uuid;
 
+#[tracing::instrument(skip(state))]
 pub async fn load_exif(
     state: AppState,
     message: MediumItemCreatedEvent,
@@ -21,6 +22,7 @@ pub async fn load_exif(
     Ok(event)
 }
 
+#[tracing::instrument(skip(metadata))]
 fn parse_metadata(id: Uuid, metadata: HashMap<String, Metadata>) -> MediumItemExifLoadedEvent {
     let date = extract_date_time(&metadata);
     let mime = metadata

@@ -6,6 +6,14 @@ use crate::{
     state::AppState,
     util::{db::init_db, events::EventBus, server::shutdown_signal_with_external_signal},
 };
+use opentelemetry::{
+    global, propagation::TextMapCompositePropagator, trace::TracerProvider as _, KeyValue,
+};
+use opentelemetry_sdk::{
+    propagation::{BaggagePropagator, TraceContextPropagator},
+    trace::TracerProvider,
+    Resource,
+};
 use snafu::{ResultExt, Whatever};
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::mpsc};
@@ -28,10 +36,7 @@ mod util;
 async fn main() -> Result<(), Whatever> {
     dotenv::dotenv().ok();
 
-    tracing_subscriber::registry()
-        .with(EnvFilter::from_default_env())
-        .with(fmt::layer())
-        .init();
+    setup_tracing()?;
 
     let config = Arc::new(GlobalConfig::load().await?);
     let event_bus = EventBus::new();
@@ -57,5 +62,37 @@ async fn main() -> Result<(), Whatever> {
         .await
         .whatever_context("Could not start server")?;
 
+    Ok(())
+}
+
+fn setup_tracing() -> Result<(), Whatever> {
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .build()
+        .whatever_context("Could no create span exporter")?;
+    let provider = TracerProvider::builder()
+        .with_batch_exporter(exporter, opentelemetry_sdk::runtime::Tokio)
+        .with_resource(Resource::new(vec![KeyValue::new(
+            "service.name",
+            "photonic",
+        )]))
+        .build();
+
+    let propagators = TextMapCompositePropagator::new(vec![
+        Box::new(TraceContextPropagator::new()),
+        Box::new(BaggagePropagator::new()),
+    ]);
+    global::set_text_map_propagator(propagators);
+
+    let telemetry_layer = tracing_opentelemetry::layer()
+        .with_error_records_to_exceptions(true)
+        .with_tracer(provider.tracer("photonic"));
+    global::set_tracer_provider(provider);
+
+    tracing_subscriber::registry()
+        .with(EnvFilter::from_default_env())
+        .with(fmt::layer())
+        .with(telemetry_layer)
+        .init();
     Ok(())
 }

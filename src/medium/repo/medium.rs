@@ -1,9 +1,8 @@
 use crate::{
     error::Result,
     medium::{Direction, FindAllMediaOptions, MediumType},
-    state::Transaction,
 };
-use sqlx::QueryBuilder;
+use sqlx::{PgConnection, QueryBuilder};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -14,7 +13,8 @@ pub struct MediumDb {
     pub leading_item_id: Uuid,
 }
 
-pub async fn create_medium(transaction: &mut Transaction, medium: MediumDb) -> Result<()> {
+#[tracing::instrument(skip(conn))]
+pub async fn create_medium(conn: &mut PgConnection, medium: MediumDb) -> Result<()> {
     sqlx::query!(
         "INSERT INTO media (id, owner_id, medium_type, leading_item_id) \
         VALUES ($1, $2, $3, $4)",
@@ -23,13 +23,14 @@ pub async fn create_medium(transaction: &mut Transaction, medium: MediumDb) -> R
         medium.medium_type as MediumType,
         medium.leading_item_id,
     )
-    .execute(&mut **transaction)
+    .execute(&mut *conn)
     .await?;
     Ok(())
 }
 
+#[tracing::instrument(skip(conn))]
 pub async fn find_media(
-    transaction: &mut Transaction,
+    conn: &mut PgConnection,
     owner_id: Uuid,
     filter: FindAllMediaOptions,
 ) -> Result<Vec<MediumDb>> {
@@ -72,22 +73,19 @@ pub async fn find_media(
 
     let media = query
         .build_query_as::<MediumDb>()
-        .fetch_all(&mut **transaction)
+        .fetch_all(&mut *conn)
         .await?;
     Ok(media)
 }
 
-pub async fn delete_medium(
-    transaction: &mut Transaction,
-    owner_id: Uuid,
-    medium_id: Uuid,
-) -> Result<()> {
+#[tracing::instrument(skip(conn))]
+pub async fn delete_medium(conn: &mut PgConnection, owner_id: Uuid, medium_id: Uuid) -> Result<()> {
     sqlx::query!(
         "DELETE FROM media WHERE owner_id = $1 AND id = $2",
         owner_id,
         medium_id,
     )
-    .execute(&mut **transaction)
+    .execute(&mut *conn)
     .await?;
     Ok(())
 }

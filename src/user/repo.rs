@@ -1,10 +1,10 @@
 use crate::{
     error::Result,
-    state::Transaction,
     user::{User, UserInput},
 };
 use byte_unit::Byte;
 use serde::{Deserialize, Serialize};
+use sqlx::PgConnection;
 use uuid::Uuid;
 
 #[derive(Debug, Deserialize, Serialize, sqlx::FromRow)]
@@ -28,18 +28,20 @@ impl Into<User> for UserDb {
     }
 }
 
-pub async fn find_user_by_id(transaction: &mut Transaction, id: Uuid) -> Result<User> {
+#[tracing::instrument(skip(conn))]
+pub async fn find_user_by_id(conn: &mut PgConnection, id: Uuid) -> Result<User> {
     let queried = sqlx::query_as!(
         UserDb,
         "SELECT id, username, email, quota, quota_used FROM users WHERE id = $1",
         id
     )
-    .fetch_one(&mut **transaction)
+    .fetch_one(&mut *conn)
     .await?;
     Ok(queried.into())
 }
 
-pub async fn create_or_update_user(transaction: &mut Transaction, user: UserInput) -> Result<()> {
+#[tracing::instrument(skip(conn))]
+pub async fn create_or_update_user(conn: &mut PgConnection, user: UserInput) -> Result<()> {
     sqlx::query!(
         "INSERT INTO users (id, username, email, quota, quota_used)\
         VALUES ($1, $2, $3, $4, 0)\
@@ -50,7 +52,7 @@ pub async fn create_or_update_user(transaction: &mut Transaction, user: UserInpu
         user.email,
         user.quota.as_u64() as i64,
     )
-    .execute(&mut **transaction)
+    .execute(&mut *conn)
     .await?;
     Ok(())
 }

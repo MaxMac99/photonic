@@ -1,6 +1,7 @@
-use crate::{error::Result, state::Transaction};
+use crate::error::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::PgConnection;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Deserialize, Serialize, sqlx::FromRow)]
@@ -14,8 +15,9 @@ pub struct MediumItemInfoDb {
     pub height: Option<i32>,
 }
 
+#[tracing::instrument(skip(conn))]
 pub async fn create_medium_item_info(
-    transaction: &mut Transaction,
+    conn: &mut PgConnection,
     medium_item_info: MediumItemInfoDb,
 ) -> Result<()> {
     sqlx::query!(
@@ -26,13 +28,14 @@ pub async fn create_medium_item_info(
         medium_item_info.camera_make,
         medium_item_info.camera_model,
     )
-    .execute(&mut **transaction)
+    .execute(&mut *conn)
     .await?;
     Ok(())
 }
 
+#[tracing::instrument(skip(conn))]
 pub async fn find_medium_item_info(
-    transaction: &mut Transaction,
+    conn: &mut PgConnection,
     id: Uuid,
 ) -> Result<Option<MediumItemInfoDb>> {
     let medium_item_info = sqlx::query_as!(
@@ -40,13 +43,14 @@ pub async fn find_medium_item_info(
         "SELECT * FROM medium_item_info WHERE id = $1",
         id
     )
-    .fetch_optional(&mut **transaction)
+    .fetch_optional(&mut *conn)
     .await?;
     Ok(medium_item_info)
 }
 
+#[tracing::instrument(skip(conn))]
 pub async fn update_medium_item_info(
-    transaction: &mut Transaction,
+    conn: &mut PgConnection,
     medium_item_info: MediumItemInfoDb,
 ) -> Result<()> {
     sqlx::query!(
@@ -66,7 +70,7 @@ pub async fn update_medium_item_info(
         medium_item_info.height,
         medium_item_info.id,
     )
-    .execute(&mut **transaction)
+    .execute(&mut *conn)
     .await?;
     Ok(())
 }

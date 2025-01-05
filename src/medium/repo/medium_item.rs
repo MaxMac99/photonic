@@ -1,6 +1,7 @@
-use crate::{error::Result, medium::MediumItemType, state::Transaction};
+use crate::{error::Result, medium::MediumItemType};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::PgConnection;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Deserialize, Serialize, sqlx::FromRow)]
@@ -35,10 +36,8 @@ pub struct FullMediumItemDb {
     pub height: Option<i32>,
 }
 
-pub async fn create_medium_item(
-    transaction: &mut Transaction,
-    medium_item: MediumItemDb,
-) -> Result<()> {
+#[tracing::instrument(skip(conn))]
+pub async fn create_medium_item(conn: &mut PgConnection, medium_item: MediumItemDb) -> Result<()> {
     sqlx::query!("INSERT INTO medium_items (id, medium_id, medium_item_type, mime, filename, size, priority) \
         VALUES ($1, $2, $3, $4, $5, $6, $7)",
         medium_item.id,
@@ -48,13 +47,14 @@ pub async fn create_medium_item(
         medium_item.filename,
         medium_item.size,
         medium_item.priority)
-        .execute(&mut **transaction)
+        .execute(&mut *conn)
         .await?;
     Ok(())
 }
 
+#[tracing::instrument(skip(conn))]
 pub async fn find_medium_items_by_id(
-    transaction: &mut Transaction,
+    conn: &mut PgConnection,
     medium_id: Uuid,
 ) -> Result<Vec<FullMediumItemDb>> {
     let medium_items = sqlx::query_as!(FullMediumItemDb, "\
@@ -63,7 +63,7 @@ pub async fn find_medium_items_by_id(
         JOIN medium_item_info \
         ON medium_items.id = medium_item_info.id \
         WHERE medium_id = $1", medium_id)
-        .fetch_all(&mut **transaction)
+        .fetch_all(&mut *conn)
         .await?;
     Ok(medium_items)
 }
