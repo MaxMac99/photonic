@@ -17,7 +17,6 @@ use chrono::{FixedOffset, Utc};
 use futures_util::future::{try_join_all, BoxFuture};
 use mime::Mime;
 use mime_serde_shim::Wrapper;
-use sqlx::PgConnection;
 use std::fs::Metadata;
 use tokio::{fs, try_join};
 use tracing::log::warn;
@@ -26,7 +25,7 @@ use uuid::Uuid;
 #[tracing::instrument(skip(state, conn, tmp_file))]
 pub async fn create_medium<F>(
     state: AppState,
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     tmp_file: F,
     filesize: Byte,
     user: UserInput,
@@ -35,10 +34,10 @@ pub async fn create_medium<F>(
     mime: Mime,
 ) -> Result<MediumItemCreatedEvent>
 where
-    F: FnOnce(&mut PgConnection, Uuid) -> BoxFuture<'_, Result<StorageLocation>>,
+    F: FnOnce(ArcConnection<'_>, Uuid) -> BoxFuture<'_, Result<StorageLocation>>,
 {
     let user_id = user.sub;
-    let usage = get_user(conn, user_id).await?.quota_used;
+    let usage = get_user(conn.clone(), user_id).await?.quota_used;
     if usage.as_u64() + filesize.as_u64() > user.quota.as_u64() {
         return QuotaExceededSnafu.fail();
     }
@@ -48,11 +47,10 @@ where
         .medium_type
         .unwrap_or_else(|| MediumType::from(mime.clone()));
 
-    let arc_conn = ArcConnection::new(conn);
     let ((tmp_path, metadata), medium) = try_join!(
-        store_tmp_file(&state, arc_conn.clone(), tmp_file, medium_item_id),
+        store_tmp_file(&state, conn.clone(), tmp_file, medium_item_id),
         save_new_medium(
-            arc_conn,
+            conn.clone(),
             user.clone(),
             medium_item_opts.clone(),
             mime.clone(),
@@ -91,17 +89,17 @@ where
 
 #[tracing::instrument(skip(conn))]
 pub async fn find_media(
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     user: UserInput,
     opts: FindAllMediaOptions,
 ) -> Result<Vec<MediumResponse>> {
     let owner_id = user.sub;
-    let media = repo::find_media(conn, owner_id, opts).await?;
-    let arc_conn = ArcConnection::new(conn);
-    let result = try_join_all(media.into_iter().map(|medium| async {
-        let mut conn = arc_conn.get_connection().await;
-        create_medium_response(medium, &mut *conn).await
-    }))
+    let media = repo::find_media(conn.clone(), owner_id, opts).await?;
+    let result = try_join_all(
+        media
+            .into_iter()
+            .map(|medium| async { create_medium_response(medium, conn.clone()).await }),
+    )
     .await?;
 
     Ok(result)
@@ -109,10 +107,10 @@ pub async fn find_media(
 
 #[tracing::instrument(skip(conn))]
 pub async fn update_medium_item_from_exif(
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     exif: MediumItemExifLoadedEvent,
 ) -> Result<()> {
-    let medium_item = repo::find_medium_item_info(conn, exif.id)
+    let medium_item = repo::find_medium_item_info(conn.clone(), exif.id)
         .await?
         .expect("Medium item not found");
     repo::update_medium_item_info(
@@ -137,7 +135,7 @@ pub async fn update_medium_item_from_exif(
 
 #[tracing::instrument(skip(conn))]
 pub async fn delete_medium(
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     user: UserInput,
     medium_id: Uuid,
 ) -> Result<()> {
@@ -145,18 +143,17 @@ pub async fn delete_medium(
     Ok(())
 }
 
-#[tracing::instrument(skip(state, arc_conn, tmp_file))]
+#[tracing::instrument(skip(state, conn, tmp_file))]
 async fn store_tmp_file<F>(
     state: &AppState,
-    arc_conn: ArcConnection<'_>,
+    conn: ArcConnection<'_>,
     tmp_file: F,
     medium_item_id: Uuid,
 ) -> Result<(StorageLocation, Metadata)>
 where
-    F: FnOnce(&mut PgConnection, Uuid) -> BoxFuture<'_, Result<StorageLocation>>,
+    F: FnOnce(ArcConnection<'_>, Uuid) -> BoxFuture<'_, Result<StorageLocation>>,
 {
-    let mut conn = arc_conn.get_connection().await;
-    let tmp_path = tmp_file(&mut *conn, medium_item_id).await?;
+    let tmp_path = tmp_file(conn, medium_item_id).await?;
     let metadata = fs::metadata(tmp_path.full_path(&state.config.storage)).await?;
     Ok((tmp_path, metadata))
 }
@@ -216,13 +213,13 @@ async fn save_new_medium(
 #[tracing::instrument(skip(conn))]
 async fn create_medium_response(
     medium: MediumDb,
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
 ) -> Result<MediumResponse> {
-    let items = repo::find_medium_items_by_id(&mut *conn, medium.id).await?;
-    let arc_conn = ArcConnection::new(conn);
-    let items = try_join_all(items.into_iter().map(|item| async {
-        let mut conn = arc_conn.get_connection().await;
-        create_medium_item_response(item, medium.clone(), &mut *conn).await
+    let items = repo::find_medium_items_by_id(conn.clone(), medium.id).await?;
+    let items = try_join_all(items.into_iter().map(|item| {
+        let medium = medium.clone();
+        let conn = conn.clone();
+        async move { create_medium_item_response(item, medium, conn).await }
     }))
     .await?;
     Ok(MediumResponse {
@@ -236,7 +233,7 @@ async fn create_medium_response(
 async fn create_medium_item_response(
     item: FullMediumItemDb,
     medium: MediumDb,
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
 ) -> Result<MediumItemResponse> {
     let locations = find_locations_by_medium_item_id(conn, item.id).await?;
     Ok(MediumItemResponse {

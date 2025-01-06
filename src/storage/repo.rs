@@ -1,9 +1,9 @@
 use crate::{
     error::Result,
+    state::ArcConnection,
     storage::{StorageLocation, StorageVariant},
 };
 use serde::{Deserialize, Serialize};
-use sqlx::PgConnection;
 use uuid::Uuid;
 
 #[derive(Debug, Deserialize, Serialize, sqlx::FromRow)]
@@ -15,7 +15,7 @@ struct LocationDb {
 
 #[tracing::instrument(skip(conn))]
 pub async fn add_storage_location(
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     medium_item_id: Uuid,
     location: StorageLocation,
 ) -> Result<()> {
@@ -29,14 +29,14 @@ pub async fn add_storage_location(
             .expect("PathBuf to String conversion failed"),
         location.variant as StorageVariant,
     )
-    .execute(&mut *conn)
+    .execute(conn.get_connection().await.as_mut())
     .await?;
     Ok(())
 }
 
 #[tracing::instrument(skip(conn))]
 pub async fn move_location(
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     medium_item_id: Uuid,
     previous_location: StorageLocation,
     new_location: StorageLocation,
@@ -56,14 +56,14 @@ pub async fn move_location(
             .into_string()
             .expect("PathBuf to String conversion failed"),
     )
-    .execute(&mut *conn)
+    .execute(conn.get_connection().await.as_mut())
     .await?;
     Ok(())
 }
 
 #[tracing::instrument(skip(conn))]
 pub async fn find_locations_by_medium_item_id(
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     medium_item_id: Uuid,
 ) -> Result<Vec<StorageLocation>> {
     let locations = sqlx::query_as!(
@@ -71,7 +71,7 @@ pub async fn find_locations_by_medium_item_id(
         "SELECT item_id, path, variant as \"variant: StorageVariant\" FROM locations WHERE item_id = $1",
         medium_item_id,
     )
-    .fetch_all(&mut *conn)
+    .fetch_all(conn.get_connection().await.as_mut())
     .await?;
     Ok(locations
         .into_iter()

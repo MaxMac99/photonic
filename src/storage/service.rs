@@ -2,7 +2,7 @@ use crate::{
     error::Result,
     exif::MediumItemExifLoadedEvent,
     medium::MediumItemCreatedEvent,
-    state::AppState,
+    state::{AppState, ArcConnection},
     storage::{
         events::MediumItemMovedEvent,
         pattern::{create_path, PatternFields},
@@ -15,7 +15,6 @@ use bytes::Bytes;
 use chrono::Datelike;
 use futures::Stream;
 use futures_util::{io, TryStreamExt};
-use sqlx::PgConnection;
 use std::{fs::remove_file, path::PathBuf};
 use tokio::{fs, fs::File, io::BufWriter};
 use tokio_util::io::StreamReader;
@@ -24,7 +23,7 @@ use uuid::Uuid;
 
 #[tracing::instrument(skip(conn))]
 pub async fn find_locations_by_medium_item_id(
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     medium_item_id: Uuid,
 ) -> Result<Vec<StorageLocation>> {
     repo::find_locations_by_medium_item_id(conn, medium_item_id).await
@@ -33,7 +32,7 @@ pub async fn find_locations_by_medium_item_id(
 #[tracing::instrument(skip(state, conn, stream))]
 pub async fn store_tmp_from_stream<S, E>(
     state: AppState,
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     medium_item_id: Uuid,
     stream: S,
     extension: String,
@@ -69,11 +68,11 @@ where
 #[tracing::instrument(skip(state, conn))]
 pub async fn move_medium_item_to_permanent(
     state: AppState,
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     created: MediumItemCreatedEvent,
     exif: Option<MediumItemExifLoadedEvent>,
 ) -> Result<MediumItemMovedEvent> {
-    let user = get_user(conn, created.user).await?;
+    let user = get_user(conn.clone(), created.user).await?;
     let date_taken = created
         .date_taken
         .or(exif.clone().map(|e| e.date).flatten().clone());

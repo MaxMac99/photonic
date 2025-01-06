@@ -4,7 +4,7 @@ use crate::{
         model::CreateMediumInput, service, CreateMediumItemInput, FindAllMediaOptions,
         MediumResponse,
     },
-    state::AppState,
+    state::{AppState, ArcConnection},
     storage::service::store_tmp_from_stream,
     user::{service::create_or_update_user, UserInput},
 };
@@ -57,14 +57,15 @@ async fn create_medium(
     body: Body,
 ) -> Result<(StatusCode, Json<Uuid>)> {
     let mut transaction = state.begin_transaction().await?;
+    let arc_conn = ArcConnection::new(&mut *transaction);
 
-    create_or_update_user(&mut *transaction, user.clone().into()).await?;
+    create_or_update_user(arc_conn.clone(), user.clone().into()).await?;
 
     let extension = medium_item_opts.extension.clone();
     let size = Byte::from_u64(content_length.0 .0);
     let medium_item_event = service::create_medium(
         state.clone(),
-        &mut transaction,
+        arc_conn,
         |conn, medium_item_id| {
             store_tmp_from_stream(
                 state.clone(),
@@ -106,9 +107,10 @@ async fn find_all_media(
     JwtClaims(user): JwtClaims<UserInput>,
 ) -> Result<(StatusCode, Json<Vec<MediumResponse>>)> {
     let mut transaction = state.begin_transaction().await?;
+    let arc_conn = ArcConnection::new(&mut *transaction);
 
-    create_or_update_user(&mut *transaction, user.clone().into()).await?;
-    let response = service::find_media(&mut *transaction, user, opts).await?;
+    create_or_update_user(arc_conn.clone(), user.clone().into()).await?;
+    let response = service::find_media(arc_conn, user, opts).await?;
     transaction.commit().await?;
     Ok((StatusCode::CREATED, Json::from(response)))
 }
@@ -132,10 +134,11 @@ async fn delete_medium(
     JwtClaims(user): JwtClaims<UserInput>,
 ) -> Result<StatusCode> {
     let mut transaction = state.begin_transaction().await?;
+    let arc_conn = ArcConnection::new(&mut *transaction);
 
-    create_or_update_user(&mut transaction, user.clone().into()).await?;
+    create_or_update_user(arc_conn.clone(), user.clone().into()).await?;
 
-    service::delete_medium(&mut transaction, user, id).await?;
+    service::delete_medium(arc_conn, user, id).await?;
 
     transaction.commit().await?;
     Ok(StatusCode::NO_CONTENT)
@@ -167,11 +170,13 @@ async fn add_medium_item(
 ) -> Result<(StatusCode, Json<Uuid>)> {
     let extension = medium_item_opts.extension.clone();
     let mut transaction = state.begin_transaction().await?;
-    create_or_update_user(&mut transaction, user.clone().into()).await?;
+    let arc_conn = ArcConnection::new(&mut *transaction);
+
+    create_or_update_user(arc_conn.clone(), user.clone().into()).await?;
     let size = Byte::from_u64(content_length.0 .0);
     let medium_item_event = service::create_medium(
         state.clone(),
-        &mut transaction,
+        arc_conn,
         |inner_transaction, medium_item_id| {
             store_tmp_from_stream(
                 state.clone(),

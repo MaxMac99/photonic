@@ -1,6 +1,7 @@
 use crate::{
     error::Result,
     medium::{Direction, FindAllMediaOptions, MediumType},
+    state::ArcConnection,
 };
 use sqlx::{PgConnection, QueryBuilder};
 use uuid::Uuid;
@@ -30,7 +31,7 @@ pub async fn create_medium(conn: &mut PgConnection, medium: MediumDb) -> Result<
 
 #[tracing::instrument(skip(conn))]
 pub async fn find_media(
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     owner_id: Uuid,
     filter: FindAllMediaOptions,
 ) -> Result<Vec<MediumDb>> {
@@ -73,19 +74,19 @@ pub async fn find_media(
 
     let media = query
         .build_query_as::<MediumDb>()
-        .fetch_all(&mut *conn)
+        .fetch_all(conn.get_connection().await.as_mut())
         .await?;
     Ok(media)
 }
 
 #[tracing::instrument(skip(conn))]
-pub async fn delete_medium(conn: &mut PgConnection, owner_id: Uuid, medium_id: Uuid) -> Result<()> {
+pub async fn delete_medium(conn: ArcConnection<'_>, owner_id: Uuid, medium_id: Uuid) -> Result<()> {
     sqlx::query!(
         "DELETE FROM media WHERE owner_id = $1 AND id = $2",
         owner_id,
         medium_id,
     )
-    .execute(&mut *conn)
+    .execute(conn.get_connection().await.as_mut())
     .await?;
     Ok(())
 }

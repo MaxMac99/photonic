@@ -1,4 +1,4 @@
-use crate::error::Result;
+use crate::{error::Result, state::ArcConnection};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgConnection;
@@ -35,7 +35,7 @@ pub async fn create_medium_item_info(
 
 #[tracing::instrument(skip(conn))]
 pub async fn find_medium_item_info(
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     id: Uuid,
 ) -> Result<Option<MediumItemInfoDb>> {
     let medium_item_info = sqlx::query_as!(
@@ -43,14 +43,14 @@ pub async fn find_medium_item_info(
         "SELECT * FROM medium_item_info WHERE id = $1",
         id
     )
-    .fetch_optional(&mut *conn)
+    .fetch_optional(conn.get_connection().await.as_mut())
     .await?;
     Ok(medium_item_info)
 }
 
 #[tracing::instrument(skip(conn))]
 pub async fn update_medium_item_info(
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     medium_item_info: MediumItemInfoDb,
 ) -> Result<()> {
     sqlx::query!(
@@ -70,7 +70,7 @@ pub async fn update_medium_item_info(
         medium_item_info.height,
         medium_item_info.id,
     )
-    .execute(&mut *conn)
+    .execute(conn.get_connection().await.as_mut())
     .await?;
     Ok(())
 }

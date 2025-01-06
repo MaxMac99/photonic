@@ -1,4 +1,4 @@
-use crate::{error::Result, medium::MediumItemType};
+use crate::{error::Result, medium::MediumItemType, state::ArcConnection};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgConnection;
@@ -54,7 +54,7 @@ pub async fn create_medium_item(conn: &mut PgConnection, medium_item: MediumItem
 
 #[tracing::instrument(skip(conn))]
 pub async fn find_medium_items_by_id(
-    conn: &mut PgConnection,
+    conn: ArcConnection<'_>,
     medium_id: Uuid,
 ) -> Result<Vec<FullMediumItemDb>> {
     let medium_items = sqlx::query_as!(FullMediumItemDb, "\
@@ -63,7 +63,7 @@ pub async fn find_medium_items_by_id(
         JOIN medium_item_info \
         ON medium_items.id = medium_item_info.id \
         WHERE medium_id = $1", medium_id)
-        .fetch_all(&mut *conn)
+        .fetch_all(conn.get_connection().await.as_mut())
         .await?;
     Ok(medium_items)
 }
