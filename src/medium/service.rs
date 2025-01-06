@@ -43,9 +43,6 @@ where
     }
 
     let medium_item_id = Uuid::new_v4();
-    let medium_type = medium_opts
-        .medium_type
-        .unwrap_or_else(|| MediumType::from(mime.clone()));
 
     let ((tmp_path, metadata), medium) = try_join!(
         store_tmp_file(&state, conn.clone(), tmp_file, medium_item_id),
@@ -55,7 +52,7 @@ where
             medium_item_opts.clone(),
             mime.clone(),
             medium_item_id,
-            medium_type,
+            medium_opts,
             filesize,
         )
     )?;
@@ -229,9 +226,12 @@ async fn save_new_medium(
     medium_item_opts: CreateMediumItemInput,
     mime: Mime,
     medium_item_id: Uuid,
-    medium_type: MediumType,
+    medium_opts: CreateMediumInput,
     filesize: Byte,
 ) -> Result<MediumDb> {
+    let medium_type = medium_opts
+        .medium_type
+        .unwrap_or_else(|| MediumType::from(mime.clone()));
     let medium = MediumDb {
         id: Uuid::new_v4(),
         owner_id: user.sub,
@@ -239,6 +239,7 @@ async fn save_new_medium(
         leading_item_id: medium_item_id,
     };
     repo::create_medium(arc_conn.clone(), medium.clone()).await?;
+    repo::add_tags(arc_conn.clone(), medium.id, medium_opts.tags).await?;
     save_new_medium_item(
         arc_conn,
         medium.id,

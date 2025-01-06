@@ -43,15 +43,10 @@ CREATE TABLE medium_item_info (
 ALTER TABLE media ADD CONSTRAINT leading_item_id_fk FOREIGN KEY (leading_item_id) REFERENCES medium_items(id) DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE media ADD CONSTRAINT leading_item_id_info_fk FOREIGN KEY (leading_item_id) REFERENCES medium_item_info(id) DEFERRABLE INITIALLY DEFERRED;
 
-CREATE TABLE tags (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    title VARCHAR(100) NOT NULL
-);
-
 CREATE TABLE media_tags (
     medium_id uuid NOT NULL REFERENCES media(id) ON DELETE CASCADE,
-    tag_id uuid NOT NULL REFERENCES tags(id),
-    PRIMARY KEY (medium_id, tag_id)
+    tag_title VARCHAR(100) NOT NULL,
+    PRIMARY KEY (medium_id, tag_title)
 );
 
 CREATE TABLE locations (

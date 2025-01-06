@@ -41,9 +41,12 @@ pub async fn find_media(
         SELECT media.id, media.owner_id, media.medium_type, media.leading_item_id \
         FROM media \
         JOIN medium_item_info ON media.leading_item_id = medium_item_info.id \
-        WHERE media.owner_id =
         ",
     );
+    if !filter.tags.is_empty() {
+        query.push("JOIN media_tags ON media.id = media_tags.medium_id");
+    }
+    query.push(" WHERE media.owner_id = ");
     query.push_bind(owner_id);
     if let Some(start_date) = filter.start_date {
         query.push(" AND medium_item_info.taken_at >= ");
@@ -52,6 +55,14 @@ pub async fn find_media(
     if let Some(end_date) = filter.end_date {
         query.push(" AND medium_item_info.taken_at <= ");
         query.push_bind(end_date);
+    }
+    if !filter.tags.is_empty() {
+        query.push(" AND media_tags.tag_title = ANY (");
+        filter.tags.into_iter().for_each(|tag| {
+            query.push_bind(tag);
+            query.push(", ");
+        });
+        query.push(")");
     }
     if let Some(page_last_date) = filter.page_last_date {
         query.push(" AND medium_item_info.taken_at ");
