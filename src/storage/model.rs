@@ -1,8 +1,11 @@
 use crate::config::StorageConfig;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use strum::Display;
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, sqlx::Type, utoipa::ToSchema)]
+#[derive(
+    Display, Debug, Copy, Clone, Serialize, Deserialize, PartialEq, sqlx::Type, utoipa::ToSchema,
+)]
 #[sqlx(type_name = "store_location_enum", rename_all = "lowercase")]
 pub enum StorageVariant {
     Originals,

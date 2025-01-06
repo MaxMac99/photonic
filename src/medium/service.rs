@@ -87,6 +87,70 @@ where
     Ok(medium_item_event)
 }
 
+#[tracing::instrument(skip(state, conn, tmp_file))]
+pub async fn add_medium_item<F>(
+    state: AppState,
+    conn: ArcConnection<'_>,
+    tmp_file: F,
+    filesize: Byte,
+    user: UserInput,
+    medium_id: Uuid,
+    medium_item_opts: CreateMediumItemInput,
+    mime: Mime,
+) -> Result<MediumItemCreatedEvent>
+where
+    F: FnOnce(ArcConnection<'_>, Uuid) -> BoxFuture<'_, Result<StorageLocation>>,
+{
+    let user_id = user.sub;
+    let usage = get_user(conn.clone(), user_id).await?.quota_used;
+    if usage.as_u64() + filesize.as_u64() > user.quota.as_u64() {
+        return QuotaExceededSnafu.fail();
+    }
+
+    // Check if the owner has the medium
+    repo::get_medium(conn.clone(), user_id, medium_id).await?;
+
+    let medium_item_id = Uuid::new_v4();
+
+    let ((tmp_path, metadata), _) = try_join!(
+        store_tmp_file(&state, conn.clone(), tmp_file, medium_item_id),
+        save_new_medium_item(
+            conn.clone(),
+            medium_id,
+            medium_item_opts.clone(),
+            mime.clone(),
+            medium_item_id,
+            filesize,
+        )
+    )?;
+
+    if metadata.len() != filesize.as_u64() {
+        warn!(
+            "File size mismatch: expected {}, got {}",
+            filesize,
+            metadata.len()
+        );
+    }
+
+    let medium_item_event = MediumItemCreatedEvent {
+        id: medium_item_id,
+        medium_id,
+        medium_item_type: MediumItemType::Original,
+        location: tmp_path,
+        size: Byte::from_u64(metadata.len()),
+        mime: Wrapper(mime),
+        filename: medium_item_opts.filename,
+        extension: medium_item_opts.extension,
+        user: user.sub,
+        priority: medium_item_opts.priority,
+        date_taken: medium_item_opts.date_taken,
+        camera_make: medium_item_opts.camera_make,
+        camera_model: medium_item_opts.camera_model,
+        date_added: Utc::now(),
+    };
+    Ok(medium_item_event)
+}
+
 #[tracing::instrument(skip(conn))]
 pub async fn find_media(
     conn: ArcConnection<'_>,
@@ -158,9 +222,9 @@ where
     Ok((tmp_path, metadata))
 }
 
-#[tracing::instrument(skip(conn))]
+#[tracing::instrument(skip(arc_conn))]
 async fn save_new_medium(
-    conn: ArcConnection<'_>,
+    arc_conn: ArcConnection<'_>,
     user: UserInput,
     medium_item_opts: CreateMediumItemInput,
     mime: Mime,
@@ -174,13 +238,35 @@ async fn save_new_medium(
         medium_type,
         leading_item_id: medium_item_id,
     };
+    repo::create_medium(arc_conn.clone(), medium.clone()).await?;
+    save_new_medium_item(
+        arc_conn,
+        medium.id,
+        medium_item_opts,
+        mime,
+        medium_item_id,
+        filesize,
+    )
+    .await?;
+
+    Ok(medium)
+}
+
+#[tracing::instrument(skip(conn))]
+async fn save_new_medium_item(
+    conn: ArcConnection<'_>,
+    medium_id: Uuid,
+    medium_item_opts: CreateMediumItemInput,
+    mime: Mime,
+    medium_item_id: Uuid,
+    filesize: Byte,
+) -> Result<()> {
     let conn = &mut *conn.get_connection().await;
-    repo::create_medium(conn, medium.clone()).await?;
     repo::create_medium_item(
         conn,
         MediumItemDb {
             id: medium_item_id,
-            medium_id: medium.id,
+            medium_id,
             medium_item_type: MediumItemType::Original,
             mime: mime.to_string(),
             filename: medium_item_opts.filename.clone(),
@@ -206,8 +292,7 @@ async fn save_new_medium(
         },
     )
     .await?;
-
-    Ok(medium)
+    Ok(())
 }
 
 #[tracing::instrument(skip(conn))]

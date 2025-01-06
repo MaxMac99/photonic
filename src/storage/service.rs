@@ -1,5 +1,5 @@
 use crate::{
-    error::Result,
+    error::{Result, StorageVariantNotFoundSnafu},
     exif::MediumItemExifLoadedEvent,
     medium::MediumItemCreatedEvent,
     state::{AppState, ArcConnection},
@@ -15,6 +15,7 @@ use bytes::Bytes;
 use chrono::Datelike;
 use futures::Stream;
 use futures_util::{io, TryStreamExt};
+use snafu::OptionExt;
 use std::{fs::remove_file, path::PathBuf};
 use tokio::{fs, fs::File, io::BufWriter};
 use tokio_util::io::StreamReader;
@@ -66,7 +67,7 @@ where
 }
 
 #[tracing::instrument(skip(state, conn))]
-pub async fn move_medium_item_to_permanent(
+pub async fn copy_medium_item_to_permanent(
     state: AppState,
     conn: ArcConnection<'_>,
     created: MediumItemCreatedEvent,
@@ -100,12 +101,31 @@ pub async fn move_medium_item_to_permanent(
 
     debug!("Moving file from {:?} to {:?}", old_path, new_path);
     fs::create_dir_all(&new_path.parent().expect("Could not get parent dir")).await?;
-    fs::rename(old_path, &new_path).await?;
+    fs::copy(old_path, &new_path).await?;
 
-    repo::move_location(conn, created.id, created.location, new_location.clone()).await?;
+    repo::add_storage_location(conn, created.id, new_location.clone()).await?;
 
     Ok(MediumItemMovedEvent {
         id: created.id,
         new_location,
     })
+}
+
+#[tracing::instrument(skip(state, conn))]
+pub async fn remove_medium_item_variant(
+    state: AppState,
+    conn: ArcConnection<'_>,
+    medium_item_id: Uuid,
+    variant: StorageVariant,
+) -> Result<()> {
+    let location =
+        repo::find_location_variant_by_medium_item_id(conn.clone(), medium_item_id, variant)
+            .await?
+            .context(StorageVariantNotFoundSnafu {
+                medium_item_id,
+                variant,
+            })?;
+    let path = location.full_path(&state.config.storage);
+    remove_file(path)?;
+    repo::remove_location(conn, medium_item_id, location).await
 }

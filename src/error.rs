@@ -1,3 +1,4 @@
+use crate::storage::StorageVariant;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -7,6 +8,7 @@ use futures_util::task::SpawnError;
 use snafu::{ErrorCompat, Snafu};
 use std::{backtrace::Backtrace, fmt::Debug, path::PathBuf};
 use tracing::log::error;
+use uuid::Uuid;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -47,11 +49,22 @@ pub enum Error {
     InvalidPath { path: PathBuf, backtrace: Backtrace },
     #[snafu(display("The quota was exceeded"))]
     QuotaExceeded { backtrace: Backtrace },
+    #[snafu(display("The medium with id {} was not found", id))]
+    MediumNotFound { id: Uuid, backtrace: Backtrace },
+    #[snafu(display(
+        "The storage variant {variant} for medium item with id {medium_item_id} was not found"
+    ))]
+    StorageVariantNotFound {
+        medium_item_id: Uuid,
+        variant: StorageVariant,
+        backtrace: Backtrace,
+    },
 }
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let status = match self {
+            Error::MediumNotFound { .. } => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
         if let Some(backtrace) = self.backtrace() {

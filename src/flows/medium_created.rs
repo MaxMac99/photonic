@@ -38,13 +38,20 @@ async fn run_flow(state: AppState, message: MediumItemCreatedEvent) -> Result<()
     let mut conn2 = state.get_connection().await?;
     let conn2 = ArcConnection::new(&mut *conn2);
     try_join!(
-        storage::service::move_medium_item_to_permanent(
+        storage::service::copy_medium_item_to_permanent(
             state.clone(),
-            conn1,
-            message,
+            conn1.clone(),
+            message.clone(),
             Some(exif_event.clone()),
         ),
-        medium::service::update_medium_item_from_exif(conn2, exif_event.clone()),
+        medium::service::update_medium_item_from_exif(conn2.clone(), exif_event.clone()),
     )?;
+    storage::service::remove_medium_item_variant(
+        state,
+        conn1.clone(),
+        message.id,
+        storage::StorageVariant::Temp,
+    )
+    .await?;
     Ok(())
 }

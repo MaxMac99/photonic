@@ -1,9 +1,10 @@
 use crate::{
-    error::Result,
+    error::{MediumNotFoundSnafu, Result},
     medium::{Direction, FindAllMediaOptions, MediumType},
     state::ArcConnection,
 };
-use sqlx::{PgConnection, QueryBuilder};
+use snafu::OptionExt;
+use sqlx::QueryBuilder;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -15,7 +16,7 @@ pub struct MediumDb {
 }
 
 #[tracing::instrument(skip(conn))]
-pub async fn create_medium(conn: &mut PgConnection, medium: MediumDb) -> Result<()> {
+pub async fn create_medium(conn: ArcConnection<'_>, medium: MediumDb) -> Result<()> {
     sqlx::query!(
         "INSERT INTO media (id, owner_id, medium_type, leading_item_id) \
         VALUES ($1, $2, $3, $4)",
@@ -24,7 +25,7 @@ pub async fn create_medium(conn: &mut PgConnection, medium: MediumDb) -> Result<
         medium.medium_type as MediumType,
         medium.leading_item_id,
     )
-    .execute(&mut *conn)
+    .execute(conn.get_connection().await.as_mut())
     .await?;
     Ok(())
 }
@@ -89,4 +90,23 @@ pub async fn delete_medium(conn: ArcConnection<'_>, owner_id: Uuid, medium_id: U
     .execute(conn.get_connection().await.as_mut())
     .await?;
     Ok(())
+}
+
+#[tracing::instrument(skip(conn))]
+pub async fn get_medium(
+    conn: ArcConnection<'_>,
+    owner_id: Uuid,
+    medium_id: Uuid,
+) -> Result<MediumDb> {
+    let medium = sqlx::query_as!(
+        MediumDb,
+        "SELECT id, owner_id, medium_type as \"medium_type: MediumType\", leading_item_id \
+        FROM media \
+        WHERE media.owner_id = $1 AND media.id = $2",
+        owner_id,
+        medium_id,
+    )
+    .fetch_optional(conn.get_connection().await.as_mut())
+    .await?;
+    Ok(medium.context(MediumNotFoundSnafu { id: medium_id })?)
 }
