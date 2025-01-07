@@ -1,4 +1,4 @@
-use crate::{storage::StorageLocation, util::serde::serialize_byte_as_u64};
+use crate::{common::Direction, storage::StorageLocation, util::serde::serialize_byte_as_u64};
 use byte_unit::Byte;
 use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
 use mime_serde_shim::Wrapper as Mime;
@@ -32,6 +32,7 @@ pub struct CreateMediumInput {
     #[serde(default)]
     pub tags: Vec<String>,
     pub medium_type: Option<MediumType>,
+    pub album_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Deserialize, utoipa::IntoParams)]
@@ -69,6 +70,8 @@ pub struct FindAllMediaOptions {
 pub struct MediumResponse {
     pub id: Uuid,
     pub medium_type: MediumType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub album_id: Option<Uuid>,
     pub items: Vec<MediumItemResponse>,
 }
 
@@ -97,27 +100,6 @@ pub struct MediumItemResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub height: Option<i32>,
     pub last_saved: NaiveDateTime,
-}
-
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, utoipa::ToSchema, PartialEq)]
-pub enum Direction {
-    Asc,
-    Desc,
-}
-
-impl Direction {
-    pub(crate) fn to_sql(&self) -> &'static str {
-        match self {
-            Direction::Asc => "ASC",
-            Direction::Desc => "DESC",
-        }
-    }
-}
-
-impl Default for Direction {
-    fn default() -> Self {
-        Direction::Desc
-    }
 }
 
 impl From<mime::Mime> for MediumType {

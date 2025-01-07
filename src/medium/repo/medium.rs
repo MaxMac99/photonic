@@ -1,6 +1,7 @@
 use crate::{
+    common::Direction,
     error::{MediumNotFoundSnafu, Result},
-    medium::{Direction, FindAllMediaOptions, MediumType},
+    medium::{FindAllMediaOptions, MediumType},
     state::ArcConnection,
 };
 use snafu::OptionExt;
@@ -13,17 +14,19 @@ pub struct MediumDb {
     pub owner_id: Uuid,
     pub medium_type: MediumType,
     pub leading_item_id: Uuid,
+    pub album_id: Option<Uuid>,
 }
 
 #[tracing::instrument(skip(conn))]
 pub async fn create_medium(conn: ArcConnection<'_>, medium: MediumDb) -> Result<()> {
     sqlx::query!(
-        "INSERT INTO media (id, owner_id, medium_type, leading_item_id) \
-        VALUES ($1, $2, $3, $4)",
+        "INSERT INTO media (id, owner_id, medium_type, leading_item_id, album_id) \
+        VALUES ($1, $2, $3, $4, $5)",
         medium.id,
         medium.owner_id,
         medium.medium_type as MediumType,
         medium.leading_item_id,
+        medium.album_id,
     )
     .execute(conn.get_connection().await.as_mut())
     .await?;
@@ -38,7 +41,7 @@ pub async fn find_media(
 ) -> Result<Vec<MediumDb>> {
     let mut query = QueryBuilder::new(
         "\
-        SELECT media.id, media.owner_id, media.medium_type, media.leading_item_id \
+        SELECT media.id, media.owner_id, media.medium_type, media.leading_item_id, media.album_id \
         FROM media \
         JOIN medium_item_info ON media.leading_item_id = medium_item_info.id \
         ",
@@ -55,6 +58,16 @@ pub async fn find_media(
     if let Some(end_date) = filter.end_date {
         query.push(" AND medium_item_info.taken_at <= ");
         query.push_bind(end_date);
+    }
+    if let Some(album_id) = filter.album_id {
+        if filter.include_no_album {
+            query.push(" AND (media.album_id = ");
+            query.push_bind(album_id);
+            query.push(" OR media.album_id IS NULL)");
+        } else {
+            query.push(" AND media.album_id = ");
+            query.push_bind(album_id);
+        }
     }
     if !filter.tags.is_empty() {
         query.push(" AND media_tags.tag_title = ANY (");
@@ -73,7 +86,11 @@ pub async fn find_media(
         query.push_bind(page_last_date);
     }
     if let Some(page_last_id) = filter.page_last_id {
-        query.push(" AND media.id < ");
+        query.push(" AND media.id ");
+        query.push(match filter.direction {
+            Direction::Asc => " > ",
+            Direction::Desc => " < ",
+        });
         query.push_bind(page_last_id);
     }
 
@@ -111,7 +128,7 @@ pub async fn get_medium(
 ) -> Result<MediumDb> {
     let medium = sqlx::query_as!(
         MediumDb,
-        "SELECT id, owner_id, medium_type as \"medium_type: MediumType\", leading_item_id \
+        "SELECT id, owner_id, medium_type as \"medium_type: MediumType\", leading_item_id, album_id \
         FROM media \
         WHERE media.owner_id = $1 AND media.id = $2",
         owner_id,

@@ -7,7 +7,7 @@ use crate::{
 use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone};
 use mime_serde_shim::Wrapper as Mime;
 use std::{collections::HashMap, str::FromStr};
-use tracing::log::debug;
+use tracing::log::{debug, info};
 use uuid::Uuid;
 
 #[tracing::instrument(skip(state))]
@@ -17,8 +17,10 @@ pub async fn load_exif(
 ) -> Result<MediumItemExifLoadedEvent> {
     let path = message.location.full_path(&state.config.storage);
     debug!("Start reading exif metadata for file at {:?}", path);
-    let result = state.exiftool.read_file(path, false, false).await?;
+    let result = state.exiftool.read_file(path.clone(), false, false).await?;
     let event = parse_metadata(message.id, result);
+
+    info!("Loaded exif metadata for file at {:?}", path);
     Ok(event)
 }
 

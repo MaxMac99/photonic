@@ -10,11 +10,21 @@ CREATE TABLE users (
     quota_used BIGINT NOT NULL DEFAULT 0
 );
 
+CREATE TABLE albums (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP
+);
+
 CREATE TABLE media (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     medium_type medium_type_enum NOT NULL,
     leading_item_id uuid NOT NULL,
+    album_id uuid REFERENCES albums(id) ON DELETE SET NULL,
     deleted_at TIMESTAMP
 );
 

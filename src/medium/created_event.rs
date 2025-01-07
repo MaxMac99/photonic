@@ -34,6 +34,7 @@ pub struct MediumItemCreatedEvent {
     pub id: Uuid,
     pub medium_id: Uuid,
     pub medium_item_type: MediumItemType,
+    pub album_id: Option<Uuid>,
     pub location: StorageLocation,
     pub size: Byte,
     pub mime: Mime,

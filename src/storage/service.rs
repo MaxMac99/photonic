@@ -1,5 +1,6 @@
 use crate::{
-    error::{Result, StorageVariantNotFoundSnafu},
+    album,
+    error::{AlbumNotFoundSnafu, Result, StorageVariantNotFoundSnafu},
     exif::MediumItemExifLoadedEvent,
     medium::MediumItemCreatedEvent,
     state::{AppState, ArcConnection},
@@ -19,7 +20,7 @@ use snafu::OptionExt;
 use std::{fs::remove_file, path::PathBuf};
 use tokio::{fs, fs::File, io::BufWriter};
 use tokio_util::io::StreamReader;
-use tracing::log::debug;
+use tracing::log::{debug, info};
 use uuid::Uuid;
 
 #[tracing::instrument(skip(conn))]
@@ -63,6 +64,8 @@ where
 
     repo::add_storage_location(conn, medium_item_id, location.clone()).await?;
 
+    info!("Stored file temporarily at {:?}", destination);
+
     Ok(location)
 }
 
@@ -77,6 +80,12 @@ pub async fn copy_medium_item_to_permanent(
     let date_taken = created
         .date_taken
         .or(exif.clone().map(|e| e.date).flatten().clone());
+    if let Some(id) = created.album_id {
+        album::service::find_album_by_id(conn.clone(), id)
+            .await?
+            .context(AlbumNotFoundSnafu { id })?;
+    };
+
     let fields = PatternFields {
         filename: Some(created.filename),
         extension: created.extension,
@@ -101,9 +110,11 @@ pub async fn copy_medium_item_to_permanent(
 
     debug!("Moving file from {:?} to {:?}", old_path, new_path);
     fs::create_dir_all(&new_path.parent().expect("Could not get parent dir")).await?;
-    fs::copy(old_path, &new_path).await?;
+    fs::copy(old_path.clone(), &new_path).await?;
 
     repo::add_storage_location(conn, created.id, new_location.clone()).await?;
+
+    info!("Moved file from {:?} to {:?}", old_path, new_path);
 
     Ok(MediumItemMovedEvent {
         id: created.id,
@@ -126,6 +137,9 @@ pub async fn remove_medium_item_variant(
                 variant,
             })?;
     let path = location.full_path(&state.config.storage);
-    remove_file(path)?;
-    repo::remove_location(conn, medium_item_id, location).await
+    remove_file(path.clone())?;
+    repo::remove_location(conn, medium_item_id, location).await?;
+
+    info!("Removed file at {:?}", path);
+    Ok(())
 }

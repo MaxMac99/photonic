@@ -1,5 +1,6 @@
 use crate::{
-    error::{QuotaExceededSnafu, Result},
+    album,
+    error::{AlbumNotFoundSnafu, QuotaExceededSnafu, Result},
     exif::MediumItemExifLoadedEvent,
     medium::{
         model::CreateMediumInput,
@@ -17,9 +18,10 @@ use chrono::{FixedOffset, Utc};
 use futures_util::future::{try_join_all, BoxFuture};
 use mime::Mime;
 use mime_serde_shim::Wrapper;
+use snafu::OptionExt;
 use std::fs::Metadata;
 use tokio::{fs, try_join};
-use tracing::log::warn;
+use tracing::log::{info, warn};
 use uuid::Uuid;
 
 #[tracing::instrument(skip(state, conn, tmp_file))]
@@ -52,7 +54,7 @@ where
             medium_item_opts.clone(),
             mime.clone(),
             medium_item_id,
-            medium_opts,
+            medium_opts.clone(),
             filesize,
         )
     )?;
@@ -69,6 +71,7 @@ where
         id: medium_item_id,
         medium_id: medium.id,
         medium_item_type: MediumItemType::Original,
+        album_id: medium_opts.album_id,
         location: tmp_path,
         size: Byte::from_u64(metadata.len()),
         mime: Wrapper(mime),
@@ -81,6 +84,8 @@ where
         camera_model: medium_item_opts.camera_model,
         date_added: Utc::now(),
     };
+
+    info!("Created medium with id: {}", medium.id);
     Ok(medium_item_event)
 }
 
@@ -105,10 +110,14 @@ where
     }
 
     // Check if the owner has the medium
-    repo::get_medium(conn.clone(), user_id, medium_id).await?;
+    let medium = repo::get_medium(conn.clone(), user_id, medium_id).await?;
+    if let Some(id) = medium.album_id {
+        album::service::find_album_by_id(conn.clone(), id)
+            .await?
+            .context(AlbumNotFoundSnafu { id })?;
+    }
 
     let medium_item_id = Uuid::new_v4();
-
     let ((tmp_path, metadata), _) = try_join!(
         store_tmp_file(&state, conn.clone(), tmp_file, medium_item_id),
         save_new_medium_item(
@@ -133,6 +142,7 @@ where
         id: medium_item_id,
         medium_id,
         medium_item_type: MediumItemType::Original,
+        album_id: medium.album_id,
         location: tmp_path,
         size: Byte::from_u64(metadata.len()),
         mime: Wrapper(mime),
@@ -145,6 +155,8 @@ where
         camera_model: medium_item_opts.camera_model,
         date_added: Utc::now(),
     };
+
+    info!("Added medium item with id: {}", medium_item_id);
     Ok(medium_item_event)
 }
 
@@ -201,6 +213,8 @@ pub async fn delete_medium(
     medium_id: Uuid,
 ) -> Result<()> {
     repo::delete_medium(conn, user.sub, medium_id).await?;
+
+    info!("Deleted medium with id: {}", medium_id);
     Ok(())
 }
 
@@ -237,6 +251,7 @@ async fn save_new_medium(
         owner_id: user.sub,
         medium_type,
         leading_item_id: medium_item_id,
+        album_id: medium_opts.album_id,
     };
     repo::create_medium(arc_conn.clone(), medium.clone()).await?;
     repo::add_tags(arc_conn.clone(), medium.id, medium_opts.tags).await?;
@@ -312,6 +327,7 @@ async fn create_medium_response(
         id: medium.id,
         medium_type: medium.medium_type,
         items,
+        album_id: medium.album_id,
     })
 }
 

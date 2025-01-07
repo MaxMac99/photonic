@@ -20,7 +20,9 @@ use tokio::{net::TcpListener, sync::mpsc};
 use tracing::log::info;
 use tracing_subscriber::{fmt, prelude::*, util::SubscriberInitExt, EnvFilter};
 
+mod album;
 mod api;
+mod common;
 mod config;
 mod error;
 mod exif;
