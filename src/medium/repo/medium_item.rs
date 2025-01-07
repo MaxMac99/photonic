@@ -67,3 +67,30 @@ pub async fn find_medium_items_by_id(
         .await?;
     Ok(medium_items)
 }
+
+#[tracing::instrument(skip(conn))]
+pub async fn find_medium_item_by_id(
+    conn: ArcConnection<'_>,
+    medium_item_id: Uuid,
+) -> Result<MediumItemDb> {
+    let medium_item = sqlx::query_as!(
+        MediumItemDb,
+        "\
+        SELECT \
+            id, \
+            medium_id, \
+            medium_item_type as \"medium_item_type: MediumItemType\", \
+            mime, \
+            filename,\
+            size, \
+            priority, \
+            last_saved, \
+            deleted_at \
+        FROM medium_items \
+        WHERE id = $1",
+        medium_item_id
+    )
+    .fetch_one(conn.get_connection().await.as_mut())
+    .await?;
+    Ok(medium_item)
+}

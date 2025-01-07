@@ -1,6 +1,6 @@
 use crate::{
     album,
-    error::{AlbumNotFoundSnafu, Result, StorageVariantNotFoundSnafu},
+    error::{AlbumNotFoundSnafu, Result, StorageNotFoundSnafu, StorageVariantNotFoundSnafu},
     exif::MediumItemExifLoadedEvent,
     medium::MediumItemCreatedEvent,
     state::{AppState, ArcConnection},
@@ -29,6 +29,18 @@ pub async fn find_locations_by_medium_item_id(
     medium_item_id: Uuid,
 ) -> Result<Vec<StorageLocation>> {
     repo::find_locations_by_medium_item_id(conn, medium_item_id).await
+}
+
+#[tracing::instrument(skip(conn))]
+pub async fn find_fastest_location(
+    conn: ArcConnection<'_>,
+    medium_item_id: Uuid,
+) -> Result<StorageLocation> {
+    let storages = repo::find_locations_by_medium_item_id(conn, medium_item_id).await?;
+    storages
+        .into_iter()
+        .min_by_key(|location| location.variant.speed())
+        .context(StorageNotFoundSnafu { medium_item_id })
 }
 
 #[tracing::instrument(skip(state, conn, stream))]

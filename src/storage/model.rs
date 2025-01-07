@@ -13,6 +13,16 @@ pub enum StorageVariant {
     Temp,
 }
 
+impl StorageVariant {
+    pub fn speed(&self) -> u8 {
+        match self {
+            StorageVariant::Originals => 0,
+            StorageVariant::Cache => 1,
+            StorageVariant::Temp => 2,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::FromRow, utoipa::ToSchema)]
 pub struct StorageLocation {
     pub variant: StorageVariant,

@@ -19,7 +19,7 @@ use uuid::Uuid;
 
 pub fn router(state: AppState, authorization: AuthorizationLayer<UserInput>) -> OpenApiRouter {
     OpenApiRouter::new()
-        .routes(routes!(create_album))
+        .routes(routes!(create_album, find_all_albums))
         .layer(authorization)
         .with_state(state)
 }

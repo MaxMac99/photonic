@@ -56,6 +56,7 @@ pub struct FindAllMediaOptions {
     pub per_page: u64,
     pub page_last_date: Option<DateTime<Utc>>,
     pub page_last_id: Option<Uuid>,
+    #[serde(default)]
     pub tags: Vec<String>,
     pub album_id: Option<Uuid>,
     #[serde(default)]

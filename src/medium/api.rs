@@ -2,7 +2,7 @@ use crate::{
     error::Result,
     medium::{
         model::CreateMediumInput, service, CreateMediumItemInput, FindAllMediaOptions,
-        MediumResponse,
+        MediumItemType, MediumResponse,
     },
     state::{AppState, ArcConnection},
     storage::service::store_tmp_from_stream,
@@ -12,7 +12,7 @@ use axum::{
     body::Body,
     debug_handler,
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{header, HeaderMap, StatusCode},
     Json,
 };
 use axum_extra::{
@@ -28,6 +28,7 @@ use uuid::Uuid;
 pub fn router(state: AppState, authorization: AuthorizationLayer<UserInput>) -> OpenApiRouter {
     OpenApiRouter::new()
         .routes(routes!(create_medium, find_all_media, delete_medium))
+        .routes(routes!(add_medium_item, get_medium_item))
         .layer(authorization)
         .with_state(state)
 }
@@ -110,6 +111,7 @@ async fn find_all_media(
     let arc_conn = ArcConnection::new(&mut *transaction);
 
     create_or_update_user(arc_conn.clone(), user.clone().into()).await?;
+
     let response = service::find_media(arc_conn, user, opts).await?;
     transaction.commit().await?;
     Ok((StatusCode::CREATED, Json::from(response)))
@@ -119,7 +121,7 @@ async fn find_all_media(
 #[debug_handler]
 #[utoipa::path(
     delete,
-    path = "/{id}",
+    path = "/{medium_id}",
     tag = "medium",
     responses(
         (status = 204, content_type = "application/json", description = "Deletes the medium"),
@@ -129,7 +131,7 @@ async fn find_all_media(
     ),
 )]
 async fn delete_medium(
-    Path(id): Path<Uuid>,
+    Path(medium_id): Path<Uuid>,
     State(state): State<AppState>,
     JwtClaims(user): JwtClaims<UserInput>,
 ) -> Result<StatusCode> {
@@ -138,7 +140,7 @@ async fn delete_medium(
 
     create_or_update_user(arc_conn.clone(), user.clone().into()).await?;
 
-    service::delete_medium(arc_conn, user, id).await?;
+    service::delete_medium(arc_conn, user, medium_id).await?;
 
     transaction.commit().await?;
     Ok(StatusCode::NO_CONTENT)
@@ -148,7 +150,7 @@ async fn delete_medium(
 #[debug_handler]
 #[utoipa::path(
     post,
-    path = "/{id}/item/{format}",
+    path = "/{medium_id}/item/{format}",
     tag = "medium",
     request_body(
         content = Vec<u8>,
@@ -161,6 +163,7 @@ async fn delete_medium(
 )]
 async fn add_medium_item(
     State(state): State<AppState>,
+    Path((medium_id, format)): Path<(Uuid, MediumItemType)>,
     content_length: TypedHeader<ContentLength>,
     content_type: TypedHeader<ContentType>,
     Query(medium_opts): Query<CreateMediumInput>,
@@ -168,13 +171,14 @@ async fn add_medium_item(
     JwtClaims(user): JwtClaims<UserInput>,
     body: Body,
 ) -> Result<(StatusCode, Json<Uuid>)> {
-    let extension = medium_item_opts.extension.clone();
     let mut transaction = state.begin_transaction().await?;
     let arc_conn = ArcConnection::new(&mut *transaction);
 
     create_or_update_user(arc_conn.clone(), user.clone().into()).await?;
+
+    let extension = medium_item_opts.extension.clone();
     let size = Byte::from_u64(content_length.0 .0);
-    let medium_item_event = service::create_medium(
+    let medium_item_event = service::add_medium_item(
         state.clone(),
         arc_conn,
         |inner_transaction, medium_item_id| {
@@ -189,7 +193,8 @@ async fn add_medium_item(
         },
         size,
         user,
-        medium_opts,
+        medium_id,
+        format,
         medium_item_opts,
         content_type.0.into(),
     )
@@ -199,4 +204,32 @@ async fn add_medium_item(
     state.event_bus.publish(medium_item_event.clone()).await?;
 
     Ok((StatusCode::CREATED, Json::from(medium_item_event.medium_id)))
+}
+
+#[tracing::instrument(skip(state))]
+#[debug_handler]
+#[utoipa::path(
+    get,
+    path = "/{medium_id}/item/{item_id}/raw",
+    tag = "medium",
+    responses(
+        (status = 200, description = "The raw file", body = Vec<u8>),
+    ),
+)]
+async fn get_medium_item(
+    State(state): State<AppState>,
+    Path((medium_id, item_id)): Path<(Uuid, Uuid)>,
+    JwtClaims(user): JwtClaims<UserInput>,
+) -> Result<(StatusCode, HeaderMap, Body)> {
+    let mut transaction = state.begin_transaction().await?;
+    let arc_conn = ArcConnection::new(&mut *transaction);
+
+    create_or_update_user(arc_conn.clone(), user.clone().into()).await?;
+    let (mime, stream) =
+        service::get_raw_medium(state.clone(), arc_conn, user, medium_id, item_id).await?;
+    transaction.commit().await?;
+
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, mime.to_string().parse().unwrap());
+    Ok((StatusCode::CREATED, headers, Body::from_stream(stream)))
 }

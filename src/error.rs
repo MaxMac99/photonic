@@ -61,6 +61,11 @@ pub enum Error {
         variant: StorageVariant,
         backtrace: Backtrace,
     },
+    #[snafu(display("A storage for medium item with id {medium_item_id} was not found"))]
+    StorageNotFound {
+        medium_item_id: Uuid,
+        backtrace: Backtrace,
+    },
 }
 
 impl IntoResponse for Error {

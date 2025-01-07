@@ -10,7 +10,8 @@ use crate::{
         MediumItemType, MediumResponse, MediumType,
     },
     state::{AppState, ArcConnection},
-    storage::{service::find_locations_by_medium_item_id, StorageLocation},
+    storage,
+    storage::StorageLocation,
     user::{service::get_user, UserInput},
 };
 use byte_unit::Byte;
@@ -20,7 +21,8 @@ use mime::Mime;
 use mime_serde_shim::Wrapper;
 use snafu::OptionExt;
 use std::fs::Metadata;
-use tokio::{fs, try_join};
+use tokio::{fs, fs::File, try_join};
+use tokio_util::io::ReaderStream;
 use tracing::log::{info, warn};
 use uuid::Uuid;
 
@@ -97,6 +99,7 @@ pub async fn add_medium_item<F>(
     filesize: Byte,
     user: UserInput,
     medium_id: Uuid,
+    medium_item_type: MediumItemType,
     medium_item_opts: CreateMediumItemInput,
     mime: Mime,
 ) -> Result<MediumItemCreatedEvent>
@@ -123,6 +126,7 @@ where
         save_new_medium_item(
             conn.clone(),
             medium_id,
+            medium_item_type,
             medium_item_opts.clone(),
             mime.clone(),
             medium_item_id,
@@ -141,7 +145,7 @@ where
     let medium_item_event = MediumItemCreatedEvent {
         id: medium_item_id,
         medium_id,
-        medium_item_type: MediumItemType::Original,
+        medium_item_type,
         album_id: medium.album_id,
         location: tmp_path,
         size: Byte::from_u64(metadata.len()),
@@ -218,6 +222,23 @@ pub async fn delete_medium(
     Ok(())
 }
 
+#[tracing::instrument(skip(state, conn))]
+pub async fn get_raw_medium(
+    state: AppState,
+    conn: ArcConnection<'_>,
+    user: UserInput,
+    medium_id: Uuid,
+    medium_item_id: Uuid,
+) -> Result<(Mime, ReaderStream<File>)> {
+    // Check if the owner owns the medium
+    repo::get_medium(conn.clone(), user.sub, medium_id).await?;
+    let medium_item = repo::find_medium_item_by_id(conn.clone(), medium_item_id).await?;
+    let location = storage::service::find_fastest_location(conn.clone(), medium_item_id).await?;
+
+    let file = File::open(location.full_path(&state.config.storage)).await?;
+    Ok((medium_item.mime.parse().unwrap(), ReaderStream::new(file)))
+}
+
 #[tracing::instrument(skip(state, conn, tmp_file))]
 async fn store_tmp_file<F>(
     state: &AppState,
@@ -258,6 +279,7 @@ async fn save_new_medium(
     save_new_medium_item(
         arc_conn,
         medium.id,
+        MediumItemType::Original,
         medium_item_opts,
         mime,
         medium_item_id,
@@ -272,6 +294,7 @@ async fn save_new_medium(
 async fn save_new_medium_item(
     conn: ArcConnection<'_>,
     medium_id: Uuid,
+    medium_item_type: MediumItemType,
     medium_item_opts: CreateMediumItemInput,
     mime: Mime,
     medium_item_id: Uuid,
@@ -283,7 +306,7 @@ async fn save_new_medium_item(
         MediumItemDb {
             id: medium_item_id,
             medium_id,
-            medium_item_type: MediumItemType::Original,
+            medium_item_type,
             mime: mime.to_string(),
             filename: medium_item_opts.filename.clone(),
             size: filesize.as_u64() as i64,
@@ -337,7 +360,7 @@ async fn create_medium_item_response(
     medium: MediumDb,
     conn: ArcConnection<'_>,
 ) -> Result<MediumItemResponse> {
-    let locations = find_locations_by_medium_item_id(conn, item.id).await?;
+    let locations = storage::service::find_locations_by_medium_item_id(conn, item.id).await?;
     Ok(MediumItemResponse {
         id: item.id,
         is_primary: item.id == medium.leading_item_id,
