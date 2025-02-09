@@ -46,7 +46,7 @@ fn parse_metadata(id: Uuid, metadata: HashMap<String, Metadata>) -> MediumItemEx
         .get("ExifImageWidth")
         .and_then(|val| val.value.as_i64());
     MediumItemExifLoadedEvent {
-        id,
+        medium_item_id: id,
         date,
         mime,
         camera_make,

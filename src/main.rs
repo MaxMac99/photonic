@@ -1,3 +1,5 @@
+#![feature(slice_take)]
+
 use crate::{
     api::create_router,
     config::GlobalConfig,
@@ -30,6 +32,7 @@ mod flows;
 mod medium;
 mod state;
 mod storage;
+mod system;
 mod user;
 mod util;
 

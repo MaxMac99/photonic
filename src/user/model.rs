@@ -22,6 +22,16 @@ pub struct User {
     pub quota_used: Byte,
 }
 
+#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
+pub struct UserStats {
+    #[schema(value_type = String)]
+    pub quota: Byte,
+    #[schema(value_type = String)]
+    pub quota_used: Byte,
+    pub albums: u64,
+    pub media: u64,
+}
+
 impl UserInput {
     pub fn get_username(&self) -> Option<String> {
         self.preferred_username

@@ -1,853 +1,627 @@
-openapi: 3.0.2
+openapi: 3.0.3
 info:
-  title: Photonic
-  version: "1.0"
-  description: Store and manage your photos in your private cloud.
-  contact:
-    name: Max Vissing
-    email: max_vissing@yahoo.de
+  title: photonic
+  description: ''
+  license:
+    name: ''
+  version: 0.1.0
 servers:
-  - url: "http://localhost:8080/api/v1"
-    description: Develop
-  - url: "https://photonic.vissing.ddnss.de/api/v1"
-    description: Production
-tags:
-  - name: Album
-  - name: Media
-  - name: System
-security:
-  - Authentik: [ ]
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://photonic.mvissing.de
+    description: Staging server
 paths:
-  /media:
+  /api/v1/album:
     get:
-      summary: Get medium
-      responses:
-        "200":
-          description: ""
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/PaginatedResult"
-                  - type: object
-                    properties:
-                      results:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Medium"
-        "204":
-          description: No Content
-        "400":
-          description: startDate after endDate
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-      operationId: findAllMedia
-      description: |-
-        Gets all media.
-        Can be filtered by date.
-      security:
-        - Authentik: [ ]
-      parameters:
-        - $ref: "#/components/parameters/start_date"
-        - $ref: "#/components/parameters/end_date"
-        - $ref: "#/components/parameters/page_last_date"
-        - $ref: "#/components/parameters/page_last_id"
-        - $ref: "#/components/parameters/per_page"
-        - $ref: "#/components/parameters/album_id"
-        - $ref: "#/components/parameters/direction"
-        - schema:
-            type: boolean
-            default: true
-          in: query
-          name: include_no_album
       tags:
-        - Media
-    post:
-      summary: Create medium
-      operationId: createMedium
+        - album
+      operationId: find_all_albums
+      parameters:
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: include_empty_albums
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: 50
+            maximum: 100
+            minimum: 1
+        - name: page_last_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: page_last_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+            nullable: true
+        - name: direction
+          in: query
+          required: false
+          schema:
+            oneOf:
+              - type: string
+                enum:
+                  - Asc
+                  - Desc
+            default: Desc
       responses:
-        "201":
-          description: Created
+        '200':
+          description: Information on all albums
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ObjectId'
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: |-
-            Not Found
-            Could not find album_id
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "409":
-          description: |-
-            Conflict
-            The image with the filename already exists.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      security:
-        - Authentik: [ ]
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlbumResponse'
+    post:
+      tags:
+        - album
+      operationId: create_album
       requestBody:
         content:
-          image/*:
+          application/json:
             schema:
-              type: string
-              format: binary
-        description: ""
+              $ref: '#/components/schemas/CreateAlbumInput'
+        required: true
+      responses:
+        '201':
+          description: The id of the newly created album
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+  /api/v1/info:
+    get:
       tags:
-        - Media
-      description: Creates a new medium.
+        - system
+      operationId: system_info
+      responses:
+        '200':
+          description: Info on the current system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfoResponse'
+  /api/v1/medium:
+    get:
+      tags:
+        - medium
+      operationId: get_all_media
       parameters:
-        - schema:
-            type: string
+        - name: start_date
           in: query
-          name: filename
-        - schema:
+          required: false
+          schema:
             type: string
+            format: date-time
+            nullable: true
+        - name: end_date
           in: query
-          name: extension
-        - $ref: "#/components/parameters/album_id"
-        - schema:
+          required: false
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: 50
+            maximum: 100
+            minimum: 1
+        - name: page_last_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: page_last_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+            nullable: true
+        - name: tags
+          in: query
+          required: false
+          schema:
             type: array
             items:
               type: string
+        - name: album_id
           in: query
-          name: tags
-        - schema:
+          required: false
+          schema:
+            type: string
+            format: uuid
+            nullable: true
+        - name: direction
+          in: query
+          required: false
+          schema:
+            oneOf:
+              - type: string
+                enum:
+                  - Asc
+                  - Desc
+            default: Desc
+        - name: include_no_album
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Gets all media. Can be filtered by date
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MediumResponse'
+    post:
+      tags:
+        - medium
+      operationId: create_medium
+      parameters:
+        - name: tags
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: medium_type
+          in: query
+          required: false
+          schema:
+            oneOf:
+              - type: 'null'
+              - $ref: '#/components/schemas/MediumType'
+        - name: album_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+            nullable: true
+        - name: filename
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: extension
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: priority
+          in: query
+          required: false
+          schema:
             type: integer
+            format: int32
             default: 10
+        - name: date_taken
           in: query
-          name: priority
-        - schema:
+          required: false
+          schema:
             type: string
             format: date-time
+            nullable: true
+        - name: camera_make
           in: query
-          name: dateTaken
-          description: Overrides the date the medium item was taken from exif information
-    parameters: [ ]
-  "/media/{id}":
-    get:
-      summary: Get medium
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Medium"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      operationId: getMedium
-      description: Gets a specific medium by its id.
-      security:
-        - Authentik: [ ]
-      parameters: [ ]
-      tags:
-        - Media
-    parameters:
-      - in: path
-        name: id
+          required: false
+          schema:
+            type: string
+            nullable: true
+        - name: camera_model
+          in: query
+          required: false
+          schema:
+            type: string
+            nullable: true
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/Binary'
         required: true
-        schema:
-          $ref: "#/components/schemas/ObjectId"
-    delete:
-      summary: Deletes medium
-      operationId: deleteMedium
       responses:
-        "204":
-          description: No Content
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
+        '201':
+          description: The id of the newly created medium
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      description: Moves the medium to trash.
-      parameters: [ ]
-      tags:
-        - Media
-  "/media/{id}/{format}/{item_id}/raw":
-    get:
-      summary: Gets file
-      responses:
-        "200":
-          description: OK
-          content:
-            image/*:
               schema:
                 type: string
-                format: binary
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      operationId: getRaw
-      description: Gets the raw medium by its id. The content-type indicates the format of the medium.
-      security:
-        - Authentik: [ ]
-      parameters: [ ]
-      tags:
-        - Media
+                format: uuid
+  /api/v1/medium/{medium_id}:
     delete:
-      summary: Deletes item
-      operationId: deleteItem
-      responses:
-        "204":
-          description: No Content
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      parameters:
-        - schema:
-            type: boolean
-          in: query
-          name: delete
-          description: Fully deletes it instead of moving to trash
       tags:
-        - Media
-      description: Moves the item to trash. The medium will be automatically delete if it was the last original
-    parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          $ref: "#/components/schemas/ObjectId"
-      - in: path
-        name: format
-        required: true
-        schema:
-          type: string
-          enum:
-            - originals
-            - edits
-            - previews
-            - sidecars
-      - name: item_id
-        in: path
-        required: true
-        schema:
-          $ref: "#/components/schemas/ObjectId"
-  "/media/{id}/{format}/raw":
+        - medium
+      operationId: delete_medium
+      parameters:
+        - name: medium_id
+          in: path
+          description: The id of the medium to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deletes the medium
+          content:
+            application/json: {}
+  /api/v1/medium/{medium_id}/item/{format}:
     post:
-      summary: Adds file
-      operationId: addFile
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MediumItem"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "409":
-          description: Conflict
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      security:
-        - Authentik: [ ]
-      requestBody:
-        content:
-          image/*:
-            schema:
-              type: string
-              format: binary
       tags:
-        - Media
-      description: Adds a new type to an existing medium.
+        - medium
+      operationId: add_medium_item
       parameters:
-        - schema:
-            type: string
+        - name: filename
           in: query
-          name: filename
-        - schema:
+          required: true
+          schema:
             type: string
+        - name: extension
           in: query
-          name: extension
-        - schema:
+          required: true
+          schema:
+            type: string
+        - name: priority
+          in: query
+          required: false
+          schema:
             type: integer
+            format: int32
             default: 10
+        - name: date_taken
           in: query
-          name: priority
-        - schema:
+          required: false
+          schema:
             type: string
             format: date-time
+            nullable: true
+        - name: camera_make
           in: query
-          name: dateTaken
-          description: Overrides the date the medium item was taken from exif information
-    parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          $ref: "#/components/schemas/ObjectId"
-      - in: path
-        name: format
-        required: true
-        schema:
-          type: string
-          enum:
-            - originals
-            - edits
-            - previews
-            - sidecars
-  /albums:
-    get:
-      summary: Get albums
-      tags:
-        - Album
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/PaginatedResult"
-                  - type: object
-                    properties:
-                      results:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Album"
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties: { }
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      operationId: getAlbums
-      parameters:
-        - $ref: "#/components/parameters/per_page"
-        - $ref: "#/components/parameters/start_date"
-        - $ref: "#/components/parameters/end_date"
-      security:
-        - Authentik: [ ]
-      description: Returns all albums
-    post:
-      summary: Create new album
-      operationId: createAlbum
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Album"
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: |-
-            Not Found
-            Could not find ObjectId
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "409":
-          description: |-
-            Conflict
-            Name must be unique
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      security:
-        - Authentik: [ ]
+          required: false
+          schema:
+            type: string
+            nullable: true
+        - name: camera_model
+          in: query
+          required: false
+          schema:
+            type: string
+            nullable: true
+        - name: medium_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MediumItemType'
       requestBody:
         content:
-          application/json:
+          '*/*':
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                description:
-                  type: string
-                media:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/ObjectId"
-                titleMedium:
-                  $ref: "#/components/schemas/ObjectId"
-              required:
-                - name
-      tags:
-        - Album
-      description: Creates a new album
-  "/albums/{id}":
-    get:
-      summary: Get album
-      tags:
-        - Album
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Album"
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      operationId: getAlbum
-      parameters:
-        - $ref: "#/components/parameters/per_page"
-        - $ref: "#/components/parameters/start_date"
-        - $ref: "#/components/parameters/end_date"
-      security:
-        - Authentik: [ ]
-      description: Returns all albums
-    parameters:
-      - schema:
-          $ref: "#/components/schemas/ObjectId"
-        name: id
-        in: path
+              $ref: '#/components/schemas/Binary'
         required: true
-    patch:
-      summary: ""
-      operationId: updateAlbum
       responses:
-        "200":
-          description: OK
-        "400":
-          description: Bad Request
+        '201':
+          description: The id of the new medium item
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "409":
-          description: |-
-            Conflict
-            Name must be unique
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      tags:
-        - Album
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                add:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/ObjectId"
-                remove:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/ObjectId"
-                name:
-                  type: string
-                description:
-                  type: string
-      description: "Adds, removes or renames an album."
-    delete:
-      summary: Delete Album
-      operationId: deleteAlbum
-      responses:
-        "200":
-          description: OK
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "404":
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      tags:
-        - Album
-      description: Deletes an album. Resets album property on all images.
-  /ping:
+                type: string
+                format: uuid
+  /api/v1/medium/{medium_id}/item/{item_id}/raw:
     get:
-      summary: Ping
       tags:
-        - System
+        - medium
+      operationId: get_medium_item
+      parameters:
+        - name: medium_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
-        "204":
-          description: OK
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-      operationId: ping
-      description: Pings the http_server
-  /info:
+        '200':
+          description: The raw file
+          headers:
+            content-type:
+              schema:
+                type: string
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Binary'
+  /api/v1/medium/{medium_id}/preview:
     get:
-      summary: Info
       tags:
-        - System
+        - medium
+      operationId: get_medium_preview
+      parameters:
+        - name: width
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            nullable: true
+        - name: height
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            nullable: true
+        - name: medium_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
-        "200":
-          description: The info about the system
+        '200':
+          description: The raw file
+          headers:
+            content-type:
+              schema:
+                type: string
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/Binary'
+  /api/v1/user/stats:
+    get:
+      tags:
+        - user
+      operationId: user_stats
+      responses:
+        '200':
+          description: Statistics of the current user
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Info"
+                $ref: '#/components/schemas/UserStats'
 components:
   schemas:
-    Medium:
-      title: Medium
+    AlbumResponse:
       type: object
-      properties:
-        id:
-          $ref: "#/components/schemas/ObjectId"
-        type:
-          $ref: "#/components/schemas/MediumType"
-        album:
-          $ref: "#/components/schemas/ObjectId"
-        tags:
-          type: array
-          items:
-            type: string
-        originals:
-          type: array
-          minItems: 1
-          items:
-            $ref: "#/components/schemas/MediumItem"
-        previews:
-          $ref: "#/components/schemas/MediumItem"
-        edits:
-          type: array
-          items:
-            $ref: "#/components/schemas/MediumItem"
-        sidecars:
-          type: array
-          items:
-            $ref: "#/components/schemas/Sidecar"
       required:
         - id
-        - type
-        - originals
-    MediumItem:
-      title: MediumItem
-      type: object
+        - title
+        - number_of_items
       properties:
-        id:
-          $ref: "#/components/schemas/ObjectId"
-        type:
-          type: string
-          description: MIME content-type
-        filename:
-          type: string
-        dateTaken:
-          type: string
-          format: date-time
-        width:
-          type: integer
-        height:
-          type: integer
-        filesize:
-          type: integer
-          description: size in bytes
-        priority:
-          type: integer
-          default: 10
-      required:
-        - id
-        - type
-        - filename
-        - dateTaken
-        - width
-        - height
-        - filesize
-        - priority
-    Album:
-      title: Album
-      type: object
-      properties:
-        id:
-          $ref: "#/components/schemas/ObjectId"
-        name:
-          type: string
         description:
           type: string
-        firstDate:
+          nullable: true
+        id:
+          type: string
+          format: uuid
+        maximum_date:
           type: string
           format: date-time
-        lastDate:
+          nullable: true
+        minimum_date:
           type: string
           format: date-time
-        titleMedium:
-          $ref: "#/components/schemas/ObjectId"
-        media:
-          type: array
-          items:
-            $ref: "#/components/schemas/ObjectId"
-      required:
-        - id
-        - name
-    Error:
-      title: Error
+          nullable: true
+        number_of_items:
+          type: integer
+          format: int64
+          minimum: 0
+        title:
+          type: string
+    Binary:
+      type: string
+      format: binary
+    CreateAlbumInput:
       type: object
-      properties:
-        message:
-          type: string
-        type:
-          type: string
-        param:
-          type: string
       required:
-        - message
-        - type
-    Info:
-      title: Info
-      type: object
+        - title
       properties:
-        version:
+        description:
           type: string
-          description: The current server version
-        openidConfigurationUrl:
+          nullable: true
+        title:
           type: string
-          format: uri
-          description: The OpenID Connect configuration url
-        clientId:
-          type: string
-          description: The OAuth 2.0 client id
-        authorizeUrl:
-          type: string
-          description: The OAuth 2.0 authorize url
-        tokenUrl:
-          type: string
-          description: The OAuth 2.0 token url
+    InfoResponse:
+      type: object
       required:
         - version
-        - openidConfigurationUrl
-        - clientId
-        - authorizeUrl
-        - tokenUrl
-    PaginatedResult:
-      title: PaginatedResult
-      type: object
+        - client_id
+        - token_url
+        - authorize_url
       properties:
-        next:
+        authorize_url:
           type: string
-        results:
-          type: array
-          items: { }
+        client_id:
+          type: string
+        token_url:
+          type: string
+        version:
+          type: string
+    MediumItemResponse:
+      type: object
       required:
-        - next
-        - results
-    ObjectId:
-      title: ObjectId
+        - id
+        - is_primary
+        - medium_item_type
+        - mime
+        - filename
+        - filesize
+        - priority
+        - last_saved
+      properties:
+        filename:
+          type: string
+        filesize:
+          type: integer
+          format: int64
+          minimum: 0
+        height:
+          type: integer
+          format: int32
+          nullable: true
+        id:
+          type: string
+          format: uuid
+        is_primary:
+          type: boolean
+        last_saved:
+          type: string
+          format: date-time
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorageLocation'
+        medium_item_type:
+          $ref: '#/components/schemas/MediumItemType'
+        mime:
+          type: string
+        priority:
+          type: integer
+          format: int32
+        width:
+          type: integer
+          format: int32
+          nullable: true
+    MediumItemType:
       type: string
-      format: uuid
+      enum:
+        - Original
+        - Edit
+        - Preview
+        - Sidecar
+    MediumResponse:
+      type: object
+      required:
+        - id
+        - medium_type
+        - items
+      properties:
+        album_id:
+          type: string
+          format: uuid
+          nullable: true
+        camera_make:
+          type: string
+          nullable: true
+        camera_model:
+          type: string
+          nullable: true
+        id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediumItemResponse'
+        medium_type:
+          $ref: '#/components/schemas/MediumType'
+        taken_at:
+          type: string
+          format: date-time
+          nullable: true
     MediumType:
       type: string
       enum:
-        - photo
-        - video
-        - live-photo
-        - vector
-        - sequence
-        - gif
-        - other
-    Sidecar:
-      title: Sidecar
+        - PHOTO
+        - VIDEO
+        - LIVE_PHOTO
+        - VECTOR
+        - SEQUENCE
+        - GIF
+        - OTHER
+    StorageLocation:
       type: object
-      properties:
-        id:
-          type: string
-        type:
-          type: string
-          description: The MIME type
-        filename:
-          type: string
-        filesize:
-          type: integer
-          description: size in bytes
-        priority:
-          type: integer
-          default: 10
       required:
-        - id
-        - type
-        - filename
-        - filesize
-        - priority
-    TrashItem:
-      title: TrashItem
+        - variant
+        - path
+      properties:
+        path:
+          type: string
+        variant:
+          $ref: '#/components/schemas/StorageVariant'
+    StorageVariant:
+      type: string
+      enum:
+        - Originals
+        - Cache
+        - Temp
+    UserStats:
       type: object
-      properties:
-        expires:
-          type: string
-          format: date-time
-        medium:
-          $ref: "#/components/schemas/Medium"
-        mediumItem:
-          $ref: "#/components/schemas/MediumItem"
-        sidecar:
-          $ref: "#/components/schemas/Sidecar"
-        mediumId:
-          $ref: "#/components/schemas/ObjectId"
-        type:
-          type: string
-          enum:
-            - medium
-            - original
-            - preview
-            - edit
-            - sidecar
       required:
-        - expires
-        - type
-  securitySchemes:
-    Authentik:
-      type: openIdConnect
-      openIdConnectUrl: "https://auth.vissing.ddnss.de/application/o/photonic/.well-known/openid-configuration"
-      description: Authentik endpoint
-  parameters:
-    start_date:
-      name: start_date
-      in: query
-      required: false
-      schema:
-        type: string
-        format: date-time
-      description: Show medium after date
-    end_date:
-      name: end_date
-      in: query
-      schema:
-        type: string
-        format: date-time
-      description: Show medium before date
-    page_last_date:
-      name: page_last_date
-      in: query
-      schema:
-        type: string
-        format: date-time
-      description: Used for pagination
-    page_last_id:
-      name: page_last_id
-      in: query
-      schema:
-        type: string
-      description: Used for pagination
-    per_page:
-      name: per_page
-      in: query
-      required: false
-      schema:
-        type: integer
-    album_id:
-      name: album_id
-      in: query
-      required: false
-      schema:
-        $ref: '#/components/schemas/ObjectId'
-    direction:
-      name: direction
-      in: query
-      required: false
-      schema:
-        type: string
-        description: ASC = ascending = oldest first, DESC = descending = newest first
-        default: DESC
-        enum:
-          - ASC
-          - DESC
-  responses:
-    InternalServerError:
-      description: Internal Server Error
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/Error"
-    UnauthorizedError:
-      description: Unauthorized
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/Error"
+        - quota
+        - quota_used
+        - albums
+        - media
+      properties:
+        albums:
+          type: integer
+          format: int64
+          minimum: 0
+        media:
+          type: integer
+          format: int64
+          minimum: 0
+        quota:
+          type: string
+        quota_used:
+          type: string
+tags:
+  - name: medium
+    description: Medium API
+  - name: album
+    description: Album API
+  - name: system
+    description: System API
+  - name: user
+    description: User API

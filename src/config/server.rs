@@ -11,4 +11,8 @@ pub struct ServerConfig {
     pub client_id: String,
     #[config(env = "OAUTH_JWKS_URL")]
     pub jwks_url: String,
+    #[config(env = "OAUTH_TOKEN_URL")]
+    pub token_url: String,
+    #[config(env = "OAUTH_AUTHORIZE_URL")]
+    pub authorize_url: String,
 }

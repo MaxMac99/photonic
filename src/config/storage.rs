@@ -13,6 +13,10 @@ pub struct StorageConfig {
     pub pattern: String,
     #[config(default = "/cache/store", env = "STORAGE_CACHE_DIRECTORY")]
     pub cache_path: PathBuf,
+    #[config(
+        default = "/<type>/<album_year>/<album>/<month><day>/<camera_make>_<camera_model>/<filename>.<extension>"
+    )]
+    pub cache_pattern: String,
     #[config(default = "/cache/tmp", env = "STORAGE_TEMP_DIRECTORY")]
     pub tmp_path: PathBuf,
 }

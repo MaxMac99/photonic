@@ -1,8 +1,9 @@
 use crate::{
+    api::Binary,
     error::Result,
     medium::{
         model::CreateMediumInput, service, CreateMediumItemInput, FindAllMediaOptions,
-        MediumItemType, MediumResponse,
+        GetMediumPreviewOptions, MediumItemType, MediumResponse,
     },
     state::{AppState, ArcConnection},
     storage::service::store_tmp_from_stream,
@@ -27,8 +28,9 @@ use uuid::Uuid;
 
 pub fn router(state: AppState, authorization: AuthorizationLayer<UserInput>) -> OpenApiRouter {
     OpenApiRouter::new()
-        .routes(routes!(create_medium, find_all_media, delete_medium))
+        .routes(routes!(create_medium, get_all_media, delete_medium,))
         .routes(routes!(add_medium_item, get_medium_item))
+        .routes(routes!(get_medium_preview))
         .layer(authorization)
         .with_state(state)
 }
@@ -40,8 +42,8 @@ pub fn router(state: AppState, authorization: AuthorizationLayer<UserInput>) -> 
     path = "",
     tag = "medium",
     request_body(
-        content = Vec<u8>,
-        content_type = "*"
+        content = Binary,
+        content_type = "*/*"
     ),
     responses(
         (status = 201, content_type = "application/json", description = "The id of the newly created medium", body = Uuid),
@@ -102,7 +104,7 @@ async fn create_medium(
     ),
     params(FindAllMediaOptions),
 )]
-async fn find_all_media(
+async fn get_all_media(
     State(state): State<AppState>,
     Query(opts): Query<FindAllMediaOptions>,
     JwtClaims(user): JwtClaims<UserInput>,
@@ -112,9 +114,9 @@ async fn find_all_media(
 
     create_or_update_user(arc_conn.clone(), user.clone().into()).await?;
 
-    let response = service::find_media(arc_conn, user, opts).await?;
+    let response = service::get_media(arc_conn, user, opts).await?;
     transaction.commit().await?;
-    Ok((StatusCode::CREATED, Json::from(response)))
+    Ok((StatusCode::OK, Json::from(response)))
 }
 
 #[tracing::instrument(skip(state))]
@@ -127,7 +129,7 @@ async fn find_all_media(
         (status = 204, content_type = "application/json", description = "Deletes the medium"),
     ),
     params(
-        ("id" = Uuid, Path, description = "The id of the medium to delete"),
+        ("medium_id" = Uuid, Path, description = "The id of the medium to delete"),
     ),
 )]
 async fn delete_medium(
@@ -153,8 +155,8 @@ async fn delete_medium(
     path = "/{medium_id}/item/{format}",
     tag = "medium",
     request_body(
-        content = Vec<u8>,
-        content_type = "*"
+        content = Binary,
+        content_type = "*/*"
     ),
     responses(
         (status = 201, content_type = "application/json", description = "The id of the new medium item", body = Uuid),
@@ -213,7 +215,9 @@ async fn add_medium_item(
     path = "/{medium_id}/item/{item_id}/raw",
     tag = "medium",
     responses(
-        (status = 200, description = "The raw file", body = Vec<u8>),
+        (status = 200, description = "The raw file", body = Binary, content_type = "*/*", headers(
+            ("content-type" = String)
+        )),
     ),
 )]
 async fn get_medium_item(
@@ -231,5 +235,38 @@ async fn get_medium_item(
 
     let mut headers = HeaderMap::new();
     headers.insert(header::CONTENT_TYPE, mime.to_string().parse().unwrap());
-    Ok((StatusCode::CREATED, headers, Body::from_stream(stream)))
+    Ok((StatusCode::OK, headers, Body::from_stream(stream)))
+}
+
+#[tracing::instrument(skip(state))]
+#[debug_handler]
+#[utoipa::path(
+    get,
+    path = "/{medium_id}/preview",
+    tag = "medium",
+    responses(
+        (status = 200, description = "The raw file", body = Binary, content_type = "*/*", headers(
+            ("content-type" = String)
+        )),
+    ),
+    params(GetMediumPreviewOptions),
+)]
+async fn get_medium_preview(
+    State(state): State<AppState>,
+    Path(medium_id): Path<Uuid>,
+    Query(opts): Query<GetMediumPreviewOptions>,
+    JwtClaims(user): JwtClaims<UserInput>,
+) -> Result<(StatusCode, HeaderMap, Body)> {
+    let mut transaction = state.begin_transaction().await?;
+    let arc_conn = ArcConnection::new(&mut *transaction);
+
+    create_or_update_user(arc_conn.clone(), user.clone().into()).await?;
+    let (mime, stream) =
+        service::get_medium_preview(state.clone(), arc_conn, user, medium_id, opts).await?;
+
+    transaction.commit().await?;
+
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, mime.to_string().parse().unwrap());
+    Ok((StatusCode::OK, headers, Body::from_stream(stream)))
 }

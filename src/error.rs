@@ -52,6 +52,8 @@ pub enum Error {
     #[snafu(display("The medium with id {} was not found", id))]
     MediumNotFound { id: Uuid, backtrace: Backtrace },
     #[snafu(display("The medium item with id {} was not found", id))]
+    MediumItemNotFound { id: Uuid, backtrace: Backtrace },
+    #[snafu(display("The album with id {} was not found", id))]
     AlbumNotFound { id: Uuid, backtrace: Backtrace },
     #[snafu(display(
         "The storage variant {variant} for medium item with id {medium_item_id} was not found"

@@ -67,12 +67,24 @@ pub struct FindAllMediaOptions {
     pub include_no_album: bool,
 }
 
+#[derive(Debug, Clone, Deserialize, utoipa::IntoParams)]
+pub struct GetMediumPreviewOptions {
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+}
+
 #[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct MediumResponse {
     pub id: Uuid,
     pub medium_type: MediumType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub album_id: Option<Uuid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub taken_at: Option<DateTime<FixedOffset>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub camera_make: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub camera_model: Option<String>,
     pub items: Vec<MediumItemResponse>,
 }
 
@@ -90,12 +102,6 @@ pub struct MediumItemResponse {
     #[serde(serialize_with = "serialize_byte_as_u64")]
     pub filesize: Byte,
     pub priority: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub taken_at: Option<DateTime<FixedOffset>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub camera_make: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub camera_model: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub width: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]

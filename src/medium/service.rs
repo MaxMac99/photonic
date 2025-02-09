@@ -1,13 +1,16 @@
 use crate::{
     album,
-    error::{AlbumNotFoundSnafu, QuotaExceededSnafu, Result},
+    error::{
+        AlbumNotFoundSnafu, MediumItemNotFoundSnafu, MediumNotFoundSnafu, QuotaExceededSnafu,
+        Result,
+    },
     exif::MediumItemExifLoadedEvent,
     medium::{
         model::CreateMediumInput,
         repo,
-        repo::{FullMediumItemDb, MediumDb, MediumItemDb, MediumItemInfoDb},
-        CreateMediumItemInput, FindAllMediaOptions, MediumItemCreatedEvent, MediumItemResponse,
-        MediumItemType, MediumResponse, MediumType,
+        repo::{MediumDb, MediumItemDb},
+        CreateMediumItemInput, FindAllMediaOptions, GetMediumPreviewOptions,
+        MediumItemCreatedEvent, MediumItemResponse, MediumItemType, MediumResponse, MediumType,
     },
     state::{AppState, ArcConnection},
     storage,
@@ -17,6 +20,7 @@ use crate::{
 use byte_unit::Byte;
 use chrono::{FixedOffset, Utc};
 use futures_util::future::{try_join_all, BoxFuture};
+use itertools::Itertools;
 use mime::Mime;
 use mime_serde_shim::Wrapper;
 use snafu::OptionExt;
@@ -113,7 +117,13 @@ where
     }
 
     // Check if the owner has the medium
-    let medium = repo::get_medium(conn.clone(), user_id, medium_id).await?;
+    let medium = repo::find_medium(conn.clone(), medium_id)
+        .await?
+        .context(MediumNotFoundSnafu { id: medium_id })?;
+    if medium.owner_id != user_id {
+        return MediumNotFoundSnafu { id: medium_id }.fail();
+    }
+
     if let Some(id) = medium.album_id {
         album::service::find_album_by_id(conn.clone(), id)
             .await?
@@ -165,13 +175,13 @@ where
 }
 
 #[tracing::instrument(skip(conn))]
-pub async fn find_media(
+pub async fn get_media(
     conn: ArcConnection<'_>,
     user: UserInput,
     opts: FindAllMediaOptions,
 ) -> Result<Vec<MediumResponse>> {
     let owner_id = user.sub;
-    let media = repo::find_media(conn.clone(), owner_id, opts).await?;
+    let media = repo::get_media(conn.clone(), owner_id, opts).await?;
     let result = try_join_all(
         media
             .into_iter()
@@ -187,26 +197,31 @@ pub async fn update_medium_item_from_exif(
     conn: ArcConnection<'_>,
     exif: MediumItemExifLoadedEvent,
 ) -> Result<()> {
-    let medium_item = repo::find_medium_item_info(conn.clone(), exif.id)
+    let mut medium_item = repo::find_medium_item_by_id(conn.clone(), exif.medium_item_id)
         .await?
-        .expect("Medium item not found");
-    repo::update_medium_item_info(
-        conn,
-        MediumItemInfoDb {
-            id: exif.id,
-            taken_at: medium_item.taken_at.or(exif.date.map(|date| date.to_utc())),
-            taken_at_timezone: medium_item
-                .taken_at_timezone
-                .or(exif.date.map(|date| date.offset().local_minus_utc())),
-            camera_make: medium_item.camera_make.or(exif.camera_make),
-            camera_model: medium_item.camera_model.or(exif.camera_model),
-            width: medium_item.width.or(exif.width.map(|width| width as i32)),
-            height: medium_item
-                .height
-                .or(exif.height.map(|height| height as i32)),
-        },
-    )
-    .await?;
+        .context(MediumItemNotFoundSnafu {
+            id: exif.medium_item_id,
+        })?;
+    medium_item.width = medium_item.width.or(exif.width.map(|width| width as i32));
+    medium_item.height = medium_item
+        .height
+        .or(exif.height.map(|height| height as i32));
+
+    let medium_id = medium_item.medium_id;
+    repo::update_medium_item(conn.clone(), medium_item).await?;
+
+    let mut medium = repo::find_medium(conn.clone(), medium_id)
+        .await?
+        .context(MediumNotFoundSnafu { id: medium_id })?;
+    medium.taken_at = medium.taken_at.or(exif.date.map(|date| date.to_utc()));
+    medium.taken_at_timezone = medium
+        .taken_at_timezone
+        .or(exif.date.map(|date| date.offset().local_minus_utc()));
+    medium.camera_make = medium.camera_make.or(exif.camera_make);
+    medium.camera_model = medium.camera_model.or(exif.camera_model);
+
+    repo::update_medium(conn, medium).await?;
+
     Ok(())
 }
 
@@ -231,9 +246,63 @@ pub async fn get_raw_medium(
     medium_item_id: Uuid,
 ) -> Result<(Mime, ReaderStream<File>)> {
     // Check if the owner owns the medium
-    repo::get_medium(conn.clone(), user.sub, medium_id).await?;
-    let medium_item = repo::find_medium_item_by_id(conn.clone(), medium_item_id).await?;
+    let medium = repo::find_medium(conn.clone(), medium_id)
+        .await?
+        .context(MediumNotFoundSnafu { id: medium_id })?;
+    if medium.owner_id != user.sub {
+        return MediumNotFoundSnafu { id: medium_id }.fail();
+    }
+
+    let medium_item = repo::find_medium_item_by_id(conn.clone(), medium_item_id)
+        .await?
+        .context(MediumItemNotFoundSnafu { id: medium_item_id })?;
     let location = storage::service::find_fastest_location(conn.clone(), medium_item_id).await?;
+
+    let file = File::open(location.full_path(&state.config.storage)).await?;
+    Ok((medium_item.mime.parse().unwrap(), ReaderStream::new(file)))
+}
+
+#[tracing::instrument(skip(state, conn))]
+pub async fn get_medium_preview(
+    state: AppState,
+    conn: ArcConnection<'_>,
+    user: UserInput,
+    medium_id: Uuid,
+    opts: GetMediumPreviewOptions,
+) -> Result<(Mime, ReaderStream<File>)> {
+    // Check if user has access
+    let medium = repo::find_medium(conn.clone(), medium_id)
+        .await?
+        .context(MediumNotFoundSnafu { id: medium_id })?;
+    if medium.owner_id != user.sub {
+        return MediumNotFoundSnafu { id: medium_id }.fail();
+    }
+
+    let medium_items = repo::find_medium_items_by_id(conn.clone(), medium_id)
+        .await?
+        .into_iter()
+        .filter(|item| item.medium_item_type != MediumItemType::Sidecar)
+        .sorted_by(|a, b| {
+            if matches!(a.medium_item_type, MediumItemType::Preview) {
+                return std::cmp::Ordering::Less;
+            }
+            if matches!(b.medium_item_type, MediumItemType::Preview) {
+                return std::cmp::Ordering::Greater;
+            }
+            if matches!(a.medium_item_type, MediumItemType::Edit) {
+                return std::cmp::Ordering::Less;
+            }
+            if matches!(b.medium_item_type, MediumItemType::Edit) {
+                return std::cmp::Ordering::Greater;
+            }
+            a.priority.cmp(&b.priority)
+        })
+        .take(1)
+        .collect_vec();
+    let medium_item = medium_items
+        .first()
+        .context(MediumNotFoundSnafu { id: medium_id })?;
+    let location = storage::service::find_fastest_location(conn.clone(), medium_item.id).await?;
 
     let file = File::open(location.full_path(&state.config.storage)).await?;
     Ok((medium_item.mime.parse().unwrap(), ReaderStream::new(file)))
@@ -273,6 +342,12 @@ async fn save_new_medium(
         medium_type,
         leading_item_id: medium_item_id,
         album_id: medium_opts.album_id,
+        taken_at: medium_item_opts.date_taken.map(|date| date.to_utc()),
+        taken_at_timezone: medium_item_opts
+            .date_taken
+            .map(|date| date.offset().local_minus_utc()),
+        camera_make: medium_item_opts.camera_make.clone(),
+        camera_model: medium_item_opts.camera_model.clone(),
     };
     repo::create_medium(arc_conn.clone(), medium.clone()).await?;
     repo::add_tags(arc_conn.clone(), medium.id, medium_opts.tags).await?;
@@ -311,23 +386,10 @@ async fn save_new_medium_item(
             filename: medium_item_opts.filename.clone(),
             size: filesize.as_u64() as i64,
             priority: medium_item_opts.priority.clone(),
-            last_saved: Utc::now().naive_utc(),
-            deleted_at: None,
-        },
-    )
-    .await?;
-    repo::create_medium_item_info(
-        conn,
-        MediumItemInfoDb {
-            id: medium_item_id,
-            taken_at: medium_item_opts.date_taken.map(|date| date.to_utc()),
-            taken_at_timezone: medium_item_opts
-                .date_taken
-                .map(|date| date.offset().local_minus_utc()),
-            camera_make: medium_item_opts.camera_make.clone(),
-            camera_model: medium_item_opts.camera_model.clone(),
             width: None,
             height: None,
+            last_saved: Utc::now().naive_utc(),
+            deleted_at: None,
         },
     )
     .await?;
@@ -349,14 +411,21 @@ async fn create_medium_response(
     Ok(MediumResponse {
         id: medium.id,
         medium_type: medium.medium_type,
-        items,
         album_id: medium.album_id,
+        taken_at: medium.taken_at.and_then(|date| {
+            medium.taken_at_timezone.map(|tz| {
+                date.with_timezone(&FixedOffset::east_opt(tz).expect("Invalid timezone offset"))
+            })
+        }),
+        camera_make: medium.camera_make,
+        camera_model: medium.camera_model,
+        items,
     })
 }
 
 #[tracing::instrument(skip(conn))]
 async fn create_medium_item_response(
-    item: FullMediumItemDb,
+    item: MediumItemDb,
     medium: MediumDb,
     conn: ArcConnection<'_>,
 ) -> Result<MediumItemResponse> {
@@ -370,13 +439,6 @@ async fn create_medium_item_response(
         locations,
         filesize: Byte::from_u64(item.size as u64),
         priority: item.priority,
-        taken_at: item.taken_at.and_then(|date| {
-            item.taken_at_timezone.map(|tz| {
-                date.with_timezone(&FixedOffset::east_opt(tz).expect("Invalid timezone offset"))
-            })
-        }),
-        camera_make: item.camera_make,
-        camera_model: item.camera_model,
         width: item.width,
         height: item.height,
         last_saved: item.last_saved,

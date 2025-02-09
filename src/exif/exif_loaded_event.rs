@@ -9,7 +9,7 @@ use uuid::Uuid;
 #[event(topic = "MediumItemExifLoaded")]
 pub struct MediumItemExifLoadedEvent {
     #[event(key)]
-    pub id: Uuid,
+    pub medium_item_id: Uuid,
     pub date: Option<DateTime<FixedOffset>>,
     pub mime: Option<Mime>,
     pub camera_make: Option<String>,
