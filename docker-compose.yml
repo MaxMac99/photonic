@@ -7,6 +7,8 @@ services:
     volumes:
       - photonic_data:/storage/
       - photonic_cache:/cache/
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
     profiles:
       - develop
   db:

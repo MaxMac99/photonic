@@ -93,7 +93,7 @@
                     name = "photonic";
                     tag = "latest";
                     created = "now";
-                    copyToRoot = [ bin ];
+                    copyToRoot = [ bin pkgs.exiftool ];
                     config = {
                         Cmd = [ "${bin}/bin/photonic" ];
                     };
