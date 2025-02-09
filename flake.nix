@@ -93,7 +93,7 @@
                     name = "photonic";
                     tag = "latest";
                     created = "now";
-                    copyToRoot = [ bin pkgs.exiftool ];
+                    copyToRoot = [ bin pkgs.exiftool pkgs.cacert ];
                     config = {
                         Cmd = [ "${bin}/bin/photonic" ];
                     };
