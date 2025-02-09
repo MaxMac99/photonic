@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO media (id, owner_id, medium_type, leading_item_id, album_id,taken_at, taken_at_timezone,camera_make,camera_model) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "medium_type_enum",
+            "kind": {
+              "Enum": [
+                "photo",
+                "video",
+                "live_photo",
+                "vector",
+                "sequence",
+                "gif",
+                "other"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Int4",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "96dd71e6311d8765581dbb07f63fa433f414b0b1d29ac48a37780ce1c581ca9f"
+}

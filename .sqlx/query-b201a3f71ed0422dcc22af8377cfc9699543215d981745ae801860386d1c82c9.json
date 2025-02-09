@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO users (id, username, email, quota, quota_used)VALUES ($1, $2, $3, $4, 0)ON CONFLICT (id)DO UPDATE SET username = $2, email = $3, quota = $4;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b201a3f71ed0422dcc22af8377cfc9699543215d981745ae801860386d1c82c9"
+}

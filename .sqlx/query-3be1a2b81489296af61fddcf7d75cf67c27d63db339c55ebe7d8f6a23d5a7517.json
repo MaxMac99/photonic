@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE medium_items SET medium_item_type = $1, mime = $2, filename = $3,size = $4, priority = $5, width = $6, height = $7 WHERE id = $8",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "medium_item_type_enum",
+            "kind": {
+              "Enum": [
+                "original",
+                "preview",
+                "edit",
+                "sidecar"
+              ]
+            }
+          }
+        },
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3be1a2b81489296af61fddcf7d75cf67c27d63db339c55ebe7d8f6a23d5a7517"
+}

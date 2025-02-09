@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO media_tags (medium_id, tag_title) SELECT * FROM UNNEST ($1::uuid[], $2::text[])",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "04e7531750c42e7136e6c9ee8e1be223fb9f2b1c6a7a5ae8995a8175656c5630"
+}

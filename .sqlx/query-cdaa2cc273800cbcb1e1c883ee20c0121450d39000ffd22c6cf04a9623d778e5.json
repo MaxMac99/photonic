@@ -1,0 +1,85 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, owner_id, medium_type as \"medium_type: MediumType\", leading_item_id, album_id, taken_at, taken_at_timezone, camera_make, camera_model FROM media WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "owner_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "medium_type: MediumType",
+        "type_info": {
+          "Custom": {
+            "name": "medium_type_enum",
+            "kind": {
+              "Enum": [
+                "photo",
+                "video",
+                "live_photo",
+                "vector",
+                "sequence",
+                "gif",
+                "other"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "leading_item_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "album_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "taken_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "taken_at_timezone",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "camera_make",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "camera_model",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "cdaa2cc273800cbcb1e1c883ee20c0121450d39000ffd22c6cf04a9623d778e5"
+}

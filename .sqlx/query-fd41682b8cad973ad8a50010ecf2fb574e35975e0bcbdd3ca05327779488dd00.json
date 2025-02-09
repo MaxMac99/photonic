@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, medium_id, medium_item_type as \"medium_item_type: MediumItemType\", mime, filename,size, priority, width, height, last_saved, deleted_at FROM medium_items WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "medium_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "medium_item_type: MediumItemType",
+        "type_info": {
+          "Custom": {
+            "name": "medium_item_type_enum",
+            "kind": {
+              "Enum": [
+                "original",
+                "preview",
+                "edit",
+                "sidecar"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "mime",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "filename",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "size",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "priority",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "width",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "height",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "last_saved",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 10,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "fd41682b8cad973ad8a50010ecf2fb574e35975e0bcbdd3ca05327779488dd00"
+}

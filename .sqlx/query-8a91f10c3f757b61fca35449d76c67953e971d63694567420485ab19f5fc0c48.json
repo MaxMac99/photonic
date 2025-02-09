@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE media SET owner_id = $1, medium_type = $2, leading_item_id = $3, album_id = $4, taken_at = $5, taken_at_timezone = $6, camera_make = $7, camera_model = $8 WHERE id = $9",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "medium_type_enum",
+            "kind": {
+              "Enum": [
+                "photo",
+                "video",
+                "live_photo",
+                "vector",
+                "sequence",
+                "gif",
+                "other"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8a91f10c3f757b61fca35449d76c67953e971d63694567420485ab19f5fc0c48"
+}

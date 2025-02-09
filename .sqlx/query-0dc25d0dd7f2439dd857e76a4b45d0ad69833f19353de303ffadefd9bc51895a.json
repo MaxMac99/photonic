@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM locations WHERE item_id = $1 AND variant = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "store_location_enum",
+            "kind": {
+              "Enum": [
+                "originals",
+                "cache",
+                "temp"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0dc25d0dd7f2439dd857e76a4b45d0ad69833f19353de303ffadefd9bc51895a"
+}

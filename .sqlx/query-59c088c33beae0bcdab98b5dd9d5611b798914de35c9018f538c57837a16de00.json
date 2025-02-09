@@ -1,0 +1,57 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT item_id, path, variant as \"variant: StorageVariant\" FROM locations WHERE item_id = $1 AND variant = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "item_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "path",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "variant: StorageVariant",
+        "type_info": {
+          "Custom": {
+            "name": "store_location_enum",
+            "kind": {
+              "Enum": [
+                "originals",
+                "cache",
+                "temp"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "store_location_enum",
+            "kind": {
+              "Enum": [
+                "originals",
+                "cache",
+                "temp"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "59c088c33beae0bcdab98b5dd9d5611b798914de35c9018f538c57837a16de00"
+}
