@@ -51,7 +51,7 @@
                             curl
                             cacert
                         ] ++ lib.optionals stdenv.buildPlatform.isDarwin [
-                            libiconv darwin.apple_sdk.frameworks.SystemConfiguration
+                            libiconv
                         ];
 
                         # Dependencies which need to be built for the platform on which
