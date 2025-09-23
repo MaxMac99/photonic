@@ -24,10 +24,8 @@ pub struct User {
 
 #[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
 pub struct UserStats {
-    #[schema(value_type = String)]
-    pub quota: Byte,
-    #[schema(value_type = String)]
-    pub quota_used: Byte,
+    pub quota: u64,
+    pub quota_used: u64,
     pub albums: u64,
     pub media: u64,
 }

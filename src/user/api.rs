@@ -39,8 +39,8 @@ async fn user_stats(
     transaction.commit().await?;
 
     let stats = UserStats {
-        quota: user.quota.clone(),
-        quota_used: user_details.quota_used.clone(),
+        quota: user.quota.as_u64(),
+        quota_used: user_details.quota_used.as_u64(),
         albums: 0,
         media: 0,
     };
