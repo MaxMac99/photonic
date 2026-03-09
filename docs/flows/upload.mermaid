@@ -1,0 +1,114 @@
+sequenceDiagram
+    actor U as User
+    participant Medium as Medium-Domain
+    participant MetaW as Metadata-Worker
+    participant MediumW as Medium-Worker
+    participant User as User-Domain
+    participant Task as Task-Domain
+    participant Exif as Exiftool
+    participant D as Database
+    participant T as Temp Storage
+    participant S as Permanent Storage
+    participant E as EventBus
+
+# ═══════════════════════════════════════════════════════════
+# UPLOAD PHASE (synchronous - user waits)
+# ═══════════════════════════════════════════════════════════
+    U ->> +Medium: Upload image
+    Medium ->> +User: Reserve Quota
+    User ->> D: Update User Quota
+    User ->> -E: QuotaReservedEvent
+    par
+        Medium ->> T: Store image temporarily
+    and
+        Medium ->> D: Create Medium
+        Medium ->> D: Create Medium Item
+    end
+    Medium ->> E: MediumCreatedEvent
+    Medium ->> E: MediumItemCreatedEvent
+    Medium ->> +User: Commit Quota
+    User ->> -E: QuotaCommittedEvent
+    Medium -->> -U: MediumId
+
+# ═══════════════════════════════════════════════════════════
+# TASK CREATION (Task domain listens for trigger events)
+# ═══════════════════════════════════════════════════════════
+    E -->> Task: Handle MediumCreatedEvent
+    Task ->> D: Create metadata_extraction task (pending)
+
+# ═══════════════════════════════════════════════════════════
+# METADATA EXTRACTION (Metadata Worker handles backpressure)
+# ═══════════════════════════════════════════════════════════
+    E ->> MetaW: Handle MediumCreatedEvent
+    Note over MetaW: Adds to internal queue<br/>(bounded, returns immediately)
+
+    Note over MetaW: Worker loop with semaphore
+    MetaW ->> E: MetadataExtractionStartedEvent
+    E -->> Task: Handle MetadataExtractionStartedEvent
+    Task ->> D: Update task (running)
+
+    MetaW ->> +Exif: Extract Metadata
+    Exif -->> -MetaW: Raw Metadata
+
+    alt Extraction Success
+        MetaW ->> D: Save Metadata
+        MetaW ->> E: MetadataExtractedEvent
+
+        E -->> Task: Handle MetadataExtractedEvent
+        Task ->> D: Complete metadata_extraction task
+        Task ->> D: Create move_to_storage task (pending)
+
+    else Extraction Failure
+        MetaW ->> E: MetadataExtractionFailedEvent
+
+        E -->> Task: Handle MetadataExtractionFailedEvent
+        Task ->> D: Fail metadata_extraction task (+ error)
+
+        Note over User: Could release quota on<br/>terminal failure (not shown)
+    end
+
+# ═══════════════════════════════════════════════════════════
+# MOVE TO STORAGE (Medium Worker handles backpressure)
+# ═══════════════════════════════════════════════════════════
+    E ->> MediumW: Handle MetadataExtractedEvent
+    Note over MediumW: Adds to internal queue<br/>(bounded, returns immediately)
+
+    Note over MediumW: Worker loop with semaphore
+    MediumW ->> E: MoveToStorageStartedEvent
+    E -->> Task: Handle MoveToStorageStartedEvent
+    Task ->> D: Update task (running)
+
+    MediumW ->> D: Get Medium
+    MediumW ->> MediumW: Update entity with metadata fields
+
+    alt Move Success
+        MediumW ->> T: Read from temp
+        MediumW ->> S: Write to permanent
+        MediumW ->> T: Delete from temp
+        MediumW ->> D: Save Medium (new path)
+        MediumW ->> E: MediumMovedToStorageEvent
+
+        E -->> Task: Handle MediumMovedToStorageEvent
+        Task ->> D: Complete move_to_storage task
+
+    else Move Failure
+        MediumW ->> E: MoveToStorageFailedEvent
+
+        E -->> Task: Handle MoveToStorageFailedEvent
+        Task ->> D: Fail move_to_storage task (+ error)
+
+        Note over User: Could release quota on<br/>terminal failure (not shown)
+    end
+
+# ═══════════════════════════════════════════════════════════
+# EVENT -> TASK MAPPING SUMMARY
+# ═══════════════════════════════════════════════════════════
+# MediumCreatedEvent            -> Create metadata_extraction (pending)
+# MetadataExtractionStartedEvent -> Update metadata_extraction (running)
+# MetadataExtractedEvent        -> Complete metadata_extraction
+#                               -> Create move_to_storage (pending)
+# MetadataExtractionFailedEvent -> Fail metadata_extraction
+# MoveToStorageStartedEvent     -> Update move_to_storage (running)
+# MediumMovedToStorageEvent     -> Complete move_to_storage
+# MoveToStorageFailedEvent      -> Fail move_to_storage
+# ═══════════════════════════════════════════════════════════

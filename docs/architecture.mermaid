@@ -1,0 +1,55 @@
+flowchart TB
+    subgraph "Domain Layer - Core Business Logic"
+        AlbumDomain[Album<br/>Entity, Service<br/>Repository Interface]
+        MediumDomain[Medium<br/>Entity, Service<br/>Repository & Storage Interfaces]
+        UserDomain[User<br/>Entity, Service<br/>Repository Interface]
+        DomainEvents[Domain Events<br/>MediumCreated<br/>AlbumCreated<br/>MediumProcessed]
+    end
+
+    subgraph "Application Layer - Use Cases"
+        Commands[Commands<br/>CreateAlbum<br/>ProcessMedium<br/>UpdateAlbum]
+        Queries[Queries<br/>GetAlbum<br/>ListAlbums]
+        AppServices[Application Services<br/>AuthService]
+    end
+
+    subgraph "Infrastructure Layer - Technical Details"
+        Persistence[Database<br/>PostgreSQL<br/>Repository Implementations]
+        Storage[File Storage<br/>Filesystem<br/>S3 planned]
+        External[External Services<br/>Exiftool<br/>Event Bus]
+        AppState[AppState<br/>Exposes only<br/>Application Services]
+    end
+
+    subgraph "Adapters Layer - Entry Points"
+        HTTP[HTTP API<br/>Axum Handlers<br/>Router]
+        Future[Future Adapters<br/>CLI<br/>gRPC]
+    end
+
+    %% Clean Architecture: Dependencies point inward
+    HTTP --> AppState
+    AppState --> Commands
+    AppState --> Queries
+    AppState --> AppServices
+
+    Commands --> AlbumDomain
+    Commands --> MediumDomain
+    Queries --> AlbumDomain
+    Queries --> MediumDomain
+    AppServices --> UserDomain
+
+    Persistence -.implements.-> AlbumDomain
+    Persistence -.implements.-> MediumDomain
+    Persistence -.implements.-> UserDomain
+    Storage -.implements.-> MediumDomain
+
+    External --> DomainEvents
+    Commands --> External
+
+    classDef domain fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px,color:#1b5e20
+    classDef application fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#0d47a1
+    classDef infrastructure fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100
+    classDef adapters fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#880e4f
+
+    class AlbumDomain,MediumDomain,UserDomain,DomainEvents domain
+    class Commands,Queries,AppServices application
+    class Persistence,Storage,External,AppState infrastructure
+    class HTTP,Future adapters

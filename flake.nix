@@ -105,8 +105,70 @@
                     inherit bin dockerImage;
                     default = bin;
                 };
-                devShells.default = mkShell {
-                    inputsFrom = [ bin ];
+                devShells = {
+                    default = mkShell {
+                        inputsFrom = [ bin ];
+                        buildInputs = [ openapi-down-convert ];
+                    };
+
+                    test = mkShell {
+                        inputsFrom = [ bin ];
+
+                        shellHook = ''
+                            # Set up test database
+                            export PGDATA="$PWD/tmpdata/.pgdata-test"
+                            export TEST_DATABASE_URL="postgresql:///$USER?host=$PGDATA"
+                            export DATABASE_URL="$TEST_DATABASE_URL"
+
+                            # Set up test environment variables
+                            export OAUTH_CLIENT_ID="test-client-id"
+                            export OAUTH_JWKS_URL="https://example.com/.well-known/jwks.json"
+                            export OAUTH_TOKEN_URL="https://example.com/oauth/token"
+                            export OAUTH_AUTHORIZE_URL="https://example.com/oauth/authorize"
+                            export JWT_SECRET="test-secret-key-for-testing-only"
+
+                            # Set log level (change to 'debug' or 'trace' for more detail)
+                            export RUST_LOG=''${RUST_LOG:-info}
+
+                            # Set up test storage directories
+                            export STORAGE_BASE_DIRECTORY="$PWD/tmpdata/test-storage"
+                            export STORAGE_CACHE_DIRECTORY="$PWD/tmpdata/test-cache"
+                            export STORAGE_TEMP_DIRECTORY="$PWD/tmpdata/test-tmp"
+
+                            # Create storage directories if they don't exist
+                            mkdir -p "$STORAGE_BASE_DIRECTORY" "$STORAGE_CACHE_DIRECTORY" "$STORAGE_TEMP_DIRECTORY"
+
+                            # Initialize PostgreSQL if not already done
+                            if [ ! -d "$PGDATA" ]; then
+                                echo "Initializing test database..."
+                                initdb -D "$PGDATA"
+                                # Use the actual path, not the variable name
+                                echo "unix_socket_directories = '$PWD/tmpdata/.pgdata-test'" >> "$PGDATA/postgresql.conf"
+                                echo "listen_addresses = 'localhost'" >> "$PGDATA/postgresql.conf"
+                                echo "port = 5432" >> "$PGDATA/postgresql.conf"
+                                pg_ctl start -D "$PGDATA" -l "$PGDATA/postgres.log" -w
+                                # Specify socket directory for createdb
+                                createdb -h "$PGDATA" $USER
+
+                                # Run migrations
+                                echo "Running migrations..."
+                                cargo sqlx migrate run --source crates/photonic/migrations
+
+                                echo "Test database initialized at $PGDATA"
+                            else
+                                # Start existing database
+                                pg_ctl start -D "$PGDATA" -l "$PGDATA/postgres.log" -w 2>/dev/null || true
+                            fi
+
+                            echo "Test database ready: $TEST_DATABASE_URL"
+                            echo "Test environment configured"
+                            echo "To run tests: cargo test"
+                            echo "To stop: pg_ctl stop -D \$PGDATA"
+                        '';
+
+                        # Add PostgreSQL tools to the shell
+                        buildInputs = [ postgresql openapi-down-convert ];
+                    };
                 };
             }
         );
