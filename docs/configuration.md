@@ -1,6 +1,7 @@
 # Photonic Configuration
 
-This document describes all configuration options for Photonic, including environment variables, configuration files, and deployment examples.
+This document describes all configuration options for Photonic, including environment variables,
+configuration files, and deployment examples.
 
 ## Table of Contents
 
@@ -31,6 +32,7 @@ Configuration is loaded in this order (later sources override earlier ones):
 ### Configuration Validation
 
 All configuration is validated on startup. The application will fail to start if:
+
 - Required variables are missing
 - Values are invalid (e.g., negative numbers, invalid URLs)
 - Storage paths don't exist or aren't writable
@@ -43,12 +45,14 @@ All configuration is validated on startup. The application will fail to start if
 ### Server Configuration
 
 #### `SERVER_HOST`
+
 - **Description:** IP address to bind to
 - **Type:** String
 - **Default:** `0.0.0.0` (all interfaces)
 - **Example:** `127.0.0.1` (localhost only)
 
 #### `SERVER_PORT`
+
 - **Description:** Port to listen on
 - **Type:** Integer
 - **Default:** `8080`
@@ -56,6 +60,7 @@ All configuration is validated on startup. The application will fail to start if
 - **Example:** `3000`
 
 #### `SERVER_WORKERS`
+
 - **Description:** Number of worker threads
 - **Type:** Integer
 - **Default:** Number of CPU cores
@@ -67,30 +72,35 @@ All configuration is validated on startup. The application will fail to start if
 ### Authentication Configuration
 
 #### `JWT_ISSUER`
+
 - **Description:** Expected JWT issuer (iss claim)
 - **Type:** URL
 - **Required:** Yes
 - **Example:** `https://idp.example.com`
 
 #### `JWT_AUDIENCE`
+
 - **Description:** Expected JWT audience (aud claim)
 - **Type:** String
 - **Required:** Yes
 - **Example:** `photonic-api`
 
 #### `JWT_JWKS_URL`
+
 - **Description:** URL to fetch JWKS (public keys)
 - **Type:** URL
 - **Required:** Yes
 - **Example:** `https://idp.example.com/.well-known/jwks.json`
 
 #### `JWT_VALIDATE_EXPIRY`
+
 - **Description:** Validate JWT expiration
 - **Type:** Boolean
 - **Default:** `true`
 - **Example:** `false` (dev only)
 
 #### `JWT_LEEWAY_SECONDS`
+
 - **Description:** Clock skew tolerance for exp/nbf
 - **Type:** Integer
 - **Default:** `60`
@@ -102,6 +112,7 @@ All configuration is validated on startup. The application will fail to start if
 ### Database Configuration
 
 #### `DATABASE_URL`
+
 - **Description:** PostgreSQL connection string
 - **Type:** Connection String
 - **Required:** Yes
@@ -109,6 +120,7 @@ All configuration is validated on startup. The application will fail to start if
 - **Example:** `postgresql://photonic:secret@localhost:5432/photonic`
 
 #### `DATABASE_MAX_CONNECTIONS`
+
 - **Description:** Maximum connection pool size
 - **Type:** Integer
 - **Default:** `10`
@@ -116,6 +128,7 @@ All configuration is validated on startup. The application will fail to start if
 - **Example:** `20`
 
 #### `DATABASE_MIN_CONNECTIONS`
+
 - **Description:** Minimum connection pool size
 - **Type:** Integer
 - **Default:** `2`
@@ -123,6 +136,7 @@ All configuration is validated on startup. The application will fail to start if
 - **Example:** `5`
 
 #### `DATABASE_ACQUIRE_TIMEOUT_SECONDS`
+
 - **Description:** Timeout for acquiring connection
 - **Type:** Integer
 - **Default:** `30`
@@ -130,6 +144,7 @@ All configuration is validated on startup. The application will fail to start if
 - **Example:** `60`
 
 #### `DATABASE_IDLE_TIMEOUT_SECONDS`
+
 - **Description:** Idle connection timeout
 - **Type:** Integer
 - **Default:** `600` (10 minutes)
@@ -137,6 +152,7 @@ All configuration is validated on startup. The application will fail to start if
 - **Example:** `300`
 
 #### `DATABASE_MAX_LIFETIME_SECONDS`
+
 - **Description:** Maximum connection lifetime
 - **Type:** Integer
 - **Default:** `1800` (30 minutes)
@@ -144,6 +160,7 @@ All configuration is validated on startup. The application will fail to start if
 - **Example:** `3600`
 
 #### `DATABASE_RUN_MIGRATIONS`
+
 - **Description:** Automatically run migrations on startup
 - **Type:** Boolean
 - **Default:** `true`
@@ -154,30 +171,35 @@ All configuration is validated on startup. The application will fail to start if
 ### Storage Configuration
 
 #### `STORAGE_BASE_PATH`
+
 - **Description:** Base directory for all file storage
 - **Type:** Path
 - **Required:** Yes
 - **Example:** `/var/photonic/storage`
 
 #### `STORAGE_TEMP_PATH`
+
 - **Description:** Temporary storage directory (fast/SSD)
 - **Type:** Path
 - **Default:** `{STORAGE_BASE_PATH}/temporary`
 - **Example:** `/mnt/ssd/photonic/temp`
 
 #### `STORAGE_PERMANENT_PATH`
+
 - **Description:** Permanent storage directory
 - **Type:** Path
 - **Default:** `{STORAGE_BASE_PATH}/permanent`
 - **Example:** `/mnt/hdd/photonic/permanent`
 
 #### `STORAGE_CACHE_PATH`
+
 - **Description:** Cache storage for variants
 - **Type:** Path
 - **Default:** `{STORAGE_BASE_PATH}/cache`
 - **Example:** `/mnt/ssd/photonic/cache`
 
 #### `STORAGE_PROVIDER`
+
 - **Description:** Storage backend to use
 - **Type:** Enum
 - **Default:** `filesystem`
@@ -185,6 +207,7 @@ All configuration is validated on startup. The application will fail to start if
 - **Example:** `filesystem`
 
 #### `STORAGE_ENSURE_DIRECTORIES`
+
 - **Description:** Create storage directories on startup
 - **Type:** Boolean
 - **Default:** `true`
@@ -195,30 +218,35 @@ All configuration is validated on startup. The application will fail to start if
 ### S3 Storage Configuration (Future)
 
 #### `S3_ENDPOINT`
+
 - **Description:** S3-compatible endpoint URL
 - **Type:** URL
 - **Required:** If STORAGE_PROVIDER=s3
 - **Example:** `https://s3.amazonaws.com`
 
 #### `S3_REGION`
+
 - **Description:** AWS region
 - **Type:** String
 - **Required:** If STORAGE_PROVIDER=s3
 - **Example:** `us-east-1`
 
 #### `S3_BUCKET`
+
 - **Description:** S3 bucket name
 - **Type:** String
 - **Required:** If STORAGE_PROVIDER=s3
 - **Example:** `photonic-media`
 
 #### `S3_ACCESS_KEY_ID`
+
 - **Description:** AWS access key ID
 - **Type:** String
 - **Required:** If STORAGE_PROVIDER=s3
 - **Example:** `AKIAIOSFODNN7EXAMPLE`
 
 #### `S3_SECRET_ACCESS_KEY`
+
 - **Description:** AWS secret access key
 - **Type:** String (sensitive)
 - **Required:** If STORAGE_PROVIDER=s3
@@ -229,21 +257,23 @@ All configuration is validated on startup. The application will fail to start if
 ### Path Pattern Configuration
 
 #### `STORAGE_PATH_PATTERN`
+
 - **Description:** Template for organizing files in permanent storage
 - **Type:** String
 - **Default:** `{year}/{month}/{camera_make}/{filename}`
 - **Variables:**
-  - `{year}` - 4-digit year
-  - `{month}` - 2-digit month (01-12)
-  - `{day}` - 2-digit day (01-31)
-  - `{camera_make}` - Camera manufacturer
-  - `{camera_model}` - Camera model
-  - `{lens_model}` - Lens model
-  - `{filename}` - Original filename
-  - `{extension}` - File extension
-  - `{user_id}` - User UUID
+    - `{year}` - 4-digit year
+    - `{month}` - 2-digit month (01-12)
+    - `{day}` - 2-digit day (01-31)
+    - `{camera_make}` - Camera manufacturer
+    - `{camera_model}` - Camera model
+    - `{lens_model}` - Lens model
+    - `{filename}` - Original filename
+    - `{extension}` - File extension
+    - `{user_id}` - User UUID
 
 **Example Patterns:**
+
 ```bash
 # Organize by date and camera
 STORAGE_PATH_PATTERN="{year}/{month}/{camera_make}/{filename}"
@@ -263,6 +293,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 ```
 
 #### `STORAGE_PATH_FALLBACK_DATE`
+
 - **Description:** What to use if taken_at is missing
 - **Type:** Enum
 - **Default:** `upload_time`
@@ -270,12 +301,14 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `file_modified`
 
 #### `STORAGE_PATH_FALLBACK_CAMERA`
+
 - **Description:** String to use if camera info missing
 - **Type:** String
 - **Default:** `Unknown`
 - **Example:** `NoCamera`
 
 #### `STORAGE_PATH_SANITIZE`
+
 - **Description:** Sanitize path components for filesystem safety
 - **Type:** Boolean
 - **Default:** `true`
@@ -286,6 +319,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 ### Processing Configuration
 
 #### `MAX_UPLOAD_SIZE_BYTES`
+
 - **Description:** Maximum file size for uploads
 - **Type:** Integer (bytes)
 - **Default:** `52428800` (50 MB)
@@ -293,12 +327,14 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `104857600` (100 MB)
 
 #### `EXIFTOOL_PATH`
+
 - **Description:** Path to exiftool binary
 - **Type:** Path
 - **Default:** `exiftool` (from PATH)
 - **Example:** `/usr/local/bin/exiftool`
 
 #### `EXIFTOOL_TIMEOUT_SECONDS`
+
 - **Description:** Timeout for exiftool execution
 - **Type:** Integer
 - **Default:** `30`
@@ -306,6 +342,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `60`
 
 #### `THUMBNAIL_SIZE`
+
 - **Description:** Thumbnail dimensions (square)
 - **Type:** Integer (pixels)
 - **Default:** `200`
@@ -313,6 +350,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `300`
 
 #### `THUMBNAIL_QUALITY`
+
 - **Description:** JPEG quality for thumbnails
 - **Type:** Integer (percentage)
 - **Default:** `85`
@@ -320,6 +358,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `90`
 
 #### `PREVIEW_SIZE`
+
 - **Description:** Preview max dimension (longest side)
 - **Type:** Integer (pixels)
 - **Default:** `1024`
@@ -327,6 +366,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `1920`
 
 #### `PREVIEW_QUALITY`
+
 - **Description:** JPEG quality for previews
 - **Type:** Integer (percentage)
 - **Default:** `90`
@@ -334,6 +374,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `92`
 
 #### `LOWRES_SIZE`
+
 - **Description:** Low-res max dimension for RAW files
 - **Type:** Integer (pixels)
 - **Default:** `2048`
@@ -341,6 +382,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `2560`
 
 #### `LOWRES_QUALITY`
+
 - **Description:** JPEG quality for low-res
 - **Type:** Integer (percentage)
 - **Default:** `92`
@@ -348,6 +390,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `95`
 
 #### `PROCESSING_TIMEOUT_SECONDS`
+
 - **Description:** Global timeout for processing pipeline
 - **Type:** Integer
 - **Default:** `300` (5 minutes)
@@ -355,6 +398,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `600`
 
 #### `PROCESSING_MAX_RETRIES`
+
 - **Description:** Maximum retry attempts for failed processing
 - **Type:** Integer
 - **Default:** `3`
@@ -362,6 +406,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `5`
 
 #### `PROCESSING_RETRY_DELAY_MS`
+
 - **Description:** Initial retry delay (exponential backoff)
 - **Type:** Integer (milliseconds)
 - **Default:** `1000` (1 second)
@@ -373,6 +418,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 ### Event Bus Configuration
 
 #### `EVENT_BUS_TYPE`
+
 - **Description:** Event bus implementation
 - **Type:** Enum
 - **Default:** `in_memory`
@@ -380,6 +426,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `in_memory`
 
 #### `EVENT_BUS_BUFFER_SIZE`
+
 - **Description:** Event channel buffer size
 - **Type:** Integer
 - **Default:** `1000`
@@ -387,6 +434,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `5000`
 
 #### `NATS_URL` (Future)
+
 - **Description:** NATS server URL
 - **Type:** URL
 - **Required:** If EVENT_BUS_TYPE=nats
@@ -397,6 +445,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 ### Quota Configuration
 
 #### `QUOTA_RESERVATION_TIMEOUT_SECONDS`
+
 - **Description:** How long quota reservations are valid
 - **Type:** Integer
 - **Default:** `3600` (1 hour)
@@ -404,6 +453,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Example:** `7200` (2 hours)
 
 #### `QUOTA_CLEANUP_INTERVAL_SECONDS`
+
 - **Description:** How often to cleanup expired reservations
 - **Type:** Integer
 - **Default:** `300` (5 minutes)
@@ -415,6 +465,7 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 ### Logging and Tracing
 
 #### `RUST_LOG`
+
 - **Description:** Log level and filtering
 - **Type:** String
 - **Default:** `info`
@@ -422,21 +473,23 @@ STORAGE_PATH_PATTERN="{year}{month}{day}_{filename}"
 - **Levels:** `error`, `warn`, `info`, `debug`, `trace`
 
 **Examples:**
+
 ```bash
 # Everything at info level
 RUST_LOG=info
 
 # Photonic at debug, everything else at warn
-RUST_LOG=warn,photonic=debug
+RUST_LOG=warn,infrastructure=debug
 
 # Detailed logging for specific module
-RUST_LOG=info,photonic::domain::medium=trace
+RUST_LOG=info,infrastructure::domain::medium=trace
 
 # SQL query logging
 RUST_LOG=info,sqlx=debug
 ```
 
 #### `LOG_FORMAT`
+
 - **Description:** Log output format
 - **Type:** Enum
 - **Default:** `json`
@@ -444,24 +497,28 @@ RUST_LOG=info,sqlx=debug
 - **Example:** `pretty` (dev)
 
 #### `LOG_INCLUDE_TIMESTAMPS`
+
 - **Description:** Include timestamps in logs
 - **Type:** Boolean
 - **Default:** `true`
 - **Example:** `false` (if using external logger)
 
 #### `OTEL_EXPORTER_OTLP_ENDPOINT`
+
 - **Description:** OpenTelemetry collector endpoint
 - **Type:** URL
 - **Default:** Not set (tracing disabled)
 - **Example:** `http://localhost:4317`
 
 #### `OTEL_SERVICE_NAME`
+
 - **Description:** Service name for tracing
 - **Type:** String
 - **Default:** `photonic`
 - **Example:** `photonic-api-prod`
 
 #### `OTEL_TRACES_SAMPLER`
+
 - **Description:** Trace sampling strategy
 - **Type:** Enum
 - **Default:** `parentbased_always_on`
@@ -469,6 +526,7 @@ RUST_LOG=info,sqlx=debug
 - **Example:** `traceidratio`
 
 #### `OTEL_TRACES_SAMPLER_ARG`
+
 - **Description:** Sampler argument (e.g., ratio)
 - **Type:** Float
 - **Default:** `1.0` (100%)
@@ -480,18 +538,21 @@ RUST_LOG=info,sqlx=debug
 ### Feature Flags
 
 #### `FEATURE_IMAGE_RECOGNITION`
+
 - **Description:** Enable image recognition (future)
 - **Type:** Boolean
 - **Default:** `false`
 - **Example:** `true`
 
 #### `FEATURE_VIDEO_PROCESSING`
+
 - **Description:** Enable video processing
 - **Type:** Boolean
 - **Default:** `false`
 - **Example:** `true`
 
 #### `FEATURE_LIVE_PHOTOS`
+
 - **Description:** Enable live photo support
 - **Type:** Boolean
 - **Default:** `false`
@@ -506,6 +567,7 @@ Instead of environment variables, use a TOML configuration file:
 **Location:** `/etc/photonic/config.toml` or set via `PHOTONIC_CONFIG`
 
 **Example:**
+
 ```toml
 [server]
 host = "0.0.0.0"
@@ -594,12 +656,12 @@ SERVER_PORT=8080
 
 # JWT
 JWT_ISSUER=https://idp.dev.example.com
-JWT_AUDIENCE=photonic-dev
+JWT_AUDIENCE=infrastructure-dev
 JWT_JWKS_URL=https://idp.dev.example.com/.well-known/jwks.json
 JWT_VALIDATE_EXPIRY=false
 
 # Database
-DATABASE_URL=postgresql://photonic:devpass@localhost:5432/photonic_dev
+DATABASE_URL=postgresql://infrastructure:devpass@localhost:5432/photonic_dev
 DATABASE_MAX_CONNECTIONS=5
 DATABASE_RUN_MIGRATIONS=true
 
@@ -613,7 +675,7 @@ EXIFTOOL_PATH=/usr/local/bin/exiftool
 THUMBNAIL_SIZE=150
 
 # Logging
-RUST_LOG=debug,photonic=trace
+RUST_LOG=debug,infrastructure=trace
 LOG_FORMAT=pretty
 OTEL_EXPORTER_OTLP_ENDPOINT=
 
@@ -633,13 +695,13 @@ SERVER_WORKERS=8
 
 # JWT
 JWT_ISSUER=https://idp.example.com
-JWT_AUDIENCE=photonic-api
+JWT_AUDIENCE=infrastructure-api
 JWT_JWKS_URL=https://idp.example.com/.well-known/jwks.json
 JWT_VALIDATE_EXPIRY=true
 JWT_LEEWAY_SECONDS=60
 
 # Database
-DATABASE_URL=postgresql://photonic:${DB_PASSWORD}@db.internal:5432/photonic
+DATABASE_URL=postgresql://infrastructure:${DB_PASSWORD}@db.internal:5432/infrastructure
 DATABASE_MAX_CONNECTIONS=50
 DATABASE_MIN_CONNECTIONS=10
 DATABASE_ACQUIRE_TIMEOUT_SECONDS=30
@@ -648,10 +710,10 @@ DATABASE_MAX_LIFETIME_SECONDS=1800
 DATABASE_RUN_MIGRATIONS=false
 
 # Storage
-STORAGE_BASE_PATH=/mnt/photonic
-STORAGE_TEMP_PATH=/mnt/ssd/photonic/temp
-STORAGE_PERMANENT_PATH=/mnt/hdd/photonic/permanent
-STORAGE_CACHE_PATH=/mnt/ssd/photonic/cache
+STORAGE_BASE_PATH=/mnt/infrastructure
+STORAGE_TEMP_PATH=/mnt/ssd/infrastructure/temp
+STORAGE_PERMANENT_PATH=/mnt/hdd/infrastructure/permanent
+STORAGE_CACHE_PATH=/mnt/ssd/infrastructure/cache
 STORAGE_PATH_PATTERN={year}/{month}/{camera_make}/{filename}
 STORAGE_ENSURE_DIRECTORIES=true
 
@@ -677,13 +739,13 @@ EVENT_BUS_TYPE=in_memory
 EVENT_BUS_BUFFER_SIZE=5000
 
 # Logging
-RUST_LOG=info,photonic=debug
+RUST_LOG=info,infrastructure=debug
 LOG_FORMAT=json
 LOG_INCLUDE_TIMESTAMPS=true
 
 # Tracing
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-OTEL_SERVICE_NAME=photonic-api-prod
+OTEL_SERVICE_NAME=infrastructure-api-prod
 OTEL_TRACES_SAMPLER=parentbased_always_on
 OTEL_TRACES_SAMPLER_ARG=1.0
 
@@ -709,23 +771,23 @@ services:
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=8080
       - JWT_ISSUER=https://idp.example.com
-      - JWT_AUDIENCE=photonic-api
+      - JWT_AUDIENCE=infrastructure-api
       - JWT_JWKS_URL=https://idp.example.com/.well-known/jwks.json
-      - DATABASE_URL=postgresql://photonic:secret@postgres:5432/photonic
+      - DATABASE_URL=postgresql://infrastructure:secret@postgres:5432/infrastructure
       - STORAGE_BASE_PATH=/storage
       - STORAGE_PATH_PATTERN={year}/{month}/{camera_make}/{filename}
       - RUST_LOG=info
     volumes:
-      - photonic-storage:/storage
+      - infrastructure-storage:/storage
     depends_on:
       - postgres
 
   postgres:
     image: postgres:16
     environment:
-      - POSTGRES_USER=photonic
+      - POSTGRES_USER=infrastructure
       - POSTGRES_PASSWORD=secret
-      - POSTGRES_DB=photonic
+      - POSTGRES_DB=infrastructure
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
@@ -748,15 +810,15 @@ data:
   SERVER_PORT: "8080"
   SERVER_WORKERS: "8"
   JWT_ISSUER: "https://idp.example.com"
-  JWT_AUDIENCE: "photonic-api"
+  JWT_AUDIENCE: "infrastructure-api"
   JWT_JWKS_URL: "https://idp.example.com/.well-known/jwks.json"
   STORAGE_BASE_PATH: "/storage"
   STORAGE_PATH_PATTERN: "{year}/{month}/{camera_make}/{filename}"
   MAX_UPLOAD_SIZE_BYTES: "52428800"
-  RUST_LOG: "info,photonic=debug"
+  RUST_LOG: "info,infrastructure=debug"
   LOG_FORMAT: "json"
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-  OTEL_SERVICE_NAME: "photonic-api"
+  OTEL_SERVICE_NAME: "infrastructure-api"
 
 ---
 apiVersion: v1
@@ -765,7 +827,7 @@ metadata:
   name: photonic-secrets
 type: Opaque
 stringData:
-  DATABASE_URL: "postgresql://photonic:secret@postgres-service:5432/photonic"
+  DATABASE_URL: "postgresql://infrastructure:secret@postgres-service:5432/infrastructure"
 ```
 
 ---
@@ -776,24 +838,24 @@ stringData:
 
 ```bash
 # Dry-run to validate configuration
-photonic --config-check
+infrastructure --config-check
 
 # Show effective configuration (merged from all sources)
-photonic --show-config
+infrastructure --show-config
 ```
 
 ### Test Database Connection
 
 ```bash
 # Test database connection and run migrations
-photonic --test-db
+infrastructure --test-db
 ```
 
 ### Test Storage Paths
 
 ```bash
 # Verify storage paths are writable
-photonic --test-storage
+infrastructure --test-storage
 ```
 
 ---
@@ -803,6 +865,7 @@ photonic --test-storage
 ### Secrets Management
 
 **DO NOT** commit secrets to version control:
+
 - Use `.env` files (add to `.gitignore`)
 - Use environment variables in production
 - Use secret management systems (HashiCorp Vault, AWS Secrets Manager, etc.)
@@ -812,11 +875,11 @@ photonic --test-storage
 
 ```bash
 # Configuration file
-chmod 600 /etc/photonic/config.toml
+chmod 600 /etc/infrastructure/config.toml
 
 # Storage directories
-chown -R photonic:photonic /var/photonic/storage
-chmod 750 /var/photonic/storage
+chown -R infrastructure:infrastructure /var/infrastructure/storage
+chmod 750 /var/infrastructure/storage
 ```
 
 ### Database Security
@@ -833,25 +896,28 @@ chmod 750 /var/photonic/storage
 ### Required Configuration
 
 Minimum required environment variables:
+
 ```bash
 JWT_ISSUER=https://idp.example.com
-JWT_AUDIENCE=photonic-api
+JWT_AUDIENCE=infrastructure-api
 JWT_JWKS_URL=https://idp.example.com/.well-known/jwks.json
 DATABASE_URL=postgresql://user:pass@host:5432/db
-STORAGE_BASE_PATH=/var/photonic/storage
+STORAGE_BASE_PATH=/var/infrastructure/storage
 ```
 
 ### Recommended for Production
 
 Additional recommended configuration:
+
 ```bash
 SERVER_WORKERS=8
 DATABASE_MAX_CONNECTIONS=50
 STORAGE_PATH_PATTERN={year}/{month}/{camera_make}/{filename}
 MAX_UPLOAD_SIZE_BYTES=52428800
 PROCESSING_TIMEOUT_SECONDS=600
-RUST_LOG=info,photonic=debug
+RUST_LOG=info,infrastructure=debug
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 ```
 
-All configuration options are validated on startup, and the application will fail fast with clear error messages if misconfigured.
+All configuration options are validated on startup, and the application will fail fast with clear
+error messages if misconfigured.

@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: photonic
+  title: infrastructure
   description: ''
   license:
     name: MIT

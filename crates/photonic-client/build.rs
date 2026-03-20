@@ -4,9 +4,9 @@ use xtask::openapi::{convert_openapi, generate_openapi_client, generate_openapi_
 
 #[tokio::main]
 async fn main() {
-    eprintln!("[build.rs] Starting photonic-client build script");
+    eprintln!("[build.rs] Starting infrastructure-client build script");
 
-    println!("cargo::rerun-if-changed=../photonic/src/infrastructure/api");
+    println!("cargo::rerun-if-changed=../infrastructure/src/infrastructure/api");
     println!("cargo::rerun-if-changed=../xtask/src");
 
     let out_dir = env::var("OUT_DIR").unwrap();

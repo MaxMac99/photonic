@@ -1,89 +1,89 @@
 openapi: 3.0.3
 info:
-  title: photonic
+  title: infrastructure
   description: ''
   license:
     name: MIT
   version: 0.1.0
 servers:
-- url: http://localhost:8080
-  description: Development server
-- url: https://photonic.mvissing.de
-  description: Staging server
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://photonic.mvissing.de
+    description: Staging server
 paths:
   /api/v1/medium:
     get:
       tags:
-      - medium
+        - medium
       operationId: get_all_media
       parameters:
-      - name: start_date
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date-time
-          nullable: true
-      - name: end_date
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date-time
-          nullable: true
-      - name: per_page
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int64
-          default: 50
-          maximum: 100
-          minimum: 1
-      - name: page_last_date
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date-time
-          nullable: true
-      - name: page_last_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-          nullable: true
-      - name: tags
-        in: query
-        required: false
-        schema:
-          type: array
-          items:
+        - name: start_date
+          in: query
+          required: false
+          schema:
             type: string
-      - name: album_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-          nullable: true
-      - name: direction
-        in: query
-        required: false
-        schema:
-          oneOf:
-          - type: string
-            enum:
-            - Asc
-            - Desc
-          default: Desc
-      - name: include_no_album
-        in: query
-        required: false
-        schema:
-          type: boolean
-          default: false
+            format: date-time
+            nullable: true
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: 50
+            maximum: 100
+            minimum: 1
+        - name: page_last_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: page_last_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+            nullable: true
+        - name: tags
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: album_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+            nullable: true
+        - name: direction
+          in: query
+          required: false
+          schema:
+            oneOf:
+              - type: string
+                enum:
+                  - Asc
+                  - Desc
+            default: Desc
+        - name: include_no_album
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: Gets all media. Can be filtered by date
@@ -95,59 +95,59 @@ paths:
                   $ref: '#/components/schemas/MediumListResponse'
     post:
       tags:
-      - medium
+        - medium
       operationId: create_medium
       parameters:
-      - name: tags
-        in: query
-        required: false
-        schema:
-          type: array
-          items:
+        - name: tags
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: medium_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/MediumTypeDto'
+        - name: album_id
+          in: query
+          required: false
+          schema:
             type: string
-      - name: medium_type
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/MediumTypeDto'
-      - name: album_id
-        in: query
-        required: false
-        schema:
-          type: string
-          format: uuid
-          nullable: true
-      - name: filename
-        in: query
-        required: true
-        schema:
-          type: string
-      - name: priority
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int32
-          default: 10
-      - name: date_taken
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date-time
-          nullable: true
-      - name: camera_make
-        in: query
-        required: false
-        schema:
-          type: string
-          nullable: true
-      - name: camera_model
-        in: query
-        required: false
-        schema:
-          type: string
-          nullable: true
+            format: uuid
+            nullable: true
+        - name: filename
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: priority
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+        - name: date_taken
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: camera_make
+          in: query
+          required: false
+          schema:
+            type: string
+            nullable: true
+        - name: camera_model
+          in: query
+          required: false
+          schema:
+            type: string
+            nullable: true
       requestBody:
         content:
           '*/*':
@@ -165,82 +165,82 @@ paths:
   /api/v1/medium/{medium_id}:
     get:
       tags:
-      - medium
+        - medium
       operationId: get_medium
       parameters:
-      - name: start_date
-        in: path
-        required: true
-        schema:
-          type: string
-          format: date-time
-          nullable: true
-      - name: end_date
-        in: path
-        required: true
-        schema:
-          type: string
-          format: date-time
-          nullable: true
-      - name: per_page
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-          default: 50
-          maximum: 100
-          minimum: 1
-      - name: page_last_date
-        in: path
-        required: true
-        schema:
-          type: string
-          format: date-time
-          nullable: true
-      - name: page_last_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          nullable: true
-      - name: tags
-        in: path
-        required: true
-        schema:
-          type: array
-          items:
+        - name: start_date
+          in: path
+          required: true
+          schema:
             type: string
-      - name: album_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          nullable: true
-      - name: direction
-        in: path
-        required: true
-        schema:
-          oneOf:
-          - type: string
-            enum:
-            - Asc
-            - Desc
-          default: Desc
-      - name: include_no_album
-        in: path
-        required: true
-        schema:
-          type: boolean
-          default: false
-      - name: medium_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+            format: date-time
+            nullable: true
+        - name: end_date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: per_page
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            default: 50
+            maximum: 100
+            minimum: 1
+        - name: page_last_date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: page_last_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            nullable: true
+        - name: tags
+          in: path
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: album_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            nullable: true
+        - name: direction
+          in: path
+          required: true
+          schema:
+            oneOf:
+              - type: string
+                enum:
+                  - Asc
+                  - Desc
+            default: Desc
+        - name: include_no_album
+          in: path
+          required: true
+          schema:
+            type: boolean
+            default: false
+        - name: medium_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Gets all media. Can be filtered by date
@@ -252,69 +252,69 @@ paths:
                   $ref: '#/components/schemas/MediumDetailResponse'
     delete:
       tags:
-      - medium
+        - medium
       operationId: delete_medium
       parameters:
-      - name: medium_id
-        in: path
-        description: The id of the medium to delete
-        required: true
-        schema:
-          type: string
-          format: uuid
+        - name: medium_id
+          in: path
+          description: The id of the medium to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '204':
           description: Deletes the medium
           content:
-            application/json: {}
+            application/json: { }
   /api/v1/medium/{medium_id}/item/{format}:
     post:
       tags:
-      - medium
+        - medium
       operationId: add_medium_item
       parameters:
-      - name: filename
-        in: query
-        required: true
-        schema:
-          type: string
-      - name: priority
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int32
-          default: 10
-      - name: date_taken
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date-time
-          nullable: true
-      - name: camera_make
-        in: query
-        required: false
-        schema:
-          type: string
-          nullable: true
-      - name: camera_model
-        in: query
-        required: false
-        schema:
-          type: string
-          nullable: true
-      - name: medium_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: format
-        in: path
-        required: true
-        schema:
-          $ref: '#/components/schemas/MediumItemTypeDto'
+        - name: filename
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: priority
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+        - name: date_taken
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+            nullable: true
+        - name: camera_make
+          in: query
+          required: false
+          schema:
+            type: string
+            nullable: true
+        - name: camera_model
+          in: query
+          required: false
+          schema:
+            type: string
+            nullable: true
+        - name: medium_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/MediumItemTypeDto'
       requestBody:
         content:
           '*/*':
@@ -332,21 +332,21 @@ paths:
   /api/v1/medium/{medium_id}/item/{item_id}/raw:
     get:
       tags:
-      - medium
+        - medium
       operationId: get_medium_item
       parameters:
-      - name: medium_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: item_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+        - name: medium_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: The raw file
@@ -361,29 +361,29 @@ paths:
   /api/v1/medium/{medium_id}/preview:
     get:
       tags:
-      - medium
+        - medium
       operationId: get_medium_preview
       parameters:
-      - name: width
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int32
-          nullable: true
-      - name: height
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int32
-          nullable: true
-      - name: medium_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+        - name: width
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            nullable: true
+        - name: height
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            nullable: true
+        - name: medium_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: The raw file
@@ -398,7 +398,7 @@ paths:
   /api/v1/system:
     get:
       tags:
-      - system
+        - system
       operationId: system_info
       responses:
         '200':
@@ -458,8 +458,8 @@ components:
     FileInfoDto:
       type: object
       required:
-      - mime_type
-      - file_size
+        - mime_type
+        - file_size
       properties:
         file_modified_at:
           type: string
@@ -474,8 +474,8 @@ components:
     FileLocationDto:
       type: object
       required:
-      - storage_tier
-      - relative_path
+        - storage_tier
+        - relative_path
       properties:
         relative_path:
           type: string
@@ -484,10 +484,10 @@ components:
     InfoResponse:
       type: object
       required:
-      - version
-      - client_id
-      - token_url
-      - authorize_url
+        - version
+        - client_id
+        - token_url
+        - authorize_url
       properties:
         authorize_url:
           type: string
@@ -500,8 +500,8 @@ components:
     LocationInfoDto:
       type: object
       required:
-      - latitude
-      - longitude
+        - latitude
+        - longitude
       properties:
         altitude:
           type: number
@@ -525,11 +525,11 @@ components:
       type: object
       description: Response for detailed medium view - includes all metadata
       required:
-      - id
-      - medium_type
-      - created_at
-      - updated_at
-      - items
+        - id
+        - medium_type
+        - created_at
+        - updated_at
+        - items
       properties:
         album_id:
           type: string
@@ -566,14 +566,14 @@ components:
       type: object
       description: Detailed item response for detailed views
       required:
-      - id
-      - is_primary
-      - medium_item_type
-      - mime
-      - filename
-      - filesize
-      - priority
-      - created_at
+        - id
+        - is_primary
+        - medium_item_type
+        - mime
+        - filename
+        - filesize
+        - priority
+        - created_at
       properties:
         created_at:
           type: string
@@ -612,12 +612,12 @@ components:
       type: object
       description: Minimal item response for list views
       required:
-      - id
-      - is_primary
-      - medium_item_type
-      - mime
-      - filename
-      - filesize
+        - id
+        - is_primary
+        - medium_item_type
+        - mime
+        - filename
+        - filesize
       properties:
         filename:
           type: string
@@ -645,17 +645,17 @@ components:
     MediumItemTypeDto:
       type: string
       enum:
-      - original
-      - edit
-      - preview
-      - sidecar
+        - original
+        - edit
+        - preview
+        - sidecar
     MediumListResponse:
       type: object
       description: Response for listing media - optimized for list views with minimal data
       required:
-      - id
-      - medium_type
-      - items
+        - id
+        - medium_type
+        - items
       properties:
         album_id:
           type: string
@@ -684,8 +684,8 @@ components:
       type: object
       description: Metadata DTOs
       required:
-      - file_info
-      - technical
+        - file_info
+        - technical
       properties:
         additional:
           type: object
@@ -702,30 +702,30 @@ components:
     MediumTypeDto:
       type: string
       enum:
-      - PHOTO
-      - VIDEO
-      - LIVE_PHOTO
-      - VECTOR
-      - SEQUENCE
-      - GIF
-      - OTHER
+        - PHOTO
+        - VIDEO
+        - LIVE_PHOTO
+        - VECTOR
+        - SEQUENCE
+        - GIF
+        - OTHER
     OrientationDto:
       type: string
       enum:
-      - normal
-      - mirror_horizontal
-      - rotate180
-      - mirror_vertical
-      - mirror_horizontal_and_rotate270_cw
-      - rotate90_cw
-      - mirror_horizontal_and_rotate90_cw
-      - rotate270_cw
+        - normal
+        - mirror_horizontal
+        - rotate180
+        - mirror_vertical
+        - mirror_horizontal_and_rotate270_cw
+        - rotate90_cw
+        - mirror_horizontal_and_rotate90_cw
+        - rotate270_cw
     StorageTierDto:
       type: string
       enum:
-      - permanent
-      - temporary
-      - cache
+        - permanent
+        - temporary
+        - cache
     TechnicalInfoDto:
       type: object
       properties:
@@ -742,11 +742,11 @@ components:
           minimum: 0
           nullable: true
 tags:
-- name: medium
-  description: Medium API
-- name: album
-  description: Album API
-- name: system
-  description: System API
-- name: user
-  description: User API
+  - name: medium
+    description: Medium API
+  - name: album
+    description: Album API
+  - name: system
+    description: System API
+  - name: user
+    description: User API

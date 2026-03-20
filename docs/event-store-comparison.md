@@ -2,13 +2,13 @@
 
 ## Executive Summary
 
-| Solution | Best For | Complexity | Event Sourcing | Rust Support | Cost | Recommendation |
-|----------|----------|------------|----------------|--------------|------|----------------|
-| **PostgreSQL + Domain Events** | Starting out, simple apps | ⭐ Low | Partial | ⭐⭐⭐⭐⭐ Native | $ Low | ✅ **START HERE** |
-| **EventStoreDB** | True event sourcing | ⭐⭐ Medium | ⭐⭐⭐⭐⭐ Full | ⭐⭐⭐⭐ Good | $$ Medium | Upgrade later |
-| **NATS JetStream** | Lightweight event streaming | ⭐⭐ Medium | ⭐⭐⭐ Good | ⭐⭐⭐⭐⭐ Excellent | $ Low | Good alternative |
-| **Apache Kafka** | High-scale, distributed | ⭐⭐⭐⭐⭐ High | ⭐⭐ Limited | ⭐⭐⭐ OK | $$$ High | Overkill for single app |
-| **Redis Streams** | Fast, simple events | ⭐⭐ Medium | ⭐⭐ Limited | ⭐⭐⭐⭐ Good | $ Low | Not recommended for ES |
+| Solution                       | Best For                    | Complexity | Event Sourcing | Rust Support    | Cost      | Recommendation          |
+|--------------------------------|-----------------------------|------------|----------------|-----------------|-----------|-------------------------|
+| **PostgreSQL + Domain Events** | Starting out, simple apps   | ⭐ Low      | Partial        | ⭐⭐⭐⭐⭐ Native    | $ Low     | ✅ **START HERE**        |
+| **EventStoreDB**               | True event sourcing         | ⭐⭐ Medium  | ⭐⭐⭐⭐⭐ Full     | ⭐⭐⭐⭐ Good       | $$ Medium | Upgrade later           |
+| **NATS JetStream**             | Lightweight event streaming | ⭐⭐ Medium  | ⭐⭐⭐ Good       | ⭐⭐⭐⭐⭐ Excellent | $ Low     | Good alternative        |
+| **Apache Kafka**               | High-scale, distributed     | ⭐⭐⭐⭐⭐ High | ⭐⭐ Limited     | ⭐⭐⭐ OK          | $$$ High  | Overkill for single app |
+| **Redis Streams**              | Fast, simple events         | ⭐⭐ Medium  | ⭐⭐ Limited     | ⭐⭐⭐⭐ Good       | $ Low     | Not recommended for ES  |
 
 ---
 
@@ -17,9 +17,12 @@
 ### 1. PostgreSQL + Domain Events
 
 #### Overview
-Store both current state AND domain events in PostgreSQL. Events are primarily for audit trails and inter-aggregate communication, not as the source of truth.
+
+Store both current state AND domain events in PostgreSQL. Events are primarily for audit trails and
+inter-aggregate communication, not as the source of truth.
 
 #### Architecture
+
 ```
 Command → Aggregate → State + Events
                          ↓
@@ -38,49 +41,54 @@ Command → Aggregate → State + Events
 #### Implementation Details
 
 **Schema Design**:
+
 ```sql
 -- State table (source of truth for reads)
-CREATE TABLE albums (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
-    title TEXT NOT NULL,
+CREATE TABLE albums
+(
+    id          UUID PRIMARY KEY,
+    user_id     UUID      NOT NULL,
+    title       TEXT      NOT NULL,
     description TEXT,
-    version BIGINT NOT NULL DEFAULT 0,  -- Optimistic locking
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    version     BIGINT    NOT NULL DEFAULT 0, -- Optimistic locking
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- Events table (audit trail + event bus source)
-CREATE TABLE domain_events (
-    id BIGSERIAL PRIMARY KEY,
-    aggregate_id UUID NOT NULL,
-    aggregate_type TEXT NOT NULL,
-    event_type TEXT NOT NULL,
-    event_data JSONB NOT NULL,
-    metadata JSONB,
-    version BIGINT NOT NULL,  -- Per-aggregate version
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    published_at TIMESTAMP,   -- NULL = not published yet
-    UNIQUE(aggregate_id, version)
+CREATE TABLE domain_events
+(
+    id             BIGSERIAL PRIMARY KEY,
+    aggregate_id   UUID      NOT NULL,
+    aggregate_type TEXT      NOT NULL,
+    event_type     TEXT      NOT NULL,
+    event_data     JSONB     NOT NULL,
+    metadata       JSONB,
+    version        BIGINT    NOT NULL, -- Per-aggregate version
+    created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+    published_at   TIMESTAMP,          -- NULL = not published yet
+    UNIQUE (aggregate_id, version)
 );
 
-CREATE INDEX idx_events_aggregate ON domain_events(aggregate_id, version);
-CREATE INDEX idx_events_unpublished ON domain_events(published_at) WHERE published_at IS NULL;
-CREATE INDEX idx_events_type ON domain_events(event_type, created_at);
+CREATE INDEX idx_events_aggregate ON domain_events (aggregate_id, version);
+CREATE INDEX idx_events_unpublished ON domain_events (published_at) WHERE published_at IS NULL;
+CREATE INDEX idx_events_type ON domain_events (event_type, created_at);
 
 -- Read model (CQRS)
-CREATE TABLE album_list_view (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
-    title TEXT NOT NULL,
+CREATE TABLE album_list_view
+(
+    id            UUID PRIMARY KEY,
+    user_id       UUID      NOT NULL,
+    title         TEXT      NOT NULL,
     thumbnail_url TEXT,
-    media_count INT DEFAULT 0,
-    last_updated TIMESTAMP NOT NULL,
-    INDEX idx_user_albums (user_id, last_updated DESC)
+    media_count   INT DEFAULT 0,
+    last_updated  TIMESTAMP NOT NULL,
+    INDEX         idx_user_albums(user_id, last_updated DESC)
 );
 ```
 
 **Rust Implementation**:
+
 ```rust
 pub struct PostgresAlbumRepository {
     pool: PgPool,
@@ -102,23 +110,23 @@ impl AlbumRepository for PostgresAlbumRepository {
                 description = EXCLUDED.description,
                 version = EXCLUDED.version,
                 updated_at = NOW()
-             WHERE albums.version = $5 - 1"  -- Optimistic locking
+             WHERE albums.version = $5 - 1" - -Optimistic locking
         )
-        .bind(&album.id)
-        .bind(&album.user_id)
-        .bind(&album.title)
-        .bind(&album.description)
-        .bind(album.version as i64)
-        .bind(&album.created_at)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| {
-            if e.to_string().contains("no rows") {
-                Error::ConcurrencyConflict
-            } else {
-                Error::Database(e)
-            }
-        })?;
+            .bind(&album.id)
+            .bind(&album.user_id)
+            .bind(&album.title)
+            .bind(&album.description)
+            .bind(album.version as i64)
+            .bind(&album.created_at)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                if e.to_string().contains("no rows") {
+                    Error::ConcurrencyConflict
+                } else {
+                    Error::Database(e)
+                }
+            })?;
 
         // 2. Save events (audit trail)
         for (i, event) in events.iter().enumerate() {
@@ -127,17 +135,17 @@ impl AlbumRepository for PostgresAlbumRepository {
                  (aggregate_id, aggregate_type, event_type, event_data, metadata, version, created_at)
                  VALUES ($1, $2, $3, $4, $5, $6, NOW())"
             )
-            .bind(&album.id)
-            .bind("Album")
-            .bind(event.event_type())
-            .bind(serde_json::to_value(event)?)
-            .bind(serde_json::json!({
+                .bind(&album.id)
+                .bind("Album")
+                .bind(event.event_type())
+                .bind(serde_json::to_value(event)?)
+                .bind(serde_json::json!({
                 "user_id": album.user_id,
                 "correlation_id": uuid::Uuid::new_v4()
             }))
-            .bind((album.version - events.len() as u64 + i as u64) as i64)
-            .execute(&mut *tx)
-            .await?;
+                .bind((album.version - events.len() as u64 + i as u64) as i64)
+                .execute(&mut *tx)
+                .await?;
         }
 
         tx.commit().await?;
@@ -155,9 +163,9 @@ impl AlbumRepository for PostgresAlbumRepository {
         let row = sqlx::query_as::<_, AlbumRow>(
             "SELECT * FROM albums WHERE id = $1"
         )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?;
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(row.map(|r| r.into_domain()))
     }
@@ -169,12 +177,12 @@ impl AlbumRepository for PostgresAlbumRepository {
              WHERE aggregate_id = $1 AND aggregate_type = 'Album'
              ORDER BY version ASC"
         )
-        .bind(id)
-        .fetch_all(&self.pool)
-        .await?
-        .into_iter()
-        .map(|row: EventRow| serde_json::from_value(row.event_data))
-        .collect::<Result<Vec<_>, _>>()?;
+            .bind(id)
+            .fetch_all(&self.pool)
+            .await?
+            .into_iter()
+            .map(|row: EventRow| serde_json::from_value(row.event_data))
+            .collect::<Result<Vec<_>, _>>()?;
 
         if events.is_empty() {
             return Ok(None);
@@ -188,6 +196,7 @@ impl AlbumRepository for PostgresAlbumRepository {
 #### Pros & Cons
 
 **✅ Advantages**:
+
 - **Simple**: One database, familiar SQL patterns
 - **ACID Transactions**: State + events saved atomically
 - **Fast Reads**: Direct table queries, no event replay
@@ -199,6 +208,7 @@ impl AlbumRepository for PostgresAlbumRepository {
 - **Audit Trail**: Events table provides history
 
 **❌ Disadvantages**:
+
 - **Not Pure Event Sourcing**: State is source of truth, not events
 - **Storage Overhead**: Duplicate data (state + events)
 - **Event Replay**: Not optimized for reconstructing from events
@@ -207,6 +217,7 @@ impl AlbumRepository for PostgresAlbumRepository {
 - **Event Ordering**: Across aggregates requires careful timestamp handling
 
 #### When to Use
+
 - ✅ Starting a new project
 - ✅ Single application deployments
 - ✅ Need audit trail but not full event sourcing
@@ -215,12 +226,14 @@ impl AlbumRepository for PostgresAlbumRepository {
 - ✅ Want to iterate quickly
 
 #### Performance Characteristics
+
 - **Writes**: ~5-10k events/sec (single instance)
 - **Reads**: Fast (indexed state tables)
 - **Event Replay**: Slow (not optimized for this)
 - **Storage**: 2x (state + events)
 
 #### Cost Analysis
+
 - **Infrastructure**: $0 (uses existing PostgreSQL)
 - **Development**: Low (familiar patterns)
 - **Operations**: Low (standard PostgreSQL ops)
@@ -231,9 +244,12 @@ impl AlbumRepository for PostgresAlbumRepository {
 ### 2. EventStoreDB
 
 #### Overview
-Purpose-built database specifically designed for event sourcing. Events are the source of truth, state is derived.
+
+Purpose-built database specifically designed for event sourcing. Events are the source of truth,
+state is derived.
 
 #### Architecture
+
 ```
 Command → Aggregate → Events
                         ↓
@@ -251,6 +267,7 @@ Command → Aggregate → Events
 #### Implementation Details
 
 **Setup**:
+
 ```yaml
 # docker-compose.yml
 services:
@@ -269,9 +286,9 @@ services:
       - eventstore-data:/var/lib/eventstore
       - eventstore-logs:/var/log/eventstore
     networks:
-      - photonic
+      - infrastructure
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:2113/health/live || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost:2113/health/live || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -282,6 +299,7 @@ volumes:
 ```
 
 **Rust Implementation**:
+
 ```rust
 use eventstore::{Client, EventData, ReadStreamOptions, StreamPosition, ExpectedRevision};
 
@@ -319,8 +337,8 @@ impl EventStore for EventStoreDbAdapter {
                     event.event_type(),
                     event
                 )
-                .expect("Failed to serialize event")
-                .metadata_as_json(serde_json::json!({
+                    .expect("Failed to serialize event")
+                    .metadata_as_json(serde_json::json!({
                     "aggregate_id": aggregate_id,
                     "aggregate_type": aggregate_type,
                     "timestamp": chrono::Utc::now(),
@@ -443,11 +461,11 @@ impl AlbumProjectionHandler {
                      (id, user_id, title, thumbnail_url, media_count, last_updated)
                      VALUES ($1, $2, $3, NULL, 0, NOW())"
                 )
-                .bind(&e.album_id)
-                .bind(&e.user_id)
-                .bind(&e.title)
-                .execute(&self.pool)
-                .await?;
+                    .bind(&e.album_id)
+                    .bind(&e.user_id)
+                    .bind(&e.title)
+                    .execute(&self.pool)
+                    .await?;
             }
             DomainEvent::MediumAddedToAlbum(e) => {
                 sqlx::query(
@@ -456,9 +474,9 @@ impl AlbumProjectionHandler {
                          last_updated = NOW()
                      WHERE id = $1"
                 )
-                .bind(&e.album_id)
-                .execute(&self.pool)
-                .await?;
+                    .bind(&e.album_id)
+                    .execute(&self.pool)
+                    .await?;
             }
             _ => {}
         }
@@ -471,6 +489,7 @@ impl AlbumProjectionHandler {
 #### Pros & Cons
 
 **✅ Advantages**:
+
 - **True Event Sourcing**: Events are source of truth
 - **Time Travel**: Query state at any point in history
 - **Optimized for ES**: Append-only, optimistic concurrency built-in
@@ -483,6 +502,7 @@ impl AlbumProjectionHandler {
 - **Tooling**: Web UI, event browser, stream viewer
 
 **❌ Disadvantages**:
+
 - **Additional Infrastructure**: Another database to manage
 - **Learning Curve**: Event sourcing concepts
 - **Event Replay Cost**: CPU intensive for large streams
@@ -493,6 +513,7 @@ impl AlbumProjectionHandler {
 - **Operational Overhead**: Monitoring, backups, clustering
 
 #### When to Use
+
 - ✅ Need complete audit trail with time travel
 - ✅ Complex domain with many state transitions
 - ✅ Regulatory compliance (financial, healthcare)
@@ -502,12 +523,14 @@ impl AlbumProjectionHandler {
 - ✅ Want to analyze event patterns
 
 #### Performance Characteristics
+
 - **Writes**: ~15k events/sec (single node), ~100k+ (cluster)
 - **Reads**: Fast subscriptions, moderate replay (depends on stream size)
 - **Event Replay**: Optimized with snapshots
 - **Storage**: Efficient (append-only, compressed)
 
 #### Cost Analysis
+
 - **Infrastructure**: $$ (Docker: ~$50-100/mo, Cloud: $200-500/mo)
 - **Development**: Medium (learning curve)
 - **Operations**: Medium (monitoring, backups, upgrades)
@@ -518,9 +541,12 @@ impl AlbumProjectionHandler {
 ### 3. NATS JetStream
 
 #### Overview
-Lightweight, cloud-native messaging system with persistence. Good middle ground between simplicity and capability.
+
+Lightweight, cloud-native messaging system with persistence. Good middle ground between simplicity
+and capability.
 
 #### Architecture
+
 ```
 Command → Aggregate → Events
                         ↓
@@ -538,6 +564,7 @@ Command → Aggregate → Events
 #### Implementation Details
 
 **Setup**:
+
 ```yaml
 # docker-compose.yml
 services:
@@ -553,9 +580,9 @@ services:
     volumes:
       - nats-data:/data
     networks:
-      - photonic
+      - infrastructure
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -565,6 +592,7 @@ volumes:
 ```
 
 **Rust Implementation**:
+
 ```rust
 use async_nats::{Client, jetstream};
 use futures::StreamExt;
@@ -744,6 +772,7 @@ impl NatsSnapshotStore {
 #### Pros & Cons
 
 **✅ Advantages**:
+
 - **Lightweight**: Small footprint (~20MB binary)
 - **Simple Operations**: Easy to deploy and manage
 - **Performance**: ~1M+ msgs/sec
@@ -756,6 +785,7 @@ impl NatsSnapshotStore {
 - **At-Least-Once Delivery**: Consumer ack tracking
 
 **❌ Disadvantages**:
+
 - **Not Purpose-Built for ES**: No native event sourcing features
 - **Limited Querying**: No complex event queries
 - **No Time Travel**: Can't easily query past state
@@ -766,6 +796,7 @@ impl NatsSnapshotStore {
 - **No Native Projections**: Must build projection infrastructure
 
 #### When to Use
+
 - ✅ Want lightweight messaging + events
 - ✅ Need fast pub/sub with persistence
 - ✅ Prefer simplicity over advanced ES features
@@ -774,12 +805,14 @@ impl NatsSnapshotStore {
 - ✅ Team familiar with messaging systems
 
 #### Performance Characteristics
+
 - **Writes**: ~100k-1M+ messages/sec
 - **Reads**: Fast subscriptions
 - **Event Replay**: Good with snapshots
 - **Storage**: Efficient (compressed)
 
 #### Cost Analysis
+
 - **Infrastructure**: $ (Docker: ~$20-40/mo, Cloud: $50-150/mo)
 - **Development**: Medium (need to build ES patterns)
 - **Operations**: Low (simple to manage)
@@ -790,9 +823,12 @@ impl NatsSnapshotStore {
 ### 4. Apache Kafka
 
 #### Overview
-Distributed event streaming platform. Massive scale, high complexity. Overkill for single application.
+
+Distributed event streaming platform. Massive scale, high complexity. Overkill for single
+application.
 
 #### Architecture
+
 ```
 Command → Aggregate → Events
                         ↓
@@ -811,6 +847,7 @@ Command → Aggregate → Events
 #### Implementation Details
 
 **Setup**:
+
 ```yaml
 # docker-compose.yml (minimal setup)
 services:
@@ -856,6 +893,7 @@ volumes:
 ```
 
 **Rust Implementation**:
+
 ```rust
 use rdkafka::{
     producer::{FutureProducer, FutureRecord},
@@ -880,7 +918,7 @@ impl KafkaEventStore {
 
         let consumer: StreamConsumer = ClientConfig::new()
             .set("bootstrap.servers", brokers)
-            .set("group.id", "photonic-projections")
+            .set("group.id", "infrastructure-projections")
             .set("enable.auto.commit", "false")  // Manual commit
             .set("auto.offset.reset", "earliest")
             .create()?;
@@ -972,6 +1010,7 @@ impl EventStore for KafkaEventStore {
 #### Pros & Cons
 
 **✅ Advantages**:
+
 - **Massive Scale**: Millions of events/sec
 - **Battle-Tested**: Used by LinkedIn, Netflix, Uber
 - **Distributed**: Built for horizontal scaling
@@ -982,6 +1021,7 @@ impl EventStore for KafkaEventStore {
 - **Compaction**: Log compaction for snapshots
 
 **❌ Disadvantages**:
+
 - **Extreme Complexity**: Requires Zookeeper/KRaft, schema registry
 - **Resource Heavy**: High memory/CPU usage
 - **Operational Burden**: Complex to tune and maintain
@@ -992,6 +1032,7 @@ impl EventStore for KafkaEventStore {
 - **Query Limitations**: Not designed for random access
 
 #### When to Use
+
 - ✅ Building distributed microservices platform
 - ✅ Need millions of events/sec
 - ✅ Have dedicated platform team
@@ -1000,12 +1041,14 @@ impl EventStore for KafkaEventStore {
 - ❌ **Single application** (use something simpler)
 
 #### Performance Characteristics
+
 - **Writes**: ~1M+ events/sec (cluster)
 - **Reads**: Fast streaming, poor random access
 - **Event Replay**: Good with consumer groups
 - **Storage**: Efficient with compaction
 
 #### Cost Analysis
+
 - **Infrastructure**: $$$ (Cloud: $500-2000+/mo)
 - **Development**: High (complexity)
 - **Operations**: High (requires expertise)
@@ -1016,9 +1059,11 @@ impl EventStore for KafkaEventStore {
 ### 5. Redis Streams
 
 #### Overview
+
 Redis data structure for log-style data. Fast, simple, but limited persistence guarantees.
 
 #### Architecture
+
 ```
 Command → Aggregate → Events
                         ↓
@@ -1036,6 +1081,7 @@ Command → Aggregate → Events
 #### Implementation Details
 
 **Rust Implementation**:
+
 ```rust
 use redis::{Client, AsyncCommands, streams::{StreamReadOptions, StreamReadReply}};
 
@@ -1108,6 +1154,7 @@ impl EventStore for RedisEventStore {
 #### Pros & Cons
 
 **✅ Advantages**:
+
 - **Very Fast**: In-memory performance
 - **Simple**: Easy to understand and use
 - **Lightweight**: No complex setup
@@ -1116,6 +1163,7 @@ impl EventStore for RedisEventStore {
 - **Real-time**: Low latency
 
 **❌ Disadvantages**:
+
 - **Persistence**: Optional, not guaranteed (AOF/RDB)
 - **Limited Storage**: Memory-bound
 - **Data Loss Risk**: If Redis crashes
@@ -1125,17 +1173,20 @@ impl EventStore for RedisEventStore {
 - **Cost**: Memory is expensive at scale
 
 #### When to Use
+
 - ⚠️ Not recommended for event sourcing source of truth
 - ✅ Good for: Real-time event bus, cache layer
 - ✅ Combined with persistent event store
 
 #### Performance Characteristics
+
 - **Writes**: ~100k+ ops/sec
 - **Reads**: Very fast
 - **Event Replay**: Limited by memory
 - **Storage**: Memory-bound
 
 #### Cost Analysis
+
 - **Infrastructure**: $$ (Memory expensive)
 - **Development**: Low
 - **Operations**: Low
@@ -1147,18 +1198,18 @@ impl EventStore for RedisEventStore {
 
 ### For Photonic (Your Photo App)
 
-| Requirement | PostgreSQL + Domain Events | EventStoreDB | NATS JetStream | Kafka | Redis |
-|-------------|---------------------------|--------------|----------------|-------|-------|
-| **Audit Trail** | ✅ Good | ✅ Excellent | ✅ Good | ✅ Excellent | ⚠️ Limited |
-| **Time Travel** | ⚠️ Manual | ✅ Native | ⚠️ Manual | ⚠️ Manual | ❌ No |
-| **Simplicity** | ✅ Very Simple | ⚠️ Medium | ✅ Simple | ❌ Complex | ✅ Simple |
-| **ACID Transactions** | ✅ Yes | ⚠️ Per stream | ⚠️ Per subject | ❌ No | ⚠️ Limited |
-| **Query Performance** | ✅ Excellent | ⚠️ Need projections | ⚠️ Need projections | ⚠️ Need projections | ✅ Fast |
-| **Single App Fit** | ✅ Perfect | ✅ Good | ✅ Good | ❌ Overkill | ⚠️ As cache only |
-| **Operational Complexity** | ✅ Low | ⚠️ Medium | ✅ Low | ❌ High | ✅ Low |
-| **Cost** | ✅ $ | ⚠️ $$ | ✅ $ | ❌ $$$ | ⚠️ $$ |
-| **Rust Ecosystem** | ✅ Excellent | ✅ Good | ✅ Excellent | ⚠️ OK | ✅ Good |
-| **Photo Processing** | ✅ Great | ✅ Good | ✅ Good | ⚠️ Overkill | ⚠️ Limited |
+| Requirement                | PostgreSQL + Domain Events | EventStoreDB        | NATS JetStream      | Kafka               | Redis            |
+|----------------------------|----------------------------|---------------------|---------------------|---------------------|------------------|
+| **Audit Trail**            | ✅ Good                     | ✅ Excellent         | ✅ Good              | ✅ Excellent         | ⚠️ Limited       |
+| **Time Travel**            | ⚠️ Manual                  | ✅ Native            | ⚠️ Manual           | ⚠️ Manual           | ❌ No             |
+| **Simplicity**             | ✅ Very Simple              | ⚠️ Medium           | ✅ Simple            | ❌ Complex           | ✅ Simple         |
+| **ACID Transactions**      | ✅ Yes                      | ⚠️ Per stream       | ⚠️ Per subject      | ❌ No                | ⚠️ Limited       |
+| **Query Performance**      | ✅ Excellent                | ⚠️ Need projections | ⚠️ Need projections | ⚠️ Need projections | ✅ Fast           |
+| **Single App Fit**         | ✅ Perfect                  | ✅ Good              | ✅ Good              | ❌ Overkill          | ⚠️ As cache only |
+| **Operational Complexity** | ✅ Low                      | ⚠️ Medium           | ✅ Low               | ❌ High              | ✅ Low            |
+| **Cost**                   | ✅ $                        | ⚠️ $$               | ✅ $                 | ❌ $$$               | ⚠️ $$            |
+| **Rust Ecosystem**         | ✅ Excellent                | ✅ Good              | ✅ Excellent         | ⚠️ OK               | ✅ Good           |
+| **Photo Processing**       | ✅ Great                    | ✅ Good              | ✅ Good              | ⚠️ Overkill         | ⚠️ Limited       |
 
 ---
 
@@ -1167,6 +1218,7 @@ impl EventStore for RedisEventStore {
 ### Phase 1: Start (Current State) - **PostgreSQL + Domain Events**
 
 **Why:**
+
 - You already have PostgreSQL
 - Simple to implement
 - Fast iteration
@@ -1175,6 +1227,7 @@ impl EventStore for RedisEventStore {
 - Easy to test and debug
 
 **What you get:**
+
 - Domain events for integration
 - Audit trail in events table
 - CQRS read models
@@ -1182,6 +1235,7 @@ impl EventStore for RedisEventStore {
 - All DDD benefits
 
 **Implementation:**
+
 ```rust
 // Your current architecture already supports this!
 // Just add the events table and event bus
@@ -1201,13 +1255,13 @@ impl EventRepository for PostgresEventRepository {
                  (aggregate_id, aggregate_type, event_type, event_data, version, created_at)
                  VALUES ($1, $2, $3, $4, $5, NOW())"
             )
-            .bind(event.aggregate_id())
-            .bind(event.aggregate_type())
-            .bind(event.event_type())
-            .bind(serde_json::to_value(event)?)
-            .bind(event.version() as i64)
-            .execute(&mut *tx)
-            .await?;
+                .bind(event.aggregate_id())
+                .bind(event.aggregate_type())
+                .bind(event.event_type())
+                .bind(serde_json::to_value(event)?)
+                .bind(event.version() as i64)
+                .execute(&mut *tx)
+                .await?;
         }
 
         tx.commit().await?;
@@ -1221,6 +1275,7 @@ impl EventRepository for PostgresEventRepository {
 ### Phase 2: Scale (Future, if needed) - **Add EventStoreDB**
 
 **When to upgrade:**
+
 - Need time-travel queries
 - Regulatory compliance requires immutable audit log
 - Want to replay events for debugging
@@ -1228,6 +1283,7 @@ impl EventRepository for PostgresEventRepository {
 - Write volume exceeds PostgreSQL capacity (>10k writes/sec)
 
 **Migration path:**
+
 1. Deploy EventStoreDB alongside PostgreSQL
 2. Start writing events to both (dual-write pattern)
 3. Migrate projections to read from EventStoreDB
@@ -1239,6 +1295,7 @@ impl EventRepository for PostgresEventRepository {
 ### Phase 3: Distributed (Far future) - **NATS JetStream or Kafka**
 
 **When to upgrade:**
+
 - Breaking into microservices
 - Need cross-service event streaming
 - Multiple teams/services consuming events
@@ -1249,6 +1306,7 @@ impl EventRepository for PostgresEventRepository {
 ## Sample Implementation Timeline
 
 ### Week 1-2: PostgreSQL + Domain Events ✅
+
 ```
 ✅ Add domain_events table
 ✅ Implement EventRepository
@@ -1259,6 +1317,7 @@ impl EventRepository for PostgresEventRepository {
 ```
 
 ### Week 3-4: CQRS Read Models
+
 ```
 ✅ Identify read-heavy queries
 ✅ Create optimized read models
@@ -1267,6 +1326,7 @@ impl EventRepository for PostgresEventRepository {
 ```
 
 ### Month 2-3: Monitoring & Refinement
+
 ```
 ✅ Add event monitoring
 ✅ Track projection lag
@@ -1275,6 +1335,7 @@ impl EventRepository for PostgresEventRepository {
 ```
 
 ### Future (only if needed): EventStoreDB
+
 ```
 ⏳ Evaluate need
 ⏳ Deploy EventStoreDB
@@ -1288,40 +1349,44 @@ impl EventRepository for PostgresEventRepository {
 ## Code Examples for PostgreSQL Approach
 
 ### Migration
+
 ```sql
 -- migrations/add_domain_events.sql
-CREATE TABLE domain_events (
-    id BIGSERIAL PRIMARY KEY,
-    aggregate_id UUID NOT NULL,
-    aggregate_type TEXT NOT NULL,
-    event_type TEXT NOT NULL,
-    event_data JSONB NOT NULL,
-    metadata JSONB,
-    version BIGINT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    published_at TIMESTAMP,
-    UNIQUE(aggregate_id, version)
+CREATE TABLE domain_events
+(
+    id             BIGSERIAL PRIMARY KEY,
+    aggregate_id   UUID      NOT NULL,
+    aggregate_type TEXT      NOT NULL,
+    event_type     TEXT      NOT NULL,
+    event_data     JSONB     NOT NULL,
+    metadata       JSONB,
+    version        BIGINT    NOT NULL,
+    created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+    published_at   TIMESTAMP,
+    UNIQUE (aggregate_id, version)
 );
 
-CREATE INDEX idx_events_aggregate ON domain_events(aggregate_id, version);
-CREATE INDEX idx_events_type ON domain_events(event_type, created_at);
-CREATE INDEX idx_events_unpublished ON domain_events(created_at) WHERE published_at IS NULL;
+CREATE INDEX idx_events_aggregate ON domain_events (aggregate_id, version);
+CREATE INDEX idx_events_type ON domain_events (event_type, created_at);
+CREATE INDEX idx_events_unpublished ON domain_events (created_at) WHERE published_at IS NULL;
 
 -- Read model
-CREATE TABLE album_list_view (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
-    title TEXT NOT NULL,
+CREATE TABLE album_list_view
+(
+    id            UUID PRIMARY KEY,
+    user_id       UUID      NOT NULL,
+    title         TEXT      NOT NULL,
     thumbnail_url TEXT,
-    media_count INT DEFAULT 0,
-    created_at TIMESTAMP NOT NULL,
-    last_updated TIMESTAMP NOT NULL,
-    INDEX idx_user_albums (user_id, last_updated DESC),
-    INDEX idx_search (title)
+    media_count   INT DEFAULT 0,
+    created_at    TIMESTAMP NOT NULL,
+    last_updated  TIMESTAMP NOT NULL,
+    INDEX         idx_user_albums(user_id, last_updated DESC),
+    INDEX         idx_search(title)
 );
 ```
 
 ### Domain Event Definition
+
 ```rust
 // src/shared/event.rs
 use serde::{Deserialize, Serialize};
@@ -1384,6 +1449,7 @@ Current State → PostgreSQL + Events → (if needed) EventStoreDB → (if neede
 ```
 
 **Why this is right for Photonic:**
+
 1. ✅ Single application requirement
 2. ✅ Photo management isn't ultra-high scale
 3. ✅ Team can be productive immediately
@@ -1392,4 +1458,5 @@ Current State → PostgreSQL + Events → (if needed) EventStoreDB → (if neede
 6. ✅ You keep all your existing PostgreSQL knowledge
 7. ✅ Can always upgrade later without rewriting domain logic
 
-The domain layer stays the same regardless of which storage you choose. That's the beauty of Hexagonal Architecture!
+The domain layer stays the same regardless of which storage you choose. That's the beauty of
+Hexagonal Architecture!

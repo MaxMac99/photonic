@@ -1,15 +1,16 @@
 openapi: 3.1.0
 info:
-  title: photonic
+  title: infrastructure
   description: ''
+  contact:
+    name: Max Vissing
   license:
-    name: MIT
-    identifier: MIT
+    name: ''
   version: 0.1.0
 servers:
 - url: http://localhost:8080
   description: Development server
-- url: https://photonic.mvissing.de
+- url: https://infrastructure.mvissing.de
   description: Staging server
 paths:
   /api/v1/medium:

@@ -1,0 +1,98 @@
+[package]
+name = "infrastructure"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "infrastructure"
+path = "src/main.rs"
+
+[dependencies]
+domain = { workspace = true }
+application = { workspace = true }
+async-trait.workspace = true
+async-channel.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tokio-stream.workspace = true
+futures.workspace = true
+futures-util.workspace = true
+future-wrap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+snafu.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+mime_serde_shim.workspace = true
+mime.workspace = true
+derive_setters.workspace = true
+derive_builder.workspace = true
+strum.workspace = true
+uuid.workspace = true
+byte-unit.workspace = true
+bytes.workspace = true
+chrono.workspace = true
+path-clean.workspace = true
+filenamify.workspace = true
+itertools.workspace = true
+axum.workspace = true
+axum-extra.workspace = true
+utoipa.workspace = true
+utoipa-swagger-ui.workspace = true
+utoipa-axum.workspace = true
+once_cell.workspace = true
+confique.workspace = true
+dotenv.workspace = true
+jwt-authorizer.workspace = true
+reqwest.workspace = true
+sqlx.workspace = true
+tower-http.workspace = true
+lazy_static.workspace = true
+convert_case.workspace = true
+pin-project-lite.workspace = true
+darling.workspace = true
+proc-macro2.workspace = true
+syn.workspace = true
+quote.workspace = true
+async-stream.workspace = true
+opentelemetry.workspace = true
+opentelemetry_sdk.workspace = true
+opentelemetry-otlp.workspace = true
+tracing-opentelemetry.workspace = true
+validator.workspace = true
+serde_html_form.workspace = true
+ammonia.workspace = true
+base64.workspace = true
+regex.workspace = true
+sha2.workspace = true
+hex.workspace = true
+mime_guess.workspace = true
+derive-new.workspace = true
+derive-getters.workspace = true
+serde_default_utils.workspace = true
+pin-project.workspace = true
+
+[dev-dependencies]
+mockall.workspace = true
+tokio-test.workspace = true
+proptest.workspace = true
+rstest.workspace = true
+fake.workspace = true
+wiremock.workspace = true
+tempfile.workspace = true
+reqwest = { workspace = true, features = ["json", "multipart"] }
+tower.workspace = true
+insta.workspace = true
+serial_test.workspace = true
+jsonwebtoken.workspace = true
+test-log.workspace = true
+photonic-client = { workspace = true }
+
+[build-dependencies]
+progenitor.workspace = true
+syn.workspace = true
+prettyplease.workspace = true
+openapiv3.workspace = true
+serde_yaml.workspace = true

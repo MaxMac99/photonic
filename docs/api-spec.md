@@ -78,7 +78,7 @@ Expected JWT payload structure:
   "email": "john@example.com",
   "quota": 10737418240,
   "iss": "https://idp.example.com",
-  "aud": "photonic-api",
+  "aud": "infrastructure-api",
   "exp": 1734361200,
   "iat": 1734357600
 }
