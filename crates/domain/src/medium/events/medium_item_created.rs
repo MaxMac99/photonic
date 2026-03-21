@@ -26,8 +26,4 @@ impl DomainEvent for MediumItemCreatedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.metadata
     }
-
-    fn event_type(&self) -> &'static str {
-        "MediumItemCreated"
-    }
 }

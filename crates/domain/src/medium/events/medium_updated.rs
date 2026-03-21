@@ -27,8 +27,4 @@ impl DomainEvent for MediumUpdatedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.metadata
     }
-
-    fn event_type(&self) -> &'static str {
-        "MediumUpdated"
-    }
 }

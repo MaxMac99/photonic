@@ -27,14 +27,6 @@ impl DomainEvent for MetadataEvent {
             MetadataEvent::ExtractionFailed(e) => e.metadata(),
         }
     }
-
-    fn event_type(&self) -> &'static str {
-        match self {
-            MetadataEvent::ExtractionStarted(e) => e.event_type(),
-            MetadataEvent::Extracted(e) => e.event_type(),
-            MetadataEvent::ExtractionFailed(e) => e.event_type(),
-        }
-    }
 }
 
 impl From<MetadataExtractionStartedEvent> for MetadataEvent {

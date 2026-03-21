@@ -22,8 +22,4 @@ impl DomainEvent for TaskStartedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.metadata
     }
-
-    fn event_type(&self) -> &'static str {
-        "TaskStarted"
-    }
 }

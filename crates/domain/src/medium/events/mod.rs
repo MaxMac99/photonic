@@ -28,14 +28,6 @@ impl DomainEvent for MediumEvent {
             MediumEvent::MediumUpdated(e) => e.metadata(),
         }
     }
-
-    fn event_type(&self) -> &'static str {
-        match self {
-            MediumEvent::MediumCreated(e) => e.event_type(),
-            MediumEvent::MediumItemCreated(e) => e.event_type(),
-            MediumEvent::MediumUpdated(e) => e.event_type(),
-        }
-    }
 }
 
 impl From<MediumCreatedEvent> for MediumEvent {

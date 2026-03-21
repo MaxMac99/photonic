@@ -36,16 +36,6 @@ impl DomainEvent for UserEvent {
             UserEvent::QuotaReleased(e) => e.metadata(),
         }
     }
-
-    fn event_type(&self) -> &'static str {
-        match self {
-            UserEvent::UserCreated(e) => e.event_type(),
-            UserEvent::UserUpdated(e) => e.event_type(),
-            UserEvent::QuotaReserved(e) => e.event_type(),
-            UserEvent::QuotaCommitted(e) => e.event_type(),
-            UserEvent::QuotaReleased(e) => e.event_type(),
-        }
-    }
 }
 
 impl From<UserCreatedEvent> for UserEvent {

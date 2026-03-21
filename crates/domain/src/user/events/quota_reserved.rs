@@ -21,8 +21,4 @@ impl DomainEvent for QuotaReservedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.metadata
     }
-
-    fn event_type(&self) -> &'static str {
-        "QuotaReserved"
-    }
 }

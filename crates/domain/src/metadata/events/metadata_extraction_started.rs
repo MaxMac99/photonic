@@ -21,8 +21,4 @@ impl DomainEvent for MetadataExtractionStartedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.event_metadata
     }
-
-    fn event_type(&self) -> &'static str {
-        "MetadataExtractionStarted"
-    }
 }

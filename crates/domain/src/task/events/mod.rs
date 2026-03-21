@@ -31,15 +31,6 @@ impl DomainEvent for TaskEvent {
             TaskEvent::TaskFailed(e) => e.metadata(),
         }
     }
-
-    fn event_type(&self) -> &'static str {
-        match self {
-            TaskEvent::TaskCreated(e) => e.event_type(),
-            TaskEvent::TaskStarted(e) => e.event_type(),
-            TaskEvent::TaskCompleted(e) => e.event_type(),
-            TaskEvent::TaskFailed(e) => e.event_type(),
-        }
-    }
 }
 
 impl From<TaskCreatedEvent> for TaskEvent {

@@ -21,7 +21,4 @@ impl Default for EventMetadata {
 
 pub trait DomainEvent: Send + Sync + Clone + Debug {
     fn metadata(&self) -> &EventMetadata;
-
-    /// Discriminator string for event type routing (e.g., "MediumCreated")
-    fn event_type(&self) -> &'static str;
 }

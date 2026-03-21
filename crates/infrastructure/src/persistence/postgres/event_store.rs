@@ -6,10 +6,10 @@ use domain::{
     aggregate::{AggregateRoot, AggregateVersion},
     event::DomainEvent,
 };
-use serde::{de::DeserializeOwned, Serialize};
 use sqlx::{PgPool, Row};
 
 use super::repo_error;
+use crate::events::StorableEvent;
 
 pub struct PostgresEventStore<A: AggregateRoot> {
     pool: PgPool,
@@ -29,7 +29,7 @@ impl<A: AggregateRoot> PostgresEventStore<A> {
 impl<A> EventStore<A> for PostgresEventStore<A>
 where
     A: AggregateRoot + 'static,
-    A::Event: Serialize + DeserializeOwned,
+    A::Event: StorableEvent,
 {
     async fn load_events(
         &self,
@@ -80,6 +80,7 @@ where
 
         for (i, event) in events.iter().enumerate() {
             let version = expected_version + i as i64 + 1;
+            let event_type = event.event_type_name();
             let payload = serde_json::to_value(event).map_err(|e| {
                 application::error::ApplicationError::Internal {
                     message: format!("Failed to serialize event: {}", e),
@@ -92,7 +93,7 @@ where
             )
             .bind(&stream_id)
             .bind(version)
-            .bind(event.event_type())
+            .bind(event_type)
             .bind(&payload)
             .bind(metadata.event_id)
             .bind(metadata.occurred_at)

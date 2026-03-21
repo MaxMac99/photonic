@@ -22,8 +22,4 @@ impl DomainEvent for TaskCompletedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.metadata
     }
-
-    fn event_type(&self) -> &'static str {
-        "TaskCompleted"
-    }
 }

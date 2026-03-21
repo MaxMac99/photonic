@@ -24,8 +24,4 @@ impl DomainEvent for TaskFailedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.metadata
     }
-
-    fn event_type(&self) -> &'static str {
-        "TaskFailed"
-    }
 }
