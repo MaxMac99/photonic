@@ -1,6 +1,8 @@
+pub mod event_store;
 mod groups;
 pub mod medium;
 pub mod metadata;
+pub mod snapshot_store;
 pub mod task;
 pub mod user;
 

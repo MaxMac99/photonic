@@ -1,8 +1,11 @@
+pub mod aggregate_repository;
 pub mod config;
 pub mod error;
 pub mod event_bus;
+pub mod event_store;
 pub mod medium;
 pub mod metadata;
+pub mod snapshot_store;
 pub mod system;
 pub mod task;
 pub mod user;

@@ -20,6 +20,12 @@ pub enum ApplicationError {
         message: String,
         backtrace: Backtrace,
     },
+
+    #[snafu(display("Internal error: {message}"))]
+    Internal { message: String },
+
+    #[snafu(display("Concurrency conflict: {message}"))]
+    Conflict { message: String },
 }
 
 pub type ApplicationResult<T> = Result<T, ApplicationError>;
@@ -32,6 +38,9 @@ pub fn format_error_with_backtrace(error: &ApplicationError) -> String {
         ApplicationError::Domain { source } => {
             // Delegate to domain error formatter
             format_domain_error(source)
+        }
+        ApplicationError::Internal { message } | ApplicationError::Conflict { message } => {
+            message.clone()
         }
         _ => {
             let mut output = error.to_string();
