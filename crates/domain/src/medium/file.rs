@@ -1,10 +1,11 @@
 use std::path::Path;
 
+use serde::{Deserialize, Serialize};
 use snafu::ensure;
 
 use crate::error::{DomainResult, ValidationSnafu};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Dimensions {
     width: u32,
     height: u32,
@@ -89,7 +90,7 @@ impl std::fmt::Display for Dimensions {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Filename(String);
 
 impl Filename {
@@ -194,7 +195,7 @@ impl std::fmt::Display for Filename {
 
 /// Priority value object for MediumItem ordering
 /// Lower numbers = higher priority (e.g., 0 is highest priority)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Priority(i32);
 
 impl Priority {

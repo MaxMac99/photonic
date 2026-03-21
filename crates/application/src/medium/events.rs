@@ -20,6 +20,10 @@ impl DomainEvent for TempCleanupStartedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.metadata
     }
+
+    fn event_type(&self) -> &'static str {
+        "TempCleanupStarted"
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +47,10 @@ impl DomainEvent for TempCleanupCompletedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.metadata
     }
+
+    fn event_type(&self) -> &'static str {
+        "TempCleanupCompleted"
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -65,5 +73,9 @@ impl TempCleanupFailedEvent {
 impl DomainEvent for TempCleanupFailedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.metadata
+    }
+
+    fn event_type(&self) -> &'static str {
+        "TempCleanupFailed"
     }
 }

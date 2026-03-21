@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, FixedOffset, Utc};
 use mime::Mime;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
@@ -15,7 +16,7 @@ use crate::{
 pub type MetadataId = Uuid;
 
 /// Metadata entity - owns full EXIF data for a medium
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metadata {
     pub id: MetadataId,
     pub medium_id: MediumId,
@@ -27,14 +28,15 @@ pub struct Metadata {
     pub additional: HashMap<String, String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileInfo {
+    #[serde(with = "crate::serde_helpers::mime_serde")]
     pub mime_type: Mime,
     pub file_size: u64,
     pub file_modified_at: Option<DateTime<FixedOffset>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CameraInfo {
     pub make: Option<String>,
     pub model: Option<String>,
@@ -49,7 +51,7 @@ pub struct CameraInfo {
     pub flash: Option<bool>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocationInfo {
     pub latitude: f64,
     pub longitude: f64,
@@ -58,14 +60,14 @@ pub struct LocationInfo {
     pub horizontal_position_error: Option<f64>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TechnicalInfo {
     pub width: Option<u32>,
     pub height: Option<u32>,
     pub orientation: Option<Orientation>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Orientation {
     Normal,
     MirrorHorizontal,

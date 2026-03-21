@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use snafu::OptionExt;
 use uuid::Uuid;
 
@@ -11,7 +12,7 @@ use crate::{
 
 pub type TaskId = Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: TaskId,
     pub task_type: TaskType,

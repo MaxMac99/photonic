@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 /// SHA-256 checksum (32 bytes)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Sha256([u8; 32]);
 
 impl Sha256 {

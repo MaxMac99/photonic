@@ -1,5 +1,6 @@
 use byte_unit::Byte;
 use derive_builder::Builder;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     event::{DomainEvent, EventMetadata},
@@ -7,7 +8,7 @@ use crate::{
 };
 
 /// Event published when user profile is updated (username, email, or quota limit)
-#[derive(Debug, Clone, Builder)]
+#[derive(Debug, Clone, Builder, Serialize, Deserialize)]
 #[builder(setter(into, strip_option))]
 pub struct UserUpdatedEvent {
     pub user_id: UserId,
@@ -30,5 +31,9 @@ pub struct UserUpdatedEvent {
 impl DomainEvent for UserUpdatedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.metadata
+    }
+
+    fn event_type(&self) -> &'static str {
+        "UserUpdated"
     }
 }

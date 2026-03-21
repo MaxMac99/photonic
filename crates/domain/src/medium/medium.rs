@@ -1,6 +1,7 @@
 use byte_unit::Byte;
 use chrono::{DateTime, FixedOffset, Utc};
 use mime::Mime;
+use serde::{Deserialize, Serialize};
 use snafu::ensure;
 use uuid::Uuid;
 
@@ -18,7 +19,7 @@ use crate::{
 pub type MediumId = Uuid;
 pub type MediumItemId = Uuid;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub enum MediumType {
     Photo,
     Video,
@@ -29,7 +30,7 @@ pub enum MediumType {
     Other,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum MediumItemType {
     Original,
     Edit,
@@ -49,7 +50,7 @@ impl From<Mime> for MediumType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Medium {
     pub id: MediumId,
     pub owner_id: UserId,
@@ -65,7 +66,7 @@ pub struct Medium {
 }
 
 /// Read model for listing media - optimized for list queries without full details
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MediumListItem {
     pub id: MediumId,
     pub owner_id: UserId,
@@ -160,20 +161,29 @@ impl Medium {
         camera_model: Option<String>,
         gps_coordinates: Option<GpsCoordinates>,
     ) -> MediumUpdatedEvent {
+        let event = MediumUpdatedEvent::new(
+            self.id,
+            self.owner_id,
+            taken_at.clone(),
+            camera_make.clone(),
+            camera_model.clone(),
+            gps_coordinates,
+        );
         self.taken_at = taken_at;
         self.camera_make = camera_make;
         self.camera_model = camera_model;
         self.gps_coordinates = gps_coordinates;
         self.updated_at = Utc::now();
-        MediumUpdatedEvent::new(self.id, self.owner_id)
+        event
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MediumItem {
     pub id: MediumItemId,
     pub medium_id: MediumId,
     pub medium_item_type: MediumItemType,
+    #[serde(with = "crate::serde_helpers::mime_serde")]
     pub mime: Mime,
     pub filename: Filename,
     pub filesize: Byte,

@@ -1,5 +1,6 @@
 use byte_unit::Byte;
 use derive_builder::Builder;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::{
@@ -13,7 +14,7 @@ use crate::error::DomainResult;
 
 pub type UserId = Uuid;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct User {
     pub id: UserId,
     pub version: i64,

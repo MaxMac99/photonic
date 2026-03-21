@@ -1,5 +1,6 @@
 use byte_unit::Byte;
 use derive_new::new;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
@@ -7,7 +8,7 @@ use crate::{
     user::UserId,
 };
 
-#[derive(new, Debug, Clone)]
+#[derive(new, Debug, Clone, Serialize, Deserialize)]
 #[new(visibility = "pub(crate)")]
 pub struct QuotaReleasedEvent {
     pub user_id: UserId,
@@ -21,5 +22,9 @@ pub struct QuotaReleasedEvent {
 impl DomainEvent for QuotaReleasedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.metadata
+    }
+
+    fn event_type(&self) -> &'static str {
+        "QuotaReleased"
     }
 }

@@ -987,6 +987,8 @@ dependencies = [
  "derive_builder",
  "hex",
  "mime",
+ "serde",
+ "serde_json",
  "sha2",
  "snafu",
  "strum",

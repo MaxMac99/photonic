@@ -2,11 +2,12 @@ use std::path::PathBuf;
 
 use derive_new::new;
 use mime::Mime;
+use serde::{Deserialize, Serialize};
 use strum::Display;
 
 use crate::shared::crypto::Sha256;
 
-#[derive(new, Debug, Clone, PartialEq)]
+#[derive(new, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FileLocation {
     pub storage_tier: StorageTier,
     pub relative_path: PathBuf,
@@ -26,7 +27,7 @@ impl FileLocation {
     }
 }
 
-#[derive(Display, Debug, Clone, PartialEq)]
+#[derive(Display, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum StorageTier {
     /// Long term storage, should be backed up
     Permanent,

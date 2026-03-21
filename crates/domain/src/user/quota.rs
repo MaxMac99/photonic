@@ -1,11 +1,12 @@
 use std::fmt;
 
 use byte_unit::Byte;
+use serde::{Deserialize, Serialize};
 use snafu::ensure;
 
 use crate::error::{DomainResult, QuotaExceededSnafu, ValidationSnafu};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct QuotaState {
     used: Byte,
     limit: Byte,

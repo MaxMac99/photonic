@@ -1,4 +1,5 @@
 use derive_new::new;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     event::{DomainEvent, EventMetadata},
@@ -6,7 +7,7 @@ use crate::{
     user::UserId,
 };
 
-#[derive(new, Debug, Clone)]
+#[derive(new, Debug, Clone, Serialize, Deserialize)]
 #[new(visibility = "pub(crate)")]
 pub struct MetadataExtractionFailedEvent {
     pub medium_id: MediumId,
@@ -20,5 +21,9 @@ pub struct MetadataExtractionFailedEvent {
 impl DomainEvent for MetadataExtractionFailedEvent {
     fn metadata(&self) -> &EventMetadata {
         &self.event_metadata
+    }
+
+    fn event_type(&self) -> &'static str {
+        "MetadataExtractionFailed"
     }
 }
