@@ -34,6 +34,7 @@ impl From<TaskDb> for Task {
             created_at: val.created_at.and_utc(),
             started_at: val.started_at.map(|d| d.and_utc()),
             completed_at: val.completed_at.map(|d| d.and_utc()),
+            version: 0,
         }
     }
 }

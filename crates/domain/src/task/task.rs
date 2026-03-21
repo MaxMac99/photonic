@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use super::status::TaskStatus;
 use crate::{
+    aggregate::{AggregateRoot, AggregateVersion},
     error::{DomainResult, InvariantViolationSnafu},
     task::{
         events::{
@@ -27,11 +28,50 @@ pub struct Task {
     pub created_at: DateTime<Utc>,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
+    pub version: AggregateVersion,
+}
+
+impl AggregateRoot for Task {
+    type Event = TaskEvent;
+
+    fn aggregate_type() -> &'static str {
+        "Task"
+    }
+
+    fn version(&self) -> AggregateVersion {
+        self.version
+    }
+
+    fn apply(&mut self, event: &TaskEvent) {
+        match event {
+            TaskEvent::TaskCreated(e) => {
+                self.id = e.task_id;
+                self.task_type = e.task_type;
+                self.reference_id = e.reference_id;
+                self.user_id = e.user_id;
+                self.status = TaskStatus::Pending;
+            }
+            TaskEvent::TaskStarted(_) => {
+                self.status = TaskStatus::InProgress;
+                self.started_at = Some(Utc::now());
+            }
+            TaskEvent::TaskCompleted(_) => {
+                self.status = TaskStatus::Completed;
+                self.completed_at = Some(Utc::now());
+            }
+            TaskEvent::TaskFailed(e) => {
+                self.status = TaskStatus::Failed(e.error.clone());
+                self.completed_at = Some(Utc::now());
+            }
+        }
+        self.version += 1;
+    }
 }
 
 /// Namespace for deterministic task ID generation
 const TASK_ID_NAMESPACE: Uuid = Uuid::from_bytes([
-    0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8,
+    0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30,
+    0xc8,
 ]);
 
 impl Task {
@@ -59,7 +99,7 @@ impl Task {
             created_at: Utc::now(),
             started_at: None,
             completed_at: None,
-        }
+            version: 0,
         };
 
         let event = TaskCreatedEvent::new(id, task_type, reference_id, user_id);

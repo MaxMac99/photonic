@@ -5,12 +5,15 @@ use uuid::Uuid;
 
 use super::{
     events::{
-        QuotaCommittedEvent, QuotaReleasedEvent, QuotaReservedEvent, UserCreatedEvent,
+        QuotaCommittedEvent, QuotaReleasedEvent, QuotaReservedEvent, UserCreatedEvent, UserEvent,
         UserUpdatedEvent, UserUpdatedEventBuilder,
     },
     quota::QuotaState,
 };
-use crate::error::DomainResult;
+use crate::{
+    aggregate::{AggregateRoot, AggregateVersion},
+    error::DomainResult,
+};
 
 pub type UserId = Uuid;
 
@@ -21,6 +24,49 @@ pub struct User {
     pub username: String,
     pub email: Option<String>,
     pub quota: QuotaState,
+}
+
+impl AggregateRoot for User {
+    type Event = UserEvent;
+
+    fn aggregate_type() -> &'static str {
+        "User"
+    }
+
+    fn version(&self) -> AggregateVersion {
+        self.version
+    }
+
+    fn apply(&mut self, event: &UserEvent) {
+        match event {
+            UserEvent::UserCreated(e) => {
+                self.id = e.user_id;
+                self.username = e.username.clone();
+                self.email = e.email.clone();
+            }
+            UserEvent::UserUpdated(e) => {
+                if let Some(ref username) = e.new_username {
+                    self.username = username.clone();
+                }
+                if let Some(ref email) = e.new_email {
+                    self.email = Some(email.clone());
+                }
+                if let Some(new_quota) = e.new_quota {
+                    self.quota = QuotaState::new_unchecked(self.quota.used(), new_quota);
+                }
+            }
+            UserEvent::QuotaReserved(e) => {
+                let _ = self.quota.reserve_quota(e.bytes);
+            }
+            UserEvent::QuotaCommitted(_) => {
+                // Quota is already reserved, commit is a no-op on state
+            }
+            UserEvent::QuotaReleased(e) => {
+                self.quota.release_quota(e.bytes);
+            }
+        }
+        self.version += 1;
+    }
 }
 
 impl User {

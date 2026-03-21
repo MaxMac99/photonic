@@ -103,6 +103,7 @@ mod tests {
                 .with_timezone(&Utc),
             updated_at: Utc::now(),
             items: vec![],
+            version: 0,
         }
     }
 

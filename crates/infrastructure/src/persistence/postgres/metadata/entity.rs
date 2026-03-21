@@ -142,6 +142,7 @@ impl From<MetadataDb> for Metadata {
             location,
             technical,
             additional: db.additional.0,
+            version: 0,
         }
     }
 }

@@ -11,8 +11,9 @@ use super::{
     storage::{FileLocation, StorageTier},
 };
 use crate::{
+    aggregate::{AggregateRoot, AggregateVersion},
     error::{DomainResult, ValidationSnafu},
-    medium::events::{MediumCreatedEvent, MediumItemCreatedEvent, MediumUpdatedEvent},
+    medium::events::{MediumCreatedEvent, MediumEvent, MediumItemCreatedEvent, MediumUpdatedEvent},
     user::UserId,
 };
 
@@ -63,6 +64,43 @@ pub struct Medium {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub items: Vec<MediumItem>,
+    pub version: AggregateVersion,
+}
+
+impl AggregateRoot for Medium {
+    type Event = MediumEvent;
+
+    fn aggregate_type() -> &'static str {
+        "Medium"
+    }
+
+    fn version(&self) -> AggregateVersion {
+        self.version
+    }
+
+    fn apply(&mut self, event: &MediumEvent) {
+        match event {
+            MediumEvent::MediumCreated(e) => {
+                self.id = e.medium_id;
+                self.owner_id = e.user_id;
+                self.medium_type = e.medium_type;
+                self.leading_item_id = e.leading_item_id;
+            }
+            MediumEvent::MediumItemCreated(_e) => {
+                // Item data is added via add_item(); during replay this is a no-op
+                // because the item is already constructed from the event data.
+                // Full reconstruction from events will be implemented when
+                // MediumItemCreatedEvent is enriched with all item fields.
+            }
+            MediumEvent::MediumUpdated(e) => {
+                self.taken_at = e.taken_at.clone();
+                self.camera_make = e.camera_make.clone();
+                self.camera_model = e.camera_model.clone();
+                self.gps_coordinates = e.gps_coordinates;
+            }
+        }
+        self.version += 1;
+    }
 }
 
 /// Read model for listing media - optimized for list queries without full details
@@ -107,6 +145,7 @@ impl Medium {
             created_at: now,
             updated_at: now,
             items: vec![],
+            version: 0,
         };
 
         let item_created_event = medium.add_item(request.medium_item)?;

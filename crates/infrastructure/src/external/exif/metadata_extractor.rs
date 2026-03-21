@@ -183,6 +183,7 @@ fn convert_exif_to_metadata(exif: &HashMap<String, Field>, medium_id: MediumId) 
         location,
         technical,
         additional,
+        version: 0,
     }
 }
 

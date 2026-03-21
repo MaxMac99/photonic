@@ -6,9 +6,11 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
+    aggregate::{AggregateRoot, AggregateVersion},
     medium::{MediumId, MediumItemId},
     metadata::events::{
-        MetadataExtractedEvent, MetadataExtractionFailedEvent, MetadataExtractionStartedEvent,
+        MetadataEvent, MetadataExtractedEvent, MetadataExtractionFailedEvent,
+        MetadataExtractionStartedEvent,
     },
     user::UserId,
 };
@@ -26,6 +28,41 @@ pub struct Metadata {
     pub location: Option<LocationInfo>,
     pub technical: TechnicalInfo,
     pub additional: HashMap<String, String>,
+    pub version: AggregateVersion,
+}
+
+impl AggregateRoot for Metadata {
+    type Event = MetadataEvent;
+
+    fn aggregate_type() -> &'static str {
+        "Metadata"
+    }
+
+    fn version(&self) -> AggregateVersion {
+        self.version
+    }
+
+    fn apply(&mut self, event: &MetadataEvent) {
+        match event {
+            MetadataEvent::ExtractionStarted(_) => {
+                // Extraction started — no state change on the metadata entity
+            }
+            MetadataEvent::Extracted(e) => {
+                self.id = e.metadata.id;
+                self.medium_id = e.metadata.medium_id;
+                self.extracted_at = e.metadata.extracted_at;
+                self.file_info = e.metadata.file_info.clone();
+                self.camera_info = e.metadata.camera_info.clone();
+                self.location = e.metadata.location.clone();
+                self.technical = e.metadata.technical.clone();
+                self.additional = e.metadata.additional.clone();
+            }
+            MetadataEvent::ExtractionFailed(_) => {
+                // Extraction failed — no state change
+            }
+        }
+        self.version += 1;
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

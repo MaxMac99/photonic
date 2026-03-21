@@ -192,6 +192,7 @@ impl From<&FindMediumRow> for Medium {
             created_at: row.created_at.and_utc(),
             updated_at: row.updated_at.and_utc(),
             items: vec![MediumItem::from(row)],
+            version: 0,
         }
     }
 }
