@@ -35,7 +35,7 @@ impl CompleteTaskHandler {
                 .build(),
             })?;
 
-        task.complete()?;
+        let _event = task.complete()?;
 
         self.repository.save(&task).await?;
 

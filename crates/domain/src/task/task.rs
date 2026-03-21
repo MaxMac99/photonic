@@ -6,7 +6,12 @@ use uuid::Uuid;
 use super::status::TaskStatus;
 use crate::{
     error::{DomainResult, InvariantViolationSnafu},
-    task::{TaskTransition, TaskType},
+    task::{
+        events::{
+            TaskCompletedEvent, TaskCreatedEvent, TaskEvent, TaskFailedEvent, TaskStartedEvent,
+        },
+        TaskTransition, TaskType,
+    },
     user::UserId,
 };
 
@@ -34,14 +39,18 @@ impl Task {
     ///
     /// This ensures that multiple handlers creating the same logical task will generate
     /// the same task ID, allowing proper conflict resolution in the database.
-    pub fn new(task_type: TaskType, reference_id: Uuid, user_id: UserId) -> Self {
+    pub fn new(
+        task_type: TaskType,
+        reference_id: Uuid,
+        user_id: UserId,
+    ) -> (Self, TaskCreatedEvent) {
         // Generate deterministic ID from the unique business key
         let id = Uuid::new_v5(
             &TASK_ID_NAMESPACE,
             format!("{}:{:?}:{}", reference_id, task_type, user_id).as_bytes(),
         );
 
-        Self {
+        let task = Self {
             id,
             task_type,
             reference_id,
@@ -51,11 +60,15 @@ impl Task {
             started_at: None,
             completed_at: None,
         }
+        };
+
+        let event = TaskCreatedEvent::new(id, task_type, reference_id, user_id);
+        (task, event)
     }
 
     /// Start the task
     /// Business rule: Can only start pending tasks
-    pub fn start(&mut self) -> DomainResult<()> {
+    pub fn start(&mut self) -> DomainResult<TaskStartedEvent> {
         self.status =
             self.status
                 .transition(TaskTransition::Start)
@@ -63,12 +76,12 @@ impl Task {
                     message: format!("Cannot start task in {:?} status", self.status),
                 })?;
         self.started_at = Some(Utc::now());
-        Ok(())
+        Ok(TaskStartedEvent::new(self.id))
     }
 
     /// Mark task as completed
     /// Business rule: Can only complete in-progress tasks
-    pub fn complete(&mut self) -> DomainResult<()> {
+    pub fn complete(&mut self) -> DomainResult<TaskCompletedEvent> {
         self.status =
             self.status
                 .transition(TaskTransition::Complete)
@@ -76,20 +89,21 @@ impl Task {
                     message: format!("Cannot complete task in {:?} status", self.status),
                 })?;
         self.completed_at = Some(Utc::now());
-        Ok(())
+        Ok(TaskCompletedEvent::new(self.id))
     }
 
     /// Mark task as failed with error message
     /// Business rule: Can fail from any state except Completed
-    pub fn fail(&mut self, error: impl Into<String>) -> DomainResult<()> {
+    pub fn fail(&mut self, error: impl Into<String>) -> DomainResult<TaskFailedEvent> {
+        let error = error.into();
         self.status = self
             .status
-            .transition(TaskTransition::Fail(error.into()))
+            .transition(TaskTransition::Fail(error.clone()))
             .context(InvariantViolationSnafu {
                 message: format!("Cannot fail task in {:?} status", self.status),
             })?;
         self.completed_at = Some(Utc::now());
-        Ok(())
+        Ok(TaskFailedEvent::new(self.id, error))
     }
 
     pub fn is_retriable(&self) -> bool {

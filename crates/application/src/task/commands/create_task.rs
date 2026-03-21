@@ -25,7 +25,7 @@ pub struct CreateTaskHandler {
 
 impl CreateTaskHandler {
     pub async fn handle(&self, command: CreateTaskCommand) -> ApplicationResult<Task> {
-        let task = Task::new(command.task_type, command.reference_id, command.user_id);
+        let (task, _event) = Task::new(command.task_type, command.reference_id, command.user_id);
 
         self.repository.save(&task).await?;
 

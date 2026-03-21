@@ -27,9 +27,13 @@ impl StartTaskHandler {
             .repository
             .find_by_reference_id(command.reference_id, command.task_type, command.user_id)
             .await?
-            .unwrap_or_else(|| Task::new(command.task_type, command.reference_id, command.user_id));
+            .unwrap_or_else(|| {
+                let (task, _event) =
+                    Task::new(command.task_type, command.reference_id, command.user_id);
+                task
+            });
 
-        task.start()?;
+        let _event = task.start()?;
 
         self.repository.save(&task).await?;
 

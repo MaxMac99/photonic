@@ -36,7 +36,7 @@ impl FailTaskHandler {
                 .build(),
             })?;
 
-        task.fail(command.error.clone())?;
+        let _event = task.fail(command.error.clone())?;
 
         self.repository.save(&task).await?;
 
