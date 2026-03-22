@@ -3,7 +3,7 @@ use std::sync::Arc;
 use derive_new::new;
 use domain::{
     medium::{FileLocation, MediumId, MediumItemId},
-    metadata::Metadata,
+    metadata::{events::MetadataEvent, Metadata},
     user::UserId,
 };
 use tracing::{error, info};
@@ -35,17 +35,19 @@ impl ExtractMetadataHandler {
         );
 
         self.event_publisher
-            .publish(Metadata::extraction_started(
+            .publish(MetadataEvent::from(Metadata::extraction_started(
                 command.medium_id,
                 command.leading_item_id,
                 command.user_id,
-            ))
+            )))
             .await?;
 
         match self.extract_metadata(&command).await {
             Ok(metadata) => {
                 let event = metadata.extracted(command.leading_item_id, command.user_id);
-                self.event_publisher.publish(event).await?;
+                self.event_publisher
+                    .publish(MetadataEvent::from(event))
+                    .await?;
 
                 info!(
                     "Metadata extraction completed for medium_id={}, medium_item_id={}",
@@ -57,12 +59,12 @@ impl ExtractMetadataHandler {
                 let error_msg = format!("{:?}", e);
 
                 self.event_publisher
-                    .publish(Metadata::extraction_failed(
+                    .publish(MetadataEvent::from(Metadata::extraction_failed(
                         command.medium_id,
                         command.leading_item_id,
                         command.user_id,
                         error_msg.clone(),
-                    ))
+                    )))
                     .await?;
 
                 error!(

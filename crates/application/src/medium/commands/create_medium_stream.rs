@@ -6,6 +6,7 @@ use derive_new::new;
 use domain::{
     error::format_error_with_backtrace as format_domain_error,
     medium::{
+        events::MediumEvent,
         storage::{FileLocation, StorageTier},
         Filename, Medium, MediumCreateRequest, MediumId, MediumItemCreateRequest, MediumItemType,
         MediumType, Priority,
@@ -13,13 +14,14 @@ use domain::{
     user::UserId,
 };
 use mime::Mime;
-use tokio::{io::AsyncRead, join};
-use tracing::{debug, error, info, instrument, warn};
+use tokio::io::AsyncRead;
+use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
 use crate::{
     error::{ApplicationError, ApplicationResult},
-    medium::ports::{FileStorage, MediumRepository, PublishMediumEvent},
+    event_bus::PublishEvent,
+    medium::ports::FileStorage,
     user::QuotaManager,
 };
 
@@ -38,10 +40,9 @@ pub struct CreateMediumStreamCommand {
 
 #[derive(new)]
 pub struct CreateMediumStreamHandler {
-    medium_repository: Arc<dyn MediumRepository>,
     file_storage: Arc<dyn FileStorage>,
     quota_manager: Arc<QuotaManager>,
-    event_bus: Arc<dyn PublishMediumEvent>,
+    event_bus: Arc<dyn PublishEvent<MediumEvent>>,
 }
 
 impl CreateMediumStreamHandler {
@@ -94,77 +95,37 @@ impl CreateMediumStreamHandler {
                 debug!(
                     medium_id = %medium_id,
                     temp_location = ?temp_location.relative_path,
-                    "Executing parallel file storage and database save"
+                    "Storing file and persisting events"
                 );
 
-                let store_future = self.file_storage.store_file_stream(&temp_location, command.stream);
-                let save_future = self.medium_repository.save(&medium);
-
-                let (store_result, save_result) = join!(store_future, save_future);
-
-                match (store_result, save_result) {
-                    (Ok(_), Ok(_)) => {
-                        debug!(
-                            medium_id = %medium_id,
-                            "File storage and database save both completed successfully"
-                        );
-                    }
-                    (Err(store_err), Ok(_)) => {
+                // Store file to temporary storage
+                self.file_storage
+                    .store_file_stream(&temp_location, command.stream)
+                    .await
+                    .map_err(|e| {
                         error!(
                             medium_id = %medium_id,
-                            error = %format_domain_error(&store_err),
-                            "File storage failed but database save succeeded, cleaning up repository"
+                            error = %format_domain_error(&e),
+                            "File storage failed"
                         );
-                        if let Err(delete_err) = self.medium_repository.delete(medium_id, command.user_id).await {
-                            error!(
-                                medium_id = %medium_id,
-                                error = %format_domain_error(&delete_err),
-                                "CRITICAL: Failed to delete medium from repository after storage failure. Manual cleanup required"
-                            );
-                        }
-                        return Err(ApplicationError::Domain { source: store_err });
-                    }
-                    (Ok(_), Err(save_err)) => {
+                        ApplicationError::Domain { source: e }
+                    })?;
+
+                // Publish events — the EventBus persists to event store,
+                // updates projections, then dispatches to listeners
+                let events = vec![
+                    MediumEvent::from(medium_created_event),
+                    MediumEvent::from(item_created_event),
+                ];
+                for event in events {
+                    self.event_bus.publish(event).await.map_err(|e| {
                         error!(
                             medium_id = %medium_id,
-                            path = ?temp_location.relative_path,
-                            error = %format_domain_error(&save_err),
-                            "Database save failed but file storage succeeded, cleaning up file"
+                            error = %e,
+                            "Failed to publish event"
                         );
-                        if let Err(cleanup_err) = self.file_storage.delete_file(&temp_location).await {
-                            error!(
-                                path = ?temp_location.relative_path,
-                                error = %format_domain_error(&cleanup_err),
-                                "CRITICAL: Failed to delete orphaned file. Manual cleanup required"
-                            );
-                        }
-                        return Err(ApplicationError::Domain { source: save_err });
-                    }
-                    (Err(store_err), Err(save_err)) => {
-                        error!(
-                            medium_id = %medium_id,
-                            store_error = %format_domain_error(&store_err),
-                            save_error = %format_domain_error(&save_err),
-                            "Both file storage and database save failed"
-                        );
-                        return Err(ApplicationError::Domain { source: store_err });
-                    }
-                }
-
-                if let Err(e) = self.event_bus.publish(medium_created_event).await {
-                    warn!(
-                        medium_id = %medium_id,
-                        error = %e,
-                        "Failed to publish MediumCreatedEvent"
-                    );
-                }
-
-                if let Err(e) = self.event_bus.publish(item_created_event).await {
-                    warn!(
-                        medium_id = %medium_id,
-                        error = %e,
-                        "Failed to publish MediumItemCreatedEvent"
-                    );
+                        e
+                    })?;
                 }
 
                 info!(

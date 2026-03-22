@@ -4,8 +4,7 @@ use byte_unit::Byte;
 use derive_new::new;
 use domain::{
     error::{ConcurrentModificationSnafu, DomainError, EntityNotFoundSnafu},
-    event::DomainEvent,
-    user::{QuotaReleasedEvent, QuotaReservedEvent, User, UserId},
+    user::{events::UserEvent, QuotaReleasedEvent, QuotaReservedEvent, User, UserId},
 };
 use snafu::OptionExt;
 use tokio::time::sleep;
@@ -13,7 +12,6 @@ use tracing::{debug, error, info, instrument, warn};
 
 use crate::{
     error::{ApplicationError, ApplicationResult},
-    event_bus::PublishEvent,
     user::ports::{PublishUserEvent, UserRepository},
 };
 
@@ -43,7 +41,11 @@ impl QuotaManager {
         match operation().await {
             Ok(result) => {
                 let committed_event = user.commit_quota(&reserved);
-                if let Err(e) = self.event_bus.publish(committed_event).await {
+                if let Err(e) = self
+                    .event_bus
+                    .publish(UserEvent::from(committed_event))
+                    .await
+                {
                     warn!(
                         user_id = %user_id,
                         bytes = %bytes.as_u64(),
@@ -80,11 +82,11 @@ impl QuotaManager {
         debug!("Attempting quota reservation");
 
         let result = self
-            .update_with_optimistic_locking::<QuotaReservedEvent, _>(user_id, 5, |user| {
+            .update_with_optimistic_locking(user_id, 5, |user| {
                 let event = user
                     .reserve_quota(bytes)
                     .map_err(|e| ApplicationError::Domain { source: e })?;
-                Ok(event)
+                Ok((UserEvent::from(event.clone()), event))
             })
             .await?;
 
@@ -105,8 +107,9 @@ impl QuotaManager {
         debug!("Releasing quota reservation");
 
         let result = self
-            .update_with_optimistic_locking::<QuotaReleasedEvent, _>(user_id, 5, |user| {
-                Ok(user.release_quota(&reserved))
+            .update_with_optimistic_locking(user_id, 5, |user| {
+                let event = user.release_quota(&reserved);
+                Ok((UserEvent::from(event.clone()), event))
             })
             .await
             .map(|(user, _)| user)?;
@@ -119,16 +122,17 @@ impl QuotaManager {
         Ok(result)
     }
 
-    async fn update_with_optimistic_locking<E, F>(
+    /// Update user with optimistic locking. The closure returns a (UserEvent, T) tuple
+    /// where UserEvent is published to the bus and T is returned to the caller.
+    async fn update_with_optimistic_locking<T, F>(
         &self,
         user_id: UserId,
         retries: u32,
         f: F,
-    ) -> ApplicationResult<(User, E)>
+    ) -> ApplicationResult<(User, T)>
     where
-        E: DomainEvent + 'static,
-        F: Fn(&mut User) -> ApplicationResult<E>,
-        dyn PublishUserEvent: PublishEvent<E>,
+        T: Clone,
+        F: Fn(&mut User) -> ApplicationResult<(UserEvent, T)>,
     {
         let mut last_version = 0;
 
@@ -145,18 +149,18 @@ impl QuotaManager {
                 .map_err(|e| ApplicationError::Domain { source: e })?;
             last_version = user.version;
 
-            let event = f(&mut user)?;
+            let (event, value) = f(&mut user)?;
 
             match self.user_repository.update(&user).await {
                 Ok(_) => {
-                    if let Err(e) = self.event_bus.publish(event.clone()).await {
+                    if let Err(e) = self.event_bus.publish(event).await {
                         warn!(
                             user_id = %user_id,
                             error = %e,
                             "Failed to publish user event"
                         );
                     }
-                    return Ok((user, event));
+                    return Ok((user, value));
                 }
                 Err(DomainError::ConcurrentModification { .. }) => {
                     if attempt < retries - 1 {

@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use commands::PublishCleanupEvent;
-use domain::medium::StoragePathService;
+use domain::medium::{events::MediumEvent, StoragePathService};
 
 use crate::{
+    event_bus::PublishEvent,
     medium::ports::{FileStorage, MediumRepository, PublishMediumEvent},
     user::QuotaManager,
 };
@@ -31,13 +32,13 @@ impl MediumApplicationHandlers {
         event_bus: Arc<dyn PublishMediumEvent>,
         cleanup_event_bus: Arc<dyn PublishCleanupEvent>,
         storage_path_service: Arc<StoragePathService>,
+        medium_event_bus: Arc<dyn PublishEvent<MediumEvent>>,
     ) -> Self {
         Self {
             create_medium_stream: Arc::new(commands::CreateMediumStreamHandler::new(
-                medium_repository.clone(),
                 file_storage.clone(),
                 quota_manager,
-                event_bus.clone(),
+                medium_event_bus,
             )),
             find_all_media: Arc::new(queries::FindAllMediaHandler::new(medium_repository.clone())),
             find_medium: Arc::new(queries::FindMediumHandler::new(medium_repository.clone())),

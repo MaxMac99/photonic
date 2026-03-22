@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use derive_new::new;
-use domain::{medium::camera::GpsCoordinates, metadata::events::MetadataExtractedEvent};
+use domain::{medium::camera::GpsCoordinates, metadata::events::MetadataEvent};
 use tracing::{debug, info, instrument};
 
 use crate::{
@@ -17,18 +17,13 @@ pub struct MediumMetadataEnrichmentListener {
 }
 
 #[async_trait]
-impl EventProcessor<MetadataExtractedEvent> for MediumMetadataEnrichmentListener {
+impl EventProcessor<MetadataEvent> for MediumMetadataEnrichmentListener {
     #[instrument(
-        name = "MediumMetadataEnrichmentListener::MetadataExtractedEvent",
+        name = "MediumMetadataEnrichmentListener::MetadataEvent",
         skip(self, event),
-        fields(
-            event = "MetadataExtractedEvent",
-            medium_id = %event.medium_id,
-            medium_item_id = %event.leading_item_id,
-            user_id = %event.owner_id,
-        )
     )]
-    async fn process(&self, event: MetadataExtractedEvent) -> ApplicationResult<()> {
+    async fn process(&self, event: MetadataEvent) -> ApplicationResult<()> {
+        let MetadataEvent::Extracted(event) = event else { return Ok(()) };
         info!(
             "Enriching medium metadata for medium_id={} (leading_item_id={})",
             event.medium_id, event.leading_item_id,

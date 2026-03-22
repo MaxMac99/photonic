@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use byte_unit::Byte;
 use derive_new::new;
-use domain::user::{User, UserCreateRequest, UserId, UserUpdateRequestBuilder};
+use domain::user::{events::UserEvent, User, UserCreateRequest, UserId, UserUpdateRequestBuilder};
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -61,7 +61,7 @@ impl EnsureUserExistsHandler {
                     self.user_repository.update(&existing_user).await?;
                     debug!("User {} changes persisted to database", existing_user.id);
 
-                    if let Err(e) = self.event_bus.publish(event).await {
+                    if let Err(e) = self.event_bus.publish(UserEvent::from(event)).await {
                         warn!(
                             "Failed to publish event for user {}: {:?}",
                             existing_user.id, e
@@ -93,7 +93,7 @@ impl EnsureUserExistsHandler {
                 self.user_repository.insert(&user).await?;
                 debug!("New user {} persisted to database", user.id);
 
-                if let Err(e) = self.event_bus.publish(event).await {
+                if let Err(e) = self.event_bus.publish(UserEvent::from(event)).await {
                     warn!(
                         "Failed to publish user created event for user {}: {:?}",
                         user.id, e

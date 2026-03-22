@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use derive_new::new;
-use domain::{medium::events::MediumCreatedEvent, task::TaskType};
+use domain::{medium::events::MediumEvent, task::TaskType};
 use tracing::{debug, info, instrument};
 
 use crate::{
@@ -17,18 +17,13 @@ pub struct TaskCreationListeners {
 }
 
 #[async_trait]
-impl EventProcessor<MediumCreatedEvent> for TaskCreationListeners {
+impl EventProcessor<MediumEvent> for TaskCreationListeners {
     #[instrument(
-        name = "TaskCreationListeners::MediumCreatedEvent",
+        name = "TaskCreationListeners::MediumEvent",
         skip(self, event),
-        fields(
-            event = "MediumCreatedEvent",
-            medium_id = %event.medium_id,
-            medium_item_id = %event.leading_item_id,
-            user_id = %event.user_id,
-        )
     )]
-    async fn process(&self, event: MediumCreatedEvent) -> ApplicationResult<()> {
+    async fn process(&self, event: MediumEvent) -> ApplicationResult<()> {
+        let MediumEvent::MediumCreated(event) = event else { return Ok(()) };
         info!(
             "Creating metadata extraction task for medium_id={} (leading_item_id={})",
             event.medium_id, event.leading_item_id,

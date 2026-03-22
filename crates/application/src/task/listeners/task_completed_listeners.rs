@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use derive_new::new;
-use domain::{metadata::events::MetadataExtractedEvent, task::TaskType};
+use domain::{metadata::events::MetadataEvent, task::TaskType};
 use tracing::{debug, info, instrument};
 use uuid::Uuid;
 
@@ -19,18 +19,13 @@ pub struct TaskCompletedListeners {
 }
 
 #[async_trait]
-impl EventProcessor<MetadataExtractedEvent> for TaskCompletedListeners {
+impl EventProcessor<MetadataEvent> for TaskCompletedListeners {
     #[instrument(
-        name = "TaskCompletedListeners::MetadataExtractedEvent",
+        name = "TaskCompletedListeners::MetadataEvent",
         skip(self, event),
-        fields(
-            event = "MetadataExtractedEvent",
-            medium_id = %event.medium_id,
-            medium_item_id = %event.leading_item_id,
-            user_id = %event.owner_id,
-        )
     )]
-    async fn process(&self, event: MetadataExtractedEvent) -> ApplicationResult<()> {
+    async fn process(&self, event: MetadataEvent) -> ApplicationResult<()> {
+        let MetadataEvent::Extracted(event) = event else { return Ok(()) };
         info!(
             "Completing metadata extraction task for medium_id={} (leading_item_id={})",
             event.medium_id, event.leading_item_id,

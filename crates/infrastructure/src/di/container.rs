@@ -27,16 +27,8 @@ use application::{
 };
 use byte_unit::Byte;
 use domain::{
-    medium::{
-        events::{MediumCreatedEvent, MediumUpdatedEvent},
-        Medium, StoragePathService,
-    },
-    metadata::{
-        events::{
-            MetadataExtractedEvent, MetadataExtractionFailedEvent, MetadataExtractionStartedEvent,
-        },
-        Metadata,
-    },
+    medium::{events::MediumEvent, Medium, StoragePathService},
+    metadata::{events::MetadataEvent, Metadata},
     task::Task,
     user::User,
 };
@@ -112,6 +104,7 @@ impl Container {
             &storage,
             quota_manager.clone(),
             event_bus.clone(),
+            &aggregate_repos,
         );
 
         // Phase 6: Start event listeners
@@ -228,6 +221,7 @@ impl Container {
         storage: &StorageServices,
         quota_manager: Arc<QuotaManager>,
         event_bus: Arc<EventBus>,
+        aggregate_repos: &AggregateRepositories,
     ) -> ApplicationHandlers {
         let quota_config = Arc::new(QuotaConfig {
             default_user_quota: Byte::from_u64(config.storage.default_user_quota),
@@ -247,6 +241,7 @@ impl Container {
             event_bus.clone(),
             event_bus.clone(),
             storage.storage_path_service.clone(),
+            event_bus.clone(),
         ));
 
         let metadata_handlers = Arc::new(MetadataApplicationHandlers::new(
@@ -291,7 +286,7 @@ impl Container {
         let task_creation_listener = TaskCreationListeners::new(processing.create_task.clone());
         handles.extend(
             event_bus
-                .start_processor::<MediumCreatedEvent, _>(task_creation_listener)
+                .start_processor::<MediumEvent, _>(task_creation_listener)
                 .await?,
         );
 
@@ -300,7 +295,7 @@ impl Container {
             MetadataExtractionListeners::new(handlers.metadata.extract_metadata_handler.clone());
         handles.extend(
             event_bus
-                .start_processor::<MediumCreatedEvent, _>(metadata_listener)
+                .start_processor::<MediumEvent, _>(metadata_listener)
                 .await?,
         );
 
@@ -308,7 +303,7 @@ impl Container {
         let started_listener = TaskStartedListeners::new(processing.start_task.clone());
         handles.extend(
             event_bus
-                .start_processor::<MetadataExtractionStartedEvent, _>(started_listener)
+                .start_processor::<MetadataEvent, _>(started_listener)
                 .await?,
         );
 
@@ -316,7 +311,7 @@ impl Container {
         let completed_listener = TaskCompletedListeners::new(processing.complete_task.clone());
         handles.extend(
             event_bus
-                .start_processor::<MetadataExtractedEvent, _>(completed_listener)
+                .start_processor::<MetadataEvent, _>(completed_listener)
                 .await?,
         );
 
@@ -324,7 +319,7 @@ impl Container {
         let failed_listener = TaskFailedListeners::new(processing.fail_task.clone());
         handles.extend(
             event_bus
-                .start_processor::<MetadataExtractionFailedEvent, _>(failed_listener)
+                .start_processor::<MetadataEvent, _>(failed_listener)
                 .await?,
         );
 
@@ -333,7 +328,7 @@ impl Container {
         );
         handles.extend(
             event_bus
-                .start_processor::<MetadataExtractedEvent, _>(medium_metadata_enrichment_listener)
+                .start_processor::<MetadataEvent, _>(medium_metadata_enrichment_listener)
                 .await?,
         );
 
@@ -342,7 +337,7 @@ impl Container {
             MoveToPermanentStorageListener::new(handlers.medium.move_to_permanent_storage.clone());
         handles.extend(
             event_bus
-                .start_processor::<MediumUpdatedEvent, _>(move_to_permanent_listener)
+                .start_processor::<MediumEvent, _>(move_to_permanent_listener)
                 .await?,
         );
 
@@ -373,15 +368,12 @@ impl Container {
     }
 
     fn build_aggregate_repositories(db_pool: &PgPool) -> AggregateRepositories {
-        let snapshot_interval = 100; // snapshot every 100 events
-
         let medium_event_store = Arc::new(PostgresEventStore::<Medium>::new(db_pool.clone()));
         let medium_snapshot_store =
             Arc::new(PostgresSnapshotStore::<Medium>::new(db_pool.clone()));
         let medium_repo = Arc::new(AggregateRepository::new(
             medium_event_store,
             Some(medium_snapshot_store),
-            snapshot_interval,
         ));
 
         let user_event_store = Arc::new(PostgresEventStore::<User>::new(db_pool.clone()));
@@ -389,15 +381,14 @@ impl Container {
         let user_repo = Arc::new(AggregateRepository::new(
             user_event_store,
             Some(user_snapshot_store),
-            snapshot_interval,
         ));
 
         let task_event_store = Arc::new(PostgresEventStore::<Task>::new(db_pool.clone()));
-        let task_repo = Arc::new(AggregateRepository::new(task_event_store, None, 0));
+        let task_repo = Arc::new(AggregateRepository::new(task_event_store, None));
 
         let metadata_event_store =
             Arc::new(PostgresEventStore::<Metadata>::new(db_pool.clone()));
-        let metadata_repo = Arc::new(AggregateRepository::new(metadata_event_store, None, 0));
+        let metadata_repo = Arc::new(AggregateRepository::new(metadata_event_store, None));
 
         AggregateRepositories {
             medium: medium_repo,

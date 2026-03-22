@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use derive_new::new;
-use domain::medium::events::MediumUpdatedEvent;
+use domain::medium::events::MediumEvent;
 use tracing::{info, instrument};
 
 use crate::{
@@ -17,18 +17,17 @@ pub struct MoveToPermanentStorageListener {
 }
 
 #[async_trait]
-impl EventProcessor<MediumUpdatedEvent> for MoveToPermanentStorageListener {
+impl EventProcessor<MediumEvent> for MoveToPermanentStorageListener {
     #[instrument(
-        name = "MoveToPermanentStorageListener::MediumUpdatedEvent",
+        name = "MoveToPermanentStorageListener::MediumEvent",
         skip(self, event),
-        fields(
-            event = "MediumUpdatedEvent",
+    )]
+    async fn process(&self, event: MediumEvent) -> ApplicationResult<()> {
+        let MediumEvent::MediumUpdated(event) = event else { return Ok(()) };
+
+        info!(
             medium_id = %event.medium_id,
             user_id = %event.owner_id,
-        )
-    )]
-    async fn process(&self, event: MediumUpdatedEvent) -> ApplicationResult<()> {
-        info!(
             "Moving medium items to permanent storage for medium_id={}",
             event.medium_id,
         );

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use derive_new::new;
-use domain::{metadata::events::MetadataExtractionFailedEvent, task::TaskType};
+use domain::{metadata::events::MetadataEvent, task::TaskType};
 use tracing::{debug, info, instrument};
 use uuid::Uuid;
 
@@ -19,18 +19,13 @@ pub struct TaskFailedListeners {
 }
 
 #[async_trait]
-impl EventProcessor<MetadataExtractionFailedEvent> for TaskFailedListeners {
+impl EventProcessor<MetadataEvent> for TaskFailedListeners {
     #[instrument(
-        name = "TaskFailedListeners::MetadataExtractionFailedEvent",
+        name = "TaskFailedListeners::MetadataEvent",
         skip(self, event),
-        fields(
-            event = "MetadataExtractionFailedEvent",
-            medium_id = %event.medium_id,
-            medium_item_id = %event.leading_item_id,
-            user_id = %event.owner_id,
-        )
     )]
-    async fn process(&self, event: MetadataExtractionFailedEvent) -> ApplicationResult<()> {
+    async fn process(&self, event: MetadataEvent) -> ApplicationResult<()> {
+        let MetadataEvent::ExtractionFailed(event) = event else { return Ok(()) };
         info!(
             "Failed metadata extraction task for medium_id={} (leading_item_id={})",
             event.medium_id, event.leading_item_id,
