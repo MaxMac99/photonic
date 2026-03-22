@@ -38,7 +38,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{
     config::GlobalConfig,
-    events::EventBus,
+    events::{EventBus, PersistentEventBus},
     external::exif::{Exiftool, ExiftoolMetadataExtractor},
     persistence::postgres::{
         event_store::PostgresEventStore, medium::PostgresMediumRepository,
@@ -85,6 +85,10 @@ impl Container {
 
         // Phase 2: Event system
         let event_bus = Arc::new(EventBus::new());
+        let persistent_event_bus = Arc::new(PersistentEventBus::new(
+            db_pool.clone(),
+            event_bus.clone(),
+        ));
 
         // Phase 3: Event sourcing infrastructure
         let aggregate_repos = Self::build_aggregate_repositories(&db_pool);
@@ -104,6 +108,7 @@ impl Container {
             &storage,
             quota_manager.clone(),
             event_bus.clone(),
+            persistent_event_bus.clone(),
             &aggregate_repos,
         );
 
@@ -221,7 +226,8 @@ impl Container {
         storage: &StorageServices,
         quota_manager: Arc<QuotaManager>,
         event_bus: Arc<EventBus>,
-        aggregate_repos: &AggregateRepositories,
+        persistent_event_bus: Arc<PersistentEventBus>,
+        _aggregate_repos: &AggregateRepositories,
     ) -> ApplicationHandlers {
         let quota_config = Arc::new(QuotaConfig {
             default_user_quota: Byte::from_u64(config.storage.default_user_quota),
@@ -241,7 +247,7 @@ impl Container {
             event_bus.clone(),
             event_bus.clone(),
             storage.storage_path_service.clone(),
-            event_bus.clone(),
+            persistent_event_bus.clone(),
         ));
 
         let metadata_handlers = Arc::new(MetadataApplicationHandlers::new(

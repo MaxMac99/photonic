@@ -19,6 +19,9 @@ pub trait StorableEvent: DomainEvent + Serialize + DeserializeOwned {
     /// The aggregate type name (e.g., "Medium", "User").
     fn aggregate_type() -> &'static str;
 
+    /// The aggregate instance ID this event belongs to.
+    fn aggregate_id(&self) -> String;
+
     /// Returns the event type name for storage and projection filtering.
     fn event_type_name(&self) -> &'static str;
 
@@ -40,6 +43,14 @@ impl MediumEventTypes {
 impl StorableEvent for MediumEvent {
     fn aggregate_type() -> &'static str {
         "Medium"
+    }
+
+    fn aggregate_id(&self) -> String {
+        match self {
+            MediumEvent::MediumCreated(e) => e.medium_id.to_string(),
+            MediumEvent::MediumItemCreated(e) => e.medium_id.to_string(),
+            MediumEvent::MediumUpdated(e) => e.medium_id.to_string(),
+        }
     }
 
     fn event_type_name(&self) -> &'static str {
@@ -74,6 +85,16 @@ impl UserEventTypes {
 impl StorableEvent for UserEvent {
     fn aggregate_type() -> &'static str {
         "User"
+    }
+
+    fn aggregate_id(&self) -> String {
+        match self {
+            UserEvent::UserCreated(e) => e.user_id.to_string(),
+            UserEvent::UserUpdated(e) => e.user_id.to_string(),
+            UserEvent::QuotaReserved(e) => e.user_id.to_string(),
+            UserEvent::QuotaCommitted(e) => e.user_id.to_string(),
+            UserEvent::QuotaReleased(e) => e.user_id.to_string(),
+        }
     }
 
     fn event_type_name(&self) -> &'static str {
@@ -112,6 +133,14 @@ impl StorableEvent for MetadataEvent {
         "Metadata"
     }
 
+    fn aggregate_id(&self) -> String {
+        match self {
+            MetadataEvent::ExtractionStarted(e) => e.medium_id.to_string(),
+            MetadataEvent::Extracted(e) => e.medium_id.to_string(),
+            MetadataEvent::ExtractionFailed(e) => e.medium_id.to_string(),
+        }
+    }
+
     fn event_type_name(&self) -> &'static str {
         match self {
             MetadataEvent::ExtractionStarted(_) => MetadataEventTypes::EXTRACTION_STARTED,
@@ -143,6 +172,15 @@ impl TaskEventTypes {
 impl StorableEvent for TaskEvent {
     fn aggregate_type() -> &'static str {
         "Task"
+    }
+
+    fn aggregate_id(&self) -> String {
+        match self {
+            TaskEvent::TaskCreated(e) => e.task_id.to_string(),
+            TaskEvent::TaskStarted(e) => e.task_id.to_string(),
+            TaskEvent::TaskCompleted(e) => e.task_id.to_string(),
+            TaskEvent::TaskFailed(e) => e.task_id.to_string(),
+        }
     }
 
     fn event_type_name(&self) -> &'static str {

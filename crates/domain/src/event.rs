@@ -8,6 +8,19 @@ use uuid::Uuid;
 pub struct EventMetadata {
     pub event_id: Uuid,
     pub occurred_at: DateTime<Utc>,
+    /// The expected aggregate version before this event is applied.
+    /// Used for optimistic concurrency in the event store.
+    pub expected_version: i64,
+}
+
+impl EventMetadata {
+    pub fn new(expected_version: i64) -> Self {
+        Self {
+            event_id: Uuid::new_v4(),
+            occurred_at: Utc::now(),
+            expected_version,
+        }
+    }
 }
 
 impl Default for EventMetadata {
@@ -15,6 +28,7 @@ impl Default for EventMetadata {
         Self {
             event_id: Uuid::new_v4(),
             occurred_at: Utc::now(),
+            expected_version: 0,
         }
     }
 }

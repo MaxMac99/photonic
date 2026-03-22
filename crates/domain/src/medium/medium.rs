@@ -173,16 +173,22 @@ impl Medium {
             version: 0,
         };
 
-        let item_created_event = medium.add_item(request.medium_item)?;
+        let mut item_created_event = medium.add_item(request.medium_item)?;
         medium.leading_item_id = medium.items[0].id;
 
-        let medium_created_event = MediumCreatedEvent::new(
+        let mut medium_created_event = MediumCreatedEvent::new(
             medium.id,
             medium.owner_id,
             medium.medium_type,
             medium.leading_item_id,
             medium.items[0].locations.first().unwrap().clone(),
         );
+
+        // Set expected versions for optimistic concurrency:
+        // created event expects version 0 (new aggregate), item event expects version 1
+        medium_created_event.metadata.expected_version = 0;
+        item_created_event.metadata.expected_version = 1;
+        medium.version = 2;
 
         Ok((medium, medium_created_event, item_created_event))
     }
@@ -225,7 +231,7 @@ impl Medium {
         camera_model: Option<String>,
         gps_coordinates: Option<GpsCoordinates>,
     ) -> MediumUpdatedEvent {
-        let event = MediumUpdatedEvent::new(
+        let mut event = MediumUpdatedEvent::new(
             self.id,
             self.owner_id,
             taken_at.clone(),
@@ -233,11 +239,13 @@ impl Medium {
             camera_model.clone(),
             gps_coordinates,
         );
+        event.metadata.expected_version = self.version;
         self.taken_at = taken_at;
         self.camera_make = camera_make;
         self.camera_model = camera_model;
         self.gps_coordinates = gps_coordinates;
         self.updated_at = Utc::now();
+        self.version += 1;
         event
     }
 }
