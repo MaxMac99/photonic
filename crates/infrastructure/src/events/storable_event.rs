@@ -1,4 +1,5 @@
 use domain::{
+    event::DomainEvent,
     medium::events::MediumEvent,
     metadata::events::MetadataEvent,
     task::events::TaskEvent,
@@ -9,11 +10,21 @@ use serde::{Serialize, de::DeserializeOwned};
 /// Infrastructure trait that maps event enum variants to their string type names
 /// for the `event_type` column in the event store.
 ///
+/// Extends `DomainEvent` — storable events are domain events with serialization
+/// and type name metadata for persistence.
+///
 /// Compile-time exhaustive: adding a new enum variant without updating the match
 /// will cause a compiler error.
-pub trait StorableEvent: Serialize + DeserializeOwned + Send + Sync {
+pub trait StorableEvent: DomainEvent + Serialize + DeserializeOwned {
+    /// The aggregate type name (e.g., "Medium", "User").
+    fn aggregate_type() -> &'static str;
+
     /// Returns the event type name for storage and projection filtering.
     fn event_type_name(&self) -> &'static str;
+
+    /// Returns all event type names for this aggregate's events.
+    /// Used by the projection engine to filter which events to fetch.
+    fn all_event_types() -> &'static [&'static str];
 }
 
 // -- Medium events --
@@ -27,12 +38,24 @@ impl MediumEventTypes {
 }
 
 impl StorableEvent for MediumEvent {
+    fn aggregate_type() -> &'static str {
+        "Medium"
+    }
+
     fn event_type_name(&self) -> &'static str {
         match self {
             MediumEvent::MediumCreated(_) => MediumEventTypes::MEDIUM_CREATED,
             MediumEvent::MediumItemCreated(_) => MediumEventTypes::MEDIUM_ITEM_CREATED,
             MediumEvent::MediumUpdated(_) => MediumEventTypes::MEDIUM_UPDATED,
         }
+    }
+
+    fn all_event_types() -> &'static [&'static str] {
+        &[
+            MediumEventTypes::MEDIUM_CREATED,
+            MediumEventTypes::MEDIUM_ITEM_CREATED,
+            MediumEventTypes::MEDIUM_UPDATED,
+        ]
     }
 }
 
@@ -49,6 +72,10 @@ impl UserEventTypes {
 }
 
 impl StorableEvent for UserEvent {
+    fn aggregate_type() -> &'static str {
+        "User"
+    }
+
     fn event_type_name(&self) -> &'static str {
         match self {
             UserEvent::UserCreated(_) => UserEventTypes::USER_CREATED,
@@ -57,6 +84,16 @@ impl StorableEvent for UserEvent {
             UserEvent::QuotaCommitted(_) => UserEventTypes::QUOTA_COMMITTED,
             UserEvent::QuotaReleased(_) => UserEventTypes::QUOTA_RELEASED,
         }
+    }
+
+    fn all_event_types() -> &'static [&'static str] {
+        &[
+            UserEventTypes::USER_CREATED,
+            UserEventTypes::USER_UPDATED,
+            UserEventTypes::QUOTA_RESERVED,
+            UserEventTypes::QUOTA_COMMITTED,
+            UserEventTypes::QUOTA_RELEASED,
+        ]
     }
 }
 
@@ -71,12 +108,24 @@ impl MetadataEventTypes {
 }
 
 impl StorableEvent for MetadataEvent {
+    fn aggregate_type() -> &'static str {
+        "Metadata"
+    }
+
     fn event_type_name(&self) -> &'static str {
         match self {
             MetadataEvent::ExtractionStarted(_) => MetadataEventTypes::EXTRACTION_STARTED,
             MetadataEvent::Extracted(_) => MetadataEventTypes::EXTRACTED,
             MetadataEvent::ExtractionFailed(_) => MetadataEventTypes::EXTRACTION_FAILED,
         }
+    }
+
+    fn all_event_types() -> &'static [&'static str] {
+        &[
+            MetadataEventTypes::EXTRACTION_STARTED,
+            MetadataEventTypes::EXTRACTED,
+            MetadataEventTypes::EXTRACTION_FAILED,
+        ]
     }
 }
 
@@ -92,6 +141,10 @@ impl TaskEventTypes {
 }
 
 impl StorableEvent for TaskEvent {
+    fn aggregate_type() -> &'static str {
+        "Task"
+    }
+
     fn event_type_name(&self) -> &'static str {
         match self {
             TaskEvent::TaskCreated(_) => TaskEventTypes::TASK_CREATED,
@@ -100,14 +153,14 @@ impl StorableEvent for TaskEvent {
             TaskEvent::TaskFailed(_) => TaskEventTypes::TASK_FAILED,
         }
     }
+
+    fn all_event_types() -> &'static [&'static str] {
+        &[
+            TaskEventTypes::TASK_CREATED,
+            TaskEventTypes::TASK_STARTED,
+            TaskEventTypes::TASK_COMPLETED,
+            TaskEventTypes::TASK_FAILED,
+        ]
+    }
 }
 
-// -- Helper: deserialize individual events from payload by type name --
-
-/// Deserializes an event from a JSON payload, returning None if the type doesn't
-/// match any known event for the given aggregate.
-pub fn try_deserialize_event<E: DeserializeOwned>(
-    payload: &serde_json::Value,
-) -> Result<E, serde_json::Error> {
-    serde_json::from_value(payload.clone())
-}

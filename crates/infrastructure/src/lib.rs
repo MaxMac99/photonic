@@ -6,6 +6,7 @@ pub mod di;
 pub mod events;
 pub mod external;
 pub mod persistence;
+pub mod projections;
 pub mod serde;
 pub mod server;
 mod shared;
