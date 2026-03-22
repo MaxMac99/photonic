@@ -42,6 +42,26 @@ impl AggregateRoot for Task {
         self.version
     }
 
+    fn from_initial_event(event: &TaskEvent) -> DomainResult<Self> {
+        let TaskEvent::TaskCreated(e) = event else {
+            return InvariantViolationSnafu {
+                message: "Task aggregate must start with TaskCreated event",
+            }
+            .fail();
+        };
+        Ok(Self {
+            id: e.task_id,
+            task_type: e.task_type,
+            reference_id: e.reference_id,
+            user_id: e.user_id,
+            status: TaskStatus::Pending,
+            created_at: e.metadata.occurred_at,
+            started_at: None,
+            completed_at: None,
+            version: 1,
+        })
+    }
+
     fn apply(&mut self, event: &TaskEvent) {
         match event {
             TaskEvent::TaskCreated(e) => {
@@ -70,8 +90,7 @@ impl AggregateRoot for Task {
 
 /// Namespace for deterministic task ID generation
 const TASK_ID_NAMESPACE: Uuid = Uuid::from_bytes([
-    0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30,
-    0xc8,
+    0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8,
 ]);
 
 impl Task {

@@ -1,6 +1,7 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use application::{
+    aggregate_repository::AggregateRepository,
     config::{AuthConfig, QuotaConfig},
     medium::{
         events::{TempCleanupCompletedEvent, TempCleanupFailedEvent, TempCleanupStartedEvent},
@@ -28,22 +29,32 @@ use byte_unit::Byte;
 use domain::{
     medium::{
         events::{MediumCreatedEvent, MediumUpdatedEvent},
-        StoragePathService,
+        Medium, StoragePathService,
     },
-    metadata::events::{
-        MetadataExtractedEvent, MetadataExtractionFailedEvent, MetadataExtractionStartedEvent,
+    metadata::{
+        events::{
+            MetadataExtractedEvent, MetadataExtractionFailedEvent, MetadataExtractionStartedEvent,
+        },
+        Metadata,
     },
+    task::Task,
+    user::User,
 };
 use snafu::Whatever;
 use sqlx::PgPool;
+use tokio_util::sync::CancellationToken;
 
 use crate::{
     config::GlobalConfig,
     events::EventBus,
     external::exif::{Exiftool, ExiftoolMetadataExtractor},
     persistence::postgres::{
-        medium::PostgresMediumRepository, metadata::PostgresMetadataRepository,
+        event_store::PostgresEventStore, medium::PostgresMediumRepository,
+        metadata::PostgresMetadataRepository, snapshot_store::PostgresSnapshotStore,
         task::PostgresTaskRepository, user::PostgresUserRepository,
+    },
+    projections::{
+        MediumProjection, MetadataProjection, ProjectionEngine, TaskProjection, UserProjection,
     },
     storage::{cleanup::spawn_cleanup_task, filesystem::repo::FilesystemStorageAdapter},
 };
@@ -57,11 +68,20 @@ pub struct Container {
     // Infrastructure - Event System
     event_bus: Arc<EventBus>,
 
+    // Event Sourcing - Aggregate Repositories
+    medium_aggregate_repo: Arc<AggregateRepository<Medium>>,
+    user_aggregate_repo: Arc<AggregateRepository<User>>,
+    task_aggregate_repo: Arc<AggregateRepository<Task>>,
+    metadata_aggregate_repo: Arc<AggregateRepository<Metadata>>,
+
     // Application - Handlers
     application_handlers: ApplicationHandlers,
 
     // Event Listeners (owned for lifecycle management)
     listener_handles: Vec<tokio::task::JoinHandle<()>>,
+
+    // Projection engine shutdown
+    projection_shutdown: CancellationToken,
 }
 
 impl Container {
@@ -74,13 +94,18 @@ impl Container {
         // Phase 2: Event system
         let event_bus = Arc::new(EventBus::new());
 
-        // Phase 3: Application services
+        // Phase 3: Event sourcing infrastructure
+        let aggregate_repos = Self::build_aggregate_repositories(&db_pool);
+        let projection_shutdown =
+            Self::start_projection_engine(&db_pool, &aggregate_repos).await;
+
+        // Phase 4: Application services
         let quota_manager = Arc::new(QuotaManager::new(
             repositories.user.clone(),
             event_bus.clone(),
         ));
 
-        // Phase 4: Application handlers
+        // Phase 5: Application handlers
         let handlers = Self::build_handlers(
             &config,
             &repositories,
@@ -89,10 +114,10 @@ impl Container {
             event_bus.clone(),
         );
 
-        // Phase 5: Start event listeners
+        // Phase 6: Start event listeners
         let mut listener_handles = Self::start_listeners(&handlers, &event_bus).await?;
 
-        // Phase 6: Background tasks
+        // Phase 7: Background tasks
         listener_handles.push(spawn_cleanup_task(
             handlers.medium.cleanup_expired_temp_storage.clone(),
             config.storage.temp_ttl_seconds,
@@ -102,8 +127,13 @@ impl Container {
         Ok(Arc::new(Self {
             config,
             event_bus,
+            medium_aggregate_repo: aggregate_repos.medium,
+            user_aggregate_repo: aggregate_repos.user,
+            task_aggregate_repo: aggregate_repos.task,
+            metadata_aggregate_repo: aggregate_repos.metadata,
             application_handlers: handlers,
             listener_handles,
+            projection_shutdown,
         }))
     }
 
@@ -132,15 +162,33 @@ impl Container {
         self.config.clone()
     }
 
-    /// Gracefully shutdown all event listeners
+    // Event sourcing accessors
+    pub fn medium_aggregate_repo(&self) -> Arc<AggregateRepository<Medium>> {
+        self.medium_aggregate_repo.clone()
+    }
+
+    pub fn user_aggregate_repo(&self) -> Arc<AggregateRepository<User>> {
+        self.user_aggregate_repo.clone()
+    }
+
+    pub fn task_aggregate_repo(&self) -> Arc<AggregateRepository<Task>> {
+        self.task_aggregate_repo.clone()
+    }
+
+    pub fn metadata_aggregate_repo(&self) -> Arc<AggregateRepository<Metadata>> {
+        self.metadata_aggregate_repo.clone()
+    }
+
+    /// Gracefully shutdown all event listeners and projection engine
     pub async fn shutdown(self: Arc<Self>) {
+        tracing::info!("Shutting down projection engine...");
+        self.projection_shutdown.cancel();
+
         tracing::info!(
             "Shutting down {} event listeners...",
             self.listener_handles.len()
         );
 
-        // We need to get ownership of the handles, but self is Arc
-        // For now, abort the tasks - a proper implementation would use cancellation tokens
         for handle in &self.listener_handles {
             handle.abort();
         }
@@ -323,6 +371,72 @@ impl Container {
 
         Ok(handles)
     }
+
+    fn build_aggregate_repositories(db_pool: &PgPool) -> AggregateRepositories {
+        let snapshot_interval = 100; // snapshot every 100 events
+
+        let medium_event_store = Arc::new(PostgresEventStore::<Medium>::new(db_pool.clone()));
+        let medium_snapshot_store =
+            Arc::new(PostgresSnapshotStore::<Medium>::new(db_pool.clone()));
+        let medium_repo = Arc::new(AggregateRepository::new(
+            medium_event_store,
+            Some(medium_snapshot_store),
+            snapshot_interval,
+        ));
+
+        let user_event_store = Arc::new(PostgresEventStore::<User>::new(db_pool.clone()));
+        let user_snapshot_store = Arc::new(PostgresSnapshotStore::<User>::new(db_pool.clone()));
+        let user_repo = Arc::new(AggregateRepository::new(
+            user_event_store,
+            Some(user_snapshot_store),
+            snapshot_interval,
+        ));
+
+        let task_event_store = Arc::new(PostgresEventStore::<Task>::new(db_pool.clone()));
+        let task_repo = Arc::new(AggregateRepository::new(task_event_store, None, 0));
+
+        let metadata_event_store =
+            Arc::new(PostgresEventStore::<Metadata>::new(db_pool.clone()));
+        let metadata_repo = Arc::new(AggregateRepository::new(metadata_event_store, None, 0));
+
+        AggregateRepositories {
+            medium: medium_repo,
+            user: user_repo,
+            task: task_repo,
+            metadata: metadata_repo,
+        }
+    }
+
+    async fn start_projection_engine(
+        db_pool: &PgPool,
+        _aggregate_repos: &AggregateRepositories,
+    ) -> CancellationToken {
+        use domain::{
+            medium::events::MediumEvent, metadata::events::MetadataEvent,
+            task::events::TaskEvent, user::events::UserEvent,
+        };
+
+        let mut engine = ProjectionEngine::new(
+            db_pool.clone(),
+            Duration::from_millis(100),
+            100,
+        );
+
+        // Register read model projections
+        engine.register::<MediumEvent, _>(MediumProjection::new(db_pool.clone()));
+        engine.register::<UserEvent, _>(UserProjection::new(db_pool.clone()));
+        engine.register::<MetadataEvent, _>(MetadataProjection::new(db_pool.clone()));
+        engine.register::<TaskEvent, _>(TaskProjection::new(db_pool.clone()));
+
+        // Start engine in background
+        let shutdown = CancellationToken::new();
+        let shutdown_clone = shutdown.clone();
+        tokio::spawn(async move {
+            engine.run(shutdown_clone).await;
+        });
+
+        shutdown
+    }
 }
 
 // Helper structs for organizing dependencies
@@ -338,6 +452,13 @@ struct StorageServices {
     file_storage: Arc<dyn FileStorage>,
     metadata_extractor: Arc<dyn MetadataExtractor>,
     storage_path_service: Arc<StoragePathService>,
+}
+
+struct AggregateRepositories {
+    medium: Arc<AggregateRepository<Medium>>,
+    user: Arc<AggregateRepository<User>>,
+    task: Arc<AggregateRepository<Task>>,
+    metadata: Arc<AggregateRepository<Metadata>>,
 }
 
 struct ApplicationHandlers {

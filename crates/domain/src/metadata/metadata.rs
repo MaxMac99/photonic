@@ -5,8 +5,10 @@ use mime::Mime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::error::InvariantViolationSnafu;
 use crate::{
     aggregate::{AggregateRoot, AggregateVersion},
+    error::DomainResult,
     medium::{MediumId, MediumItemId},
     metadata::events::{
         MetadataEvent, MetadataExtractedEvent, MetadataExtractionFailedEvent,
@@ -40,6 +42,18 @@ impl AggregateRoot for Metadata {
 
     fn version(&self) -> AggregateVersion {
         self.version
+    }
+
+    fn from_initial_event(event: &MetadataEvent) -> DomainResult<Self> {
+        let MetadataEvent::Extracted(e) = event else {
+            return InvariantViolationSnafu {
+                message: "Metadata aggregate must start with MetadataExtracted event",
+            }
+            .fail();
+        };
+        let mut metadata = e.metadata.clone();
+        metadata.version = 1;
+        Ok(metadata)
     }
 
     fn apply(&mut self, event: &MetadataEvent) {

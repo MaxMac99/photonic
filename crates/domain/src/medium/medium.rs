@@ -10,6 +10,7 @@ use super::{
     file::{Dimensions, Filename, Priority},
     storage::{FileLocation, StorageTier},
 };
+use crate::error::InvariantViolationSnafu;
 use crate::{
     aggregate::{AggregateRoot, AggregateVersion},
     error::{DomainResult, ValidationSnafu},
@@ -76,6 +77,30 @@ impl AggregateRoot for Medium {
 
     fn version(&self) -> AggregateVersion {
         self.version
+    }
+
+    fn from_initial_event(event: &MediumEvent) -> DomainResult<Self> {
+        let MediumEvent::MediumCreated(e) = event else {
+            return InvariantViolationSnafu {
+                message: "Medium aggregate must start with MediumCreated event",
+            }
+            .fail();
+        };
+        let now = e.metadata.occurred_at;
+        Ok(Self {
+            id: e.medium_id,
+            owner_id: e.user_id,
+            medium_type: e.medium_type,
+            leading_item_id: e.leading_item_id,
+            taken_at: None,
+            camera_make: None,
+            camera_model: None,
+            gps_coordinates: None,
+            created_at: now,
+            updated_at: now,
+            items: vec![],
+            version: 1,
+        })
     }
 
     fn apply(&mut self, event: &MediumEvent) {

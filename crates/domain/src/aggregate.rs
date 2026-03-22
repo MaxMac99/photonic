@@ -1,6 +1,6 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::event::DomainEvent;
+use crate::{error::DomainResult, event::DomainEvent};
 
 pub type AggregateVersion = i64;
 
@@ -14,6 +14,11 @@ pub trait AggregateRoot: Send + Sync + Sized {
 
     /// Current version (number of events applied)
     fn version(&self) -> AggregateVersion;
+
+    /// Create the aggregate from its first event (the creation event).
+    /// Used during reconstitution when no snapshot exists.
+    /// Returns an error if the event is not a valid creation event.
+    fn from_initial_event(event: &Self::Event) -> DomainResult<Self>;
 
     /// Apply a domain event to mutate aggregate state.
     /// Called both during reconstitution (replay) and after command execution.

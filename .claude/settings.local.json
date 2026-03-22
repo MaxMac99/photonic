@@ -3,7 +3,8 @@
     "allow": [
       "Bash(find:*)",
       "Bash(cargo check:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(cargo test:*)"
     ],
     "deny": [],
     "ask": []

@@ -10,6 +10,7 @@ use super::{
     },
     quota::QuotaState,
 };
+use crate::error::InvariantViolationSnafu;
 use crate::{
     aggregate::{AggregateRoot, AggregateVersion},
     error::DomainResult,
@@ -35,6 +36,22 @@ impl AggregateRoot for User {
 
     fn version(&self) -> AggregateVersion {
         self.version
+    }
+
+    fn from_initial_event(event: &UserEvent) -> DomainResult<Self> {
+        let UserEvent::UserCreated(e) = event else {
+            return InvariantViolationSnafu {
+                message: "User aggregate must start with UserCreated event",
+            }
+            .fail();
+        };
+        Ok(Self {
+            id: e.user_id,
+            version: 1,
+            username: e.username.clone(),
+            email: e.email.clone(),
+            quota: QuotaState::new_unchecked(Byte::from_u64(0), e.quota),
+        })
     }
 
     fn apply(&mut self, event: &UserEvent) {
