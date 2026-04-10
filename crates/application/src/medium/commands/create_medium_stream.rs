@@ -89,7 +89,7 @@ impl CreateMediumStreamHandler {
                     camera_model: command.camera_model,
                     medium_item: medium_item_request,
                 };
-                let (medium, medium_created_event, item_created_event) = Medium::new(medium_request)?;
+                let (medium, created_event) = Medium::new(medium_request)?;
                 let medium_id = medium.id;
 
                 debug!(
@@ -111,14 +111,11 @@ impl CreateMediumStreamHandler {
                         ApplicationError::Domain { source: e }
                     })?;
 
-                // Publish events — the EventBus persists to event store,
-                // updates projections, then dispatches to listeners
-                let events = vec![
-                    MediumEvent::from(medium_created_event),
-                    MediumEvent::from(item_created_event),
-                ];
-                for event in events {
-                    self.event_bus.publish(event).await.map_err(|e| {
+                // Publish event — persists to event store, then dispatches to listeners
+                self.event_bus
+                    .publish(MediumEvent::from(created_event))
+                    .await
+                    .map_err(|e| {
                         error!(
                             medium_id = %medium_id,
                             error = %e,
@@ -126,7 +123,6 @@ impl CreateMediumStreamHandler {
                         );
                         e
                     })?;
-                }
 
                 info!(
                     medium_id = %medium_id,

@@ -482,7 +482,7 @@ RUST_LOG=info
 RUST_LOG=warn,infrastructure=debug
 
 # Detailed logging for specific module
-RUST_LOG=info,infrastructure::domain::medium=trace
+RUST_LOG=info,infrastructure::event::medium=trace
 
 # SQL query logging
 RUST_LOG=info,sqlx=debug

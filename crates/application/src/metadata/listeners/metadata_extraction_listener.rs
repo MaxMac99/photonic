@@ -22,19 +22,20 @@ impl EventProcessor<MediumEvent> for MetadataExtractionListeners {
         name = "MetadataExtractionListener::MediumEvent",
         skip(self, event),
     )]
-    async fn process(&self, event: MediumEvent) -> ApplicationResult<()> {
+    async fn process(&self, event: &MediumEvent) -> ApplicationResult<()> {
         let MediumEvent::MediumCreated(event) = event else { return Ok(()) };
+        let item = &event.initial_item;
         info!(
             "Starting metadata extraction task for medium_id={} (leading_item_id={}, user_id={})",
-            event.medium_id, event.leading_item_id, event.user_id
+            event.medium_id, item.id, event.user_id
         );
 
         self.extract_metadata_handler
             .handle(ExtractMetadataCommand {
                 medium_id: event.medium_id,
-                leading_item_id: event.leading_item_id,
+                leading_item_id: item.id,
                 user_id: event.user_id,
-                file_location: event.leading_item_location,
+                file_location: item.locations.first().expect("Item must have a location").clone(),
             })
             .await?;
 

@@ -3,7 +3,7 @@ use snafu::ensure;
 
 use crate::error::{DomainResult, ValidationSnafu};
 
-/// Camera information value object (denormalized from Metadata domain)
+/// Camera information value object (denormalized from Metadata event)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CameraInfo {
     make: String,
@@ -61,7 +61,7 @@ impl std::fmt::Display for CameraInfo {
     }
 }
 
-/// GPS coordinates value object (denormalized from Metadata domain)
+/// GPS coordinates value object (denormalized from Metadata event)
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct GpsCoordinates {
     latitude: f64,

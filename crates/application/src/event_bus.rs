@@ -12,7 +12,7 @@ pub trait PublishEvent<E: DomainEvent>: Send + Sync {
 
 #[async_trait]
 pub trait EventProcessor<E: DomainEvent>: Send + Sync {
-    async fn process(&self, event: E) -> ApplicationResult<()>;
+    async fn process(&self, event: &E) -> ApplicationResult<()>;
 }
 
 #[async_trait]
@@ -21,7 +21,7 @@ where
     E: DomainEvent + 'static,
     T: EventProcessor<E> + ?Sized,
 {
-    async fn process(&self, event: E) -> ApplicationResult<()> {
+    async fn process(&self, event: &E) -> ApplicationResult<()> {
         T::process(self, event).await
     }
 }

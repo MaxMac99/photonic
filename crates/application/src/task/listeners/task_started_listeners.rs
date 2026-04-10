@@ -24,7 +24,7 @@ impl EventProcessor<MetadataEvent> for TaskStartedListeners {
         name = "TaskStartedListeners::MetadataEvent",
         skip(self, event),
     )]
-    async fn process(&self, event: MetadataEvent) -> ApplicationResult<()> {
+    async fn process(&self, event: &MetadataEvent) -> ApplicationResult<()> {
         let MetadataEvent::ExtractionStarted(event) = event else { return Ok(()) };
         info!(
             "Starting metadata extraction task for medium_id={} (leading_item_id={})",
@@ -58,7 +58,7 @@ impl EventProcessor<TempCleanupStartedEvent> for TaskStartedListeners {
             sweep_id = %event.sweep_id,
         )
     )]
-    async fn process(&self, event: TempCleanupStartedEvent) -> ApplicationResult<()> {
+    async fn process(&self, event: &TempCleanupStartedEvent) -> ApplicationResult<()> {
         info!(sweep_id = %event.sweep_id, "Creating and starting temp cleanup task");
 
         self.start_task_handler

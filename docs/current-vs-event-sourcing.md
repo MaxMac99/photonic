@@ -2,20 +2,20 @@
 
 ## Executive Summary
 
-| Aspect | Current Setup (State-Based CRUD) | Event Sourcing |
-|--------|----------------------------------|----------------|
-| **Complexity** | ⭐ Low | ⭐⭐⭐⭐ High |
-| **Learning Curve** | ⭐ Easy | ⭐⭐⭐⭐ Steep |
-| **Development Speed** | ⭐⭐⭐⭐⭐ Very Fast | ⭐⭐ Slow |
-| **Debugging** | ⭐⭐⭐⭐ Easy | ⭐⭐⭐ Moderate |
-| **Audit Trail** | ❌ None | ✅ Complete |
-| **Time Travel** | ❌ No | ✅ Yes |
-| **Query Performance** | ✅ Excellent | ⚠️ Needs Projections |
-| **Write Performance** | ✅ Fast | ✅ Fast (append-only) |
-| **Data Migration** | ⚠️ Complex | ✅ Easier (event upcasting) |
-| **Bug Recovery** | ❌ Data lost | ✅ Can replay with fix |
-| **Testing** | ⭐⭐⭐⭐ Easy | ⭐⭐⭐ Moderate |
-| **Operational Cost** | $ Low | $$ Medium to High |
+| Aspect                | Current Setup (State-Based CRUD) | Event Sourcing             |
+|-----------------------|----------------------------------|----------------------------|
+| **Complexity**        | ⭐ Low                            | ⭐⭐⭐⭐ High                  |
+| **Learning Curve**    | ⭐ Easy                           | ⭐⭐⭐⭐ Steep                 |
+| **Development Speed** | ⭐⭐⭐⭐⭐ Very Fast                  | ⭐⭐ Slow                    |
+| **Debugging**         | ⭐⭐⭐⭐ Easy                        | ⭐⭐⭐ Moderate               |
+| **Audit Trail**       | ❌ None                           | ✅ Complete                 |
+| **Time Travel**       | ❌ No                             | ✅ Yes                      |
+| **Query Performance** | ✅ Excellent                      | ⚠️ Needs Projections       |
+| **Write Performance** | ✅ Fast                           | ✅ Fast (append-only)       |
+| **Data Migration**    | ⚠️ Complex                       | ✅ Easier (event upcasting) |
+| **Bug Recovery**      | ❌ Data lost                      | ✅ Can replay with fix      |
+| **Testing**           | ⭐⭐⭐⭐ Easy                        | ⭐⭐⭐ Moderate               |
+| **Operational Cost**  | $ Low                            | $$ Medium to High          |
 
 ---
 
@@ -24,7 +24,7 @@
 ### What You Have Now
 
 ```rust
-// src/domain/album/entity.rs
+// src/event/album/entity.rs
 pub struct Album {
     pub id: Uuid,
     pub owner_id: Uuid,
@@ -36,13 +36,14 @@ pub struct Album {
 ```
 
 **Pattern**: Anemic Domain Model
+
 - Simple data structure
 - No business logic
 - No encapsulation (all fields public)
 - No validation
 
 ```rust
-// src/domain/album/service.rs
+// src/event/album/service.rs
 pub struct AlbumService {
     repository: Arc<dyn AlbumRepository>,
 }
@@ -62,6 +63,7 @@ impl AlbumService {
 ```
 
 **Pattern**: Transaction Script
+
 - Service orchestrates operations
 - Direct database calls via repository
 - State is immediately persisted
@@ -86,6 +88,7 @@ async fn create(&self, album: AlbumCreate, user_id: Uuid) -> DomainResult<Album>
 ```
 
 **Pattern**: Direct State Persistence (CRUD)
+
 - INSERT/UPDATE/DELETE directly modifies tables
 - No history
 - Current state only
@@ -111,6 +114,7 @@ Return current state
 ```
 
 **Characteristics**:
+
 - ✅ Simple, straightforward
 - ✅ Fast development
 - ✅ Easy to understand
@@ -463,6 +467,7 @@ Read Models Updated
 ```
 
 **Characteristics**:
+
 - ⚠️ Complex, multiple moving parts
 - ⚠️ Slower development initially
 - ⚠️ Eventual consistency (projections lag)
@@ -479,6 +484,7 @@ Read Models Updated
 #### Current (State-Based)
 
 **Database Schema**:
+
 ```sql
 CREATE TABLE albums (
     id UUID PRIMARY KEY,
@@ -499,6 +505,7 @@ UPDATE albums SET title = 'New Title' WHERE id = '...';
 **Storage**: Minimal (one row per album)
 
 **Example Timeline**:
+
 ```
 T1: Album created with title "Vacation 2024"
 T2: Title changed to "Summer Vacation 2024"
@@ -511,6 +518,7 @@ You cannot see: "Vacation 2024" or "Summer Vacation 2024"
 #### Event Sourcing
 
 **Database Schema**:
+
 ```sql
 -- Event store (append-only)
 CREATE TABLE event_store (
@@ -542,6 +550,7 @@ INSERT INTO event_store (...) VALUES (...);
 ```
 
 **What's Stored**:
+
 - All events (complete history)
 - Projections (current state for queries)
 
@@ -549,6 +558,7 @@ INSERT INTO event_store (...) VALUES (...);
 **Storage**: Higher (one row per event + projections)
 
 **Example Timeline**:
+
 ```
 T1: AlbumCreatedEvent { title: "Vacation 2024" }
 T2: AlbumRenamedEvent { old: "Vacation 2024", new: "Summer Vacation 2024" }
@@ -597,11 +607,13 @@ impl AlbumService {
 ```
 
 **Pros**:
+
 - ✅ Simple, straightforward
 - ✅ Easy for junior developers
 - ✅ Less code
 
 **Cons**:
+
 - ❌ Business logic scattered in services
 - ❌ No encapsulation (public fields)
 - ❌ Can bypass validation
@@ -672,12 +684,14 @@ impl AlbumService {
 ```
 
 **Pros**:
+
 - ✅ Business logic in domain (true DDD)
 - ✅ Encapsulation (private fields)
 - ✅ Cannot bypass validation
 - ✅ Self-documenting (events tell story)
 
 **Cons**:
+
 - ⚠️ More code
 - ⚠️ Steeper learning curve
 - ⚠️ More complex
@@ -766,6 +780,7 @@ async fn get_album_at_time(&self, id: &AlbumId, timestamp: DateTime<Utc>) -> Res
 ```
 
 **Performance**:
+
 - ✅ Projections are fast (like current queries)
 - ❌ Event replay is slow (not for regular queries)
 - ✅ Time travel possible (unique capability)
@@ -774,6 +789,7 @@ async fn get_album_at_time(&self, id: &AlbumId, timestamp: DateTime<Utc>) -> Res
 **Flexibility**: ⚠️ Need to pre-build projections
 
 **Projection Creation**:
+
 ```rust
 // Must create projection handler for each view
 pub async fn handle_album_created(&self, event: AlbumCreatedEvent) -> Result<()> {
@@ -834,11 +850,13 @@ async fn test_create_album() {
 ```
 
 **Pros**:
+
 - ✅ Simple, straightforward
 - ✅ Test state directly
 - ✅ Easy to mock
 
 **Cons**:
+
 - ❌ Can't test behavior history
 - ❌ Can't verify "what happened"
 
@@ -925,12 +943,14 @@ async fn test_event_replay() {
 ```
 
 **Pros**:
+
 - ✅ Test behavior, not just state
 - ✅ Verify events (what happened)
 - ✅ Test event replay
 - ✅ Better domain coverage
 
 **Cons**:
+
 - ⚠️ More setup required
 - ⚠️ More assertions needed
 
@@ -995,6 +1015,7 @@ OUTCOME: Complete visibility into what happened
 **Debugging tools**: Event store viewer, replay tools, time travel queries
 
 **Example Debug Queries**:
+
 ```sql
 -- See all events for an album
 SELECT
@@ -1053,6 +1074,7 @@ OUTCOME: Data loss, difficult recovery
 ```
 
 **Recovery Options**:
+
 - ❌ Replay with fix (not possible)
 - ⚠️ Restore from backup (data loss)
 - ❌ Undo specific operations (not possible)
@@ -1079,12 +1101,14 @@ OUTCOME: Full recovery, no data loss
 ```
 
 **Recovery Options**:
+
 - ✅ Replay with fix (rebuilds correct state)
 - ✅ Compensating events (fixes mistakes)
 - ✅ Time travel (restore to before bug)
 - ✅ Selective replay (fix specific aggregates)
 
 **Example Recovery**:
+
 ```rust
 // Rebuild projection with fixed code
 async fn rebuild_album_projection() -> Result<()> {
@@ -1125,6 +1149,7 @@ async fn update_album(&self, id: Uuid, new_title: String) -> Result<()> {
 ```
 
 **Concurrency Issue**:
+
 ```
 Thread 1: Read album (version 1)
 Thread 2: Read album (version 1)
@@ -1134,6 +1159,7 @@ Result: "B" wins, "A" is lost (Lost Update problem)
 ```
 
 **Solution** (would need to add):
+
 ```rust
 pub struct Album {
     pub id: Uuid,
@@ -1200,6 +1226,7 @@ async fn append_events(
 ```
 
 **Concurrency Handling**:
+
 ```
 Thread 1: Read events (version 5)
 Thread 2: Read events (version 5)
@@ -1309,6 +1336,7 @@ EXECUTE FUNCTION audit_changes();
 ```
 
 **Requirements**:
+
 - ⚠️ Manual implementation
 - ⚠️ Additional tables/triggers
 - ⚠️ May miss changes
@@ -1332,6 +1360,7 @@ ORDER BY version;
 ```
 
 **Compliance Reports**:
+
 ```sql
 -- Who accessed what and when
 SELECT
@@ -1354,6 +1383,7 @@ VALUES ('UserDataDeleted', '{"user_id": "user-123", "reason": "GDPR request"}');
 ```
 
 **Requirements**:
+
 - ✅ Automatic (no extra work)
 - ✅ Immutable (tamper-proof)
 - ✅ Complete history
@@ -1366,6 +1396,7 @@ VALUES ('UserDataDeleted', '{"user_id": "user-123", "reason": "GDPR request"}');
 #### Current (Fast Initial Development)
 
 **Week 1-4: Very Fast**
+
 ```rust
 // Quick to build
 pub struct Album { pub id: Uuid, pub title: String }
@@ -1378,11 +1409,13 @@ async fn create(album: Album) {
 ```
 
 **Month 2-6: Stable**
+
 - CRUD operations are simple
 - Easy to add new fields
 - Straightforward debugging
 
 **Month 6+: Technical Debt Accumulates**
+
 - Missing audit trail (need to add)
 - No history (users complain)
 - Concurrency issues (need versioning)
@@ -1393,6 +1426,7 @@ async fn create(album: Album) {
 #### Event Sourcing (Slower Initial, Pays Off Long-Term)
 
 **Week 1-4: Slow**
+
 ```rust
 // More upfront work
 pub struct Album { /* rich model */ }
@@ -1404,12 +1438,14 @@ pub enum DomainEvent { /* all events */ }
 ```
 
 **Month 2-6: Learning Curve**
+
 - Understanding event sourcing patterns
 - Building projection infrastructure
 - Event versioning strategies
 - Testing approaches
 
 **Month 6+: Productivity Gains**
+
 - New features are events (clear pattern)
 - Audit trail already exists
 - Debugging is easier (complete history)
@@ -1425,6 +1461,7 @@ pub enum DomainEvent { /* all events */ }
 ### Scenario 1: User Accidentally Deletes Album
 
 #### Current (State-Based)
+
 ```
 1. User clicks delete
 2. DELETE FROM albums WHERE id = '...';
@@ -1437,6 +1474,7 @@ Result: ❌ Poor user experience, data loss
 ```
 
 #### Event Sourcing
+
 ```
 1. User clicks delete
 2. AlbumDeletedEvent generated
@@ -1454,6 +1492,7 @@ Result: ✅ Excellent user experience, no data loss
 ### Scenario 2: Photo Processing Pipeline
 
 **Current Flow**:
+
 ```
 Upload photo → Process → Update medium state
 ```
@@ -1461,6 +1500,7 @@ Upload photo → Process → Update medium state
 **Problem**: If processing fails, state might be inconsistent
 
 #### With Event Sourcing
+
 ```
 Upload photo → MediumCreatedEvent
            → MediumUploadedEvent
@@ -1472,6 +1512,7 @@ Upload photo → MediumCreatedEvent
 ```
 
 **Benefits**:
+
 - ✅ Can see exactly where processing stopped
 - ✅ Can retry from specific step
 - ✅ Can rebuild thumbnails by replaying events
@@ -1483,6 +1524,7 @@ Upload photo → MediumCreatedEvent
 ### Scenario 3: Analytics & Insights
 
 #### Current (No History)
+
 ```sql
 -- Can't answer questions like:
 -- "What time of day do users create most albums?"
@@ -1494,6 +1536,7 @@ Upload photo → MediumCreatedEvent
 ```
 
 #### Event Sourcing (Analytics Built-in)
+
 ```sql
 -- All questions answerable from events
 
@@ -1533,14 +1576,17 @@ HAVING COUNT(*) > 5;
 ### Current Setup
 
 **Development**:
+
 - Initial: Low (fast to build)
 - Maintenance: Medium (technical debt grows)
 
 **Infrastructure**:
+
 - PostgreSQL: $50-100/month (already have)
 - Total: $50-100/month
 
 **Operations**:
+
 - Monitoring: Standard database monitoring
 - Backups: Regular PostgreSQL backups
 - Complexity: Low
@@ -1552,20 +1598,24 @@ HAVING COUNT(*) > 5;
 ### Event Sourcing
 
 **Development**:
+
 - Initial: High (learning curve, more code)
 - Maintenance: Medium (projections, event versioning)
 
 **Infrastructure** (PostgreSQL approach):
+
 - PostgreSQL: $50-100/month (already have)
 - Larger storage: +$20-50/month (events + projections)
 - Total: $70-150/month
 
 **Infrastructure** (EventStoreDB approach):
+
 - PostgreSQL: $50-100/month (projections only)
 - EventStoreDB: $100-200/month
 - Total: $150-300/month
 
 **Operations**:
+
 - Monitoring: Event store + projections + event lag
 - Backups: Events (critical) + projections (can rebuild)
 - Complexity: Medium to High
@@ -1579,6 +1629,7 @@ HAVING COUNT(*) > 5;
 ### Current Setup: Continue As-Is If...
 
 ✅ **Use your current approach if**:
+
 - You want to ship features quickly
 - Team is not experienced with event sourcing
 - Budget is tight
@@ -1587,6 +1638,7 @@ HAVING COUNT(*) > 5;
 - History is not important
 
 **What to add to current setup**:
+
 1. **Optimistic locking** (version field)
 2. **Soft deletes** (deleted_at field)
 3. **Audit log table** (for compliance)
@@ -1606,6 +1658,7 @@ pub struct Album {
 ### Event Sourcing: Adopt If...
 
 ✅ **Use event sourcing if**:
+
 - Audit trail is critical (compliance, regulation)
 - Users need to see history of changes
 - You need time-travel queries
@@ -1616,6 +1669,7 @@ pub struct Album {
 - You have time for upfront investment
 
 **Start with hybrid approach**:
+
 1. Event sourcing for **Album** and **Medium** (high-value domains)
 2. State-based for **User** and **Auth** (simpler domains)
 3. PostgreSQL for everything (no EventStoreDB initially)
@@ -1627,6 +1681,7 @@ pub struct Album {
 Based on your codebase analysis:
 
 **Phase 1: Improve Current Setup (1-2 weeks)**
+
 ```rust
 // Add these to your current architecture:
 1. Optimistic locking (version field)
@@ -1637,38 +1692,43 @@ Based on your codebase analysis:
 ```
 
 **Phase 2: Evaluate (Month 2-3)**
+
 - Monitor if audit/history becomes critical
 - Watch for concurrency issues
 - Listen to user feedback about "undo" features
 
 **Phase 3: Migrate to ES (If Needed)**
+
 - Start with Album aggregate
 - Keep User as state-based
 - Use PostgreSQL + domain events (hybrid)
 
-**Don't jump straight to full event sourcing** - add domain events to your current architecture first, get the benefits (audit, integration), and migrate to full ES only if you need time-travel and event replay.
+**Don't jump straight to full event sourcing** - add domain events to your current architecture
+first, get the benefits (audit, integration), and migrate to full ES only if you need time-travel
+and event replay.
 
 ---
 
 ## Summary Table
 
-| Concern | Current (State) | Event Sourcing | Winner |
-|---------|----------------|----------------|--------|
-| **Development Speed** | 🚀 Very Fast | 🐢 Slow | Current |
-| **Learning Curve** | ⭐ Easy | ⭐⭐⭐⭐ Hard | Current |
-| **Audit Trail** | ❌ None | ✅ Complete | ES |
-| **History** | ❌ No | ✅ Yes | ES |
-| **Time Travel** | ❌ No | ✅ Yes | ES |
-| **Query Performance** | ✅ Excellent | ⚠️ Need Projections | Current |
-| **Debugging** | ⚠️ Limited | ✅ Excellent | ES |
-| **Bug Recovery** | ❌ Data Lost | ✅ Can Replay | ES |
-| **Compliance** | ⚠️ Manual | ✅ Built-in | ES |
-| **Concurrency** | ⚠️ Manual | ✅ Built-in | ES |
-| **Testing** | ✅ Simple | ⚠️ More Complex | Current |
-| **Operational Cost** | $ Low | $$ Medium | Current |
-| **Storage Cost** | $ Low | $$ Higher | Current |
-| **Complexity** | ⭐ Low | ⭐⭐⭐⭐ High | Current |
+| Concern               | Current (State) | Event Sourcing      | Winner  |
+|-----------------------|-----------------|---------------------|---------|
+| **Development Speed** | 🚀 Very Fast    | 🐢 Slow             | Current |
+| **Learning Curve**    | ⭐ Easy          | ⭐⭐⭐⭐ Hard           | Current |
+| **Audit Trail**       | ❌ None          | ✅ Complete          | ES      |
+| **History**           | ❌ No            | ✅ Yes               | ES      |
+| **Time Travel**       | ❌ No            | ✅ Yes               | ES      |
+| **Query Performance** | ✅ Excellent     | ⚠️ Need Projections | Current |
+| **Debugging**         | ⚠️ Limited      | ✅ Excellent         | ES      |
+| **Bug Recovery**      | ❌ Data Lost     | ✅ Can Replay        | ES      |
+| **Compliance**        | ⚠️ Manual       | ✅ Built-in          | ES      |
+| **Concurrency**       | ⚠️ Manual       | ✅ Built-in          | ES      |
+| **Testing**           | ✅ Simple        | ⚠️ More Complex     | Current |
+| **Operational Cost**  | $ Low           | $$ Medium           | Current |
+| **Storage Cost**      | $ Low           | $$ Higher           | Current |
+| **Complexity**        | ⭐ Low           | ⭐⭐⭐⭐ High           | Current |
 
 **Overall Winner**: Depends on requirements!
+
 - **Current**: Better for simple apps, fast iteration
 - **Event Sourcing**: Better for complex domains, compliance, history needs

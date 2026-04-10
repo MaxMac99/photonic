@@ -1,16 +1,13 @@
 use domain::{
-    event::DomainEvent,
-    medium::events::MediumEvent,
-    metadata::events::MetadataEvent,
-    task::events::TaskEvent,
-    user::events::UserEvent,
+    event::DomainEvent, medium::events::MediumEvent, metadata::events::MetadataEvent,
+    task::events::TaskEvent, user::events::UserEvent,
 };
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 
 /// Infrastructure trait that maps event enum variants to their string type names
 /// for the `event_type` column in the event store.
 ///
-/// Extends `DomainEvent` — storable events are domain events with serialization
+/// Extends `DomainEvent` — storable events are event events with serialization
 /// and type name metadata for persistence.
 ///
 /// Compile-time exhaustive: adding a new enum variant without updating the match
@@ -201,4 +198,3 @@ impl StorableEvent for TaskEvent {
         ]
     }
 }
-

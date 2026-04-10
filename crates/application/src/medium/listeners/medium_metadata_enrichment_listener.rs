@@ -22,7 +22,7 @@ impl EventProcessor<MetadataEvent> for MediumMetadataEnrichmentListener {
         name = "MediumMetadataEnrichmentListener::MetadataEvent",
         skip(self, event),
     )]
-    async fn process(&self, event: MetadataEvent) -> ApplicationResult<()> {
+    async fn process(&self, event: &MetadataEvent) -> ApplicationResult<()> {
         let MetadataEvent::Extracted(event) = event else { return Ok(()) };
         info!(
             "Enriching medium metadata for medium_id={} (leading_item_id={})",

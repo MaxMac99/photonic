@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
+use application::error::ApplicationResult;
+use application::projection::Projection;
 use async_trait::async_trait;
 use domain::metadata::events::MetadataEvent;
 use sqlx::PgPool;
 use tracing::debug;
-
-use super::{Projection, ProjectionResult};
 
 /// Projection that maintains the metadata read model table.
 pub struct MetadataProjection {
@@ -24,11 +24,7 @@ impl Projection<MetadataEvent> for MetadataProjection {
         Cow::Borrowed("metadata_read_model")
     }
 
-    async fn handle(
-        &self,
-        event: &MetadataEvent,
-        global_sequence: i64,
-    ) -> ProjectionResult<()> {
+    async fn handle(&self, event: &MetadataEvent, global_sequence: i64) -> ApplicationResult<()> {
         debug!(
             global_sequence = global_sequence,
             "MetadataProjection handling event"

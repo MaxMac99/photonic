@@ -33,6 +33,6 @@ impl Default for EventMetadata {
     }
 }
 
-pub trait DomainEvent: Send + Sync + Clone + Debug {
+pub trait DomainEvent: Send + Sync + Debug {
     fn metadata(&self) -> &EventMetadata;
 }

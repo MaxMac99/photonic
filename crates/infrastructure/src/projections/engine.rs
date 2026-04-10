@@ -5,13 +5,16 @@ use std::{
     time::Duration,
 };
 
+use futures_util::future::join_all;
+
+use application::{
+    error::{ApplicationError, ApplicationResult},
+    projection::Projection,
+};
 use async_trait::async_trait;
 use sqlx::{prelude::FromRow, PgPool};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
-
-use super::{Projection, ProjectionResult};
-use crate::events::StorableEvent;
 
 #[derive(Debug, FromRow)]
 struct EventRow {
@@ -26,7 +29,7 @@ type DecodedEvent = Box<dyn Any + Send + Sync>;
 
 trait EventDecoder: Send + Sync {
     fn event_type_filter(&self) -> &'static [&'static str];
-    fn decode(&self, payload: &serde_json::Value) -> ProjectionResult<DecodedEvent>;
+    fn decode(&self, payload: &serde_json::Value) -> ApplicationResult<DecodedEvent>;
 }
 
 #[async_trait]
@@ -36,7 +39,7 @@ trait ProjectionHandler: Send + Sync {
         &self,
         event: &DecodedEvent,
         global_sequence: i64,
-    ) -> ProjectionResult<()>;
+    ) -> ApplicationResult<()>;
 }
 
 struct TypedDecoder<E: StorableEvent> {
@@ -48,8 +51,11 @@ impl<E: StorableEvent + 'static> EventDecoder for TypedDecoder<E> {
         E::all_event_types()
     }
 
-    fn decode(&self, payload: &serde_json::Value) -> ProjectionResult<DecodedEvent> {
-        let event: E = serde_json::from_value(payload.clone())?;
+    fn decode(&self, payload: &serde_json::Value) -> ApplicationResult<DecodedEvent> {
+        let event: E =
+            serde_json::from_value(payload.clone()).map_err(|e| ApplicationError::Internal {
+                message: format!("Failed to decode event: {}", e),
+            })?;
         Ok(Box::new(event))
     }
 }
@@ -69,7 +75,7 @@ impl<E: StorableEvent + 'static, P: Projection<E>> ProjectionHandler for TypedHa
         &self,
         event: &DecodedEvent,
         global_sequence: i64,
-    ) -> ProjectionResult<()> {
+    ) -> ApplicationResult<()> {
         let event = event
             .downcast_ref::<E>()
             .expect("type mismatch in projection pipeline — this is a bug");
@@ -146,15 +152,13 @@ impl ProjectionEngine {
                     break;
                 }
                 _ = tokio::time::sleep(self.poll_interval) => {
-                    if let Err(e) = self.process_all().await {
-                        error!(error = %e, "Projection engine poll failed");
-                    }
+                    self.process_all().await;
                 }
             }
         }
     }
 
-    async fn process_all(&self) -> ProjectionResult<()> {
+    async fn process_all(&self) {
         for group in self.groups.values() {
             for handler in &group.handlers {
                 if let Err(e) = self.process_handler(group, handler.as_ref()).await {
@@ -166,14 +170,13 @@ impl ProjectionEngine {
                 }
             }
         }
-        Ok(())
     }
 
     async fn process_handler(
         &self,
         group: &ProjectionGroup,
         handler: &dyn ProjectionHandler,
-    ) -> ProjectionResult<()> {
+    ) -> ApplicationResult<()> {
         let name = handler.name();
         let checkpoint = self.load_checkpoint(&name).await?;
         let filter = group.decoder.event_type_filter();
@@ -191,12 +194,7 @@ impl ProjectionEngine {
         );
 
         for event_row in events {
-            let decoded = group.decoder.decode(&event_row.payload).map_err(|e| {
-                format!(
-                    "Failed to decode event type '{}' at sequence {}: {}",
-                    event_row.event_type, event_row.global_sequence, e
-                )
-            })?;
+            let decoded = group.decoder.decode(&event_row.payload)?;
 
             if let Err(e) = handler
                 .handle_decoded(&decoded, event_row.global_sequence)
@@ -219,13 +217,16 @@ impl ProjectionEngine {
         Ok(())
     }
 
-    async fn load_checkpoint(&self, projection_name: &str) -> ProjectionResult<i64> {
+    async fn load_checkpoint(&self, projection_name: &str) -> ApplicationResult<i64> {
         let row: Option<(i64,)> = sqlx::query_as(
             "SELECT last_global_sequence FROM projection_checkpoints WHERE projection_name = $1",
         )
         .bind(projection_name)
         .fetch_optional(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| ApplicationError::Internal {
+            message: format!("Failed to load checkpoint: {}", e),
+        })?;
 
         Ok(row.map(|r| r.0).unwrap_or(0))
     }
@@ -234,7 +235,7 @@ impl ProjectionEngine {
         &self,
         projection_name: &str,
         global_sequence: i64,
-    ) -> ProjectionResult<()> {
+    ) -> ApplicationResult<()> {
         sqlx::query(
             "INSERT INTO projection_checkpoints (projection_name, last_global_sequence, updated_at)
              VALUES ($1, $2, CURRENT_TIMESTAMP)
@@ -244,7 +245,10 @@ impl ProjectionEngine {
         .bind(projection_name)
         .bind(global_sequence)
         .execute(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| ApplicationError::Internal {
+            message: format!("Failed to save checkpoint: {}", e),
+        })?;
 
         Ok(())
     }
@@ -253,7 +257,7 @@ impl ProjectionEngine {
         &self,
         after_sequence: i64,
         event_types: &[&str],
-    ) -> ProjectionResult<Vec<EventRow>> {
+    ) -> ApplicationResult<Vec<EventRow>> {
         let rows = sqlx::query_as::<_, EventRow>(
             "SELECT global_sequence, event_type, payload
              FROM events
@@ -265,7 +269,10 @@ impl ProjectionEngine {
         .bind(event_types)
         .bind(self.batch_size)
         .fetch_all(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| ApplicationError::Internal {
+            message: format!("Failed to fetch events: {}", e),
+        })?;
 
         Ok(rows)
     }

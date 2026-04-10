@@ -1,10 +1,15 @@
+use byte_unit::Byte;
 use derive_new::new;
 use mime::Mime;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     event::{DomainEvent, EventMetadata},
-    medium::{storage::FileLocation, MediumId, MediumItemId, MediumItemType},
+    medium::{
+        file::{Dimensions, Filename, Priority},
+        storage::FileLocation,
+        MediumId, MediumItemId, MediumItemType,
+    },
     user::UserId,
 };
 
@@ -18,6 +23,10 @@ pub struct MediumItemCreatedEvent {
     pub file_location: FileLocation,
     #[serde(with = "crate::serde_helpers::mime_serde")]
     pub mime_type: Mime,
+    pub filename: Filename,
+    pub filesize: Byte,
+    pub priority: Priority,
+    pub dimensions: Option<Dimensions>,
     #[new(default)]
     pub metadata: EventMetadata,
 }

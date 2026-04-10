@@ -120,7 +120,7 @@ impl MoveToPermanentStorageHandler {
             completed_copies.push(op);
         }
 
-        // Pass 3: Update domain entities — add permanent location alongside temp
+        // Pass 3: Update event entities — add permanent location alongside temp
         for op in &operations {
             if let Some(item) = medium.find_item_mut(op.item_id) {
                 item.add_location(op.dest.clone());

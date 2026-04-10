@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
+use application::error::ApplicationResult;
+use application::projection::Projection;
 use async_trait::async_trait;
 use domain::task::events::TaskEvent;
 use sqlx::PgPool;
 use tracing::debug;
-
-use super::{Projection, ProjectionResult};
 
 /// Projection that maintains the tasks read model table.
 pub struct TaskProjection {
@@ -24,11 +24,7 @@ impl Projection<TaskEvent> for TaskProjection {
         Cow::Borrowed("task_read_model")
     }
 
-    async fn handle(
-        &self,
-        event: &TaskEvent,
-        global_sequence: i64,
-    ) -> ProjectionResult<()> {
+    async fn handle(&self, event: &TaskEvent, global_sequence: i64) -> ApplicationResult<()> {
         debug!(
             global_sequence = global_sequence,
             "TaskProjection handling event"

@@ -36,7 +36,7 @@ pub type ApplicationResult<T> = Result<T, ApplicationError>;
 pub fn format_error_with_backtrace(error: &ApplicationError) -> String {
     match error {
         ApplicationError::Domain { source } => {
-            // Delegate to domain error formatter
+            // Delegate to event error formatter
             format_domain_error(source)
         }
         ApplicationError::Internal { message } | ApplicationError::Conflict { message } => {

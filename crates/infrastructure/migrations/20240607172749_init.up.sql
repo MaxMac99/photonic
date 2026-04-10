@@ -22,7 +22,7 @@ CREATE TABLE users (
 
 CREATE TABLE albums (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    owner_id uuid NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -31,10 +31,10 @@ CREATE TABLE albums (
 
 CREATE TABLE media (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    owner_id uuid NOT NULL,
     medium_type medium_type_enum NOT NULL,
     leading_item_id uuid NOT NULL,
-    album_id uuid REFERENCES albums(id) ON DELETE SET NULL,
+    album_id uuid,
     taken_at TIMESTAMP WITH TIME ZONE,
     taken_at_timezone INTEGER,
     camera_make VARCHAR(100),
@@ -49,7 +49,7 @@ CREATE TABLE media (
 
 CREATE TABLE medium_items (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    medium_id uuid NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+    medium_id uuid NOT NULL,
     medium_item_type medium_item_type_enum NOT NULL,
     mime VARCHAR(100) NOT NULL,
     filename VARCHAR(255) NOT NULL,
@@ -62,16 +62,14 @@ CREATE TABLE medium_items (
     deleted_at TIMESTAMP
 );
 
-ALTER TABLE media ADD CONSTRAINT leading_item_id_fk FOREIGN KEY (leading_item_id) REFERENCES medium_items(id) DEFERRABLE INITIALLY DEFERRED;
-
 CREATE TABLE media_tags (
-    medium_id uuid NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+    medium_id uuid NOT NULL,
     tag_title VARCHAR(100) NOT NULL,
     PRIMARY KEY (medium_id, tag_title)
 );
 
 CREATE TABLE locations (
-    item_id uuid NOT NULL REFERENCES medium_items(id) DEFERRABLE INITIALLY DEFERRED,
+    item_id uuid NOT NULL,
     path VARCHAR(1024) NOT NULL,
     variant store_location_enum NOT NULL,
     PRIMARY KEY (item_id, variant)
@@ -81,7 +79,7 @@ CREATE TABLE tasks (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     task_type task_type_enum NOT NULL,
     reference_id uuid NOT NULL,
-    user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id uuid NOT NULL,
     status task_status_enum NOT NULL DEFAULT 'pending',
     error TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -93,7 +91,7 @@ CREATE INDEX idx_tasks_reference ON tasks(reference_id, task_type);
 
 CREATE TABLE metadata (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    medium_id uuid NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+    medium_id uuid NOT NULL,
     extracted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- File info
     mime_type VARCHAR(100) NOT NULL,
@@ -135,63 +133,3 @@ COMMENT ON COLUMN media.gps_latitude IS 'Denormalized from metadata for efficien
 COMMENT ON COLUMN media.gps_longitude IS 'Denormalized from metadata for efficient map view queries';
 COMMENT ON COLUMN media.gps_altitude IS 'Denormalized from metadata - GPS altitude in meters';
 
-CREATE FUNCTION update_user_quota_used()
-    RETURNS TRIGGER
-    LANGUAGE PLPGSQL
-    AS
-$$
-DECLARE
-    v_quota bigint;
-    v_quota_used bigint;
-BEGIN
-    IF (TG_OP = 'DELETE') THEN
-        UPDATE users u
-        SET quota_used = quota_used - OLD.size
-        FROM media m
-        WHERE u.id = m.owner_id AND m.id = OLD.medium_id;
-
-        SELECT u.quota, u.quota_used
-        INTO STRICT v_quota, v_quota_used
-        FROM users u
-        JOIN media m
-        ON m.owner_id = u.id
-        WHERE m.id = OLD.medium_id;
-    ELSIF (TG_OP = 'UPDATE') THEN
-        UPDATE users u
-        SET quota_used = quota_used + (NEW.size - OLD.size)
-        FROM media m
-        WHERE u.id = m.owner_id AND m.id = OLD.medium_id;
-
-        SELECT u.quota, u.quota_used
-        INTO STRICT v_quota, v_quota_used
-        FROM users u
-        JOIN media m
-        ON m.owner_id = u.id
-        WHERE m.id = OLD.medium_id;
-    ELSIF (TG_OP = 'INSERT') THEN
-        UPDATE users u
-        SET quota_used = quota_used + NEW.size
-        FROM media m
-        WHERE u.id = m.owner_id AND m.id = NEW.medium_id;
-
-        SELECT u.quota, u.quota_used
-        INTO STRICT v_quota, v_quota_used
-        FROM users u
-        JOIN media m
-        ON m.owner_id = u.id
-        WHERE m.id = NEW.medium_id;
-    END IF;
-
-    IF v_quota_used > v_quota THEN
-        RAISE EXCEPTION 'quota exceeded';
-    END IF;
-
-    RETURN NULL;
-END;
-$$;
-
-CREATE TRIGGER update_user_quota_used
-    AFTER INSERT OR UPDATE OR DELETE
-    ON medium_items
-    FOR EACH ROW
-    EXECUTE PROCEDURE update_user_quota_used();

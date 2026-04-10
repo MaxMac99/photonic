@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
+use application::error::ApplicationResult;
+use application::projection::Projection;
 use async_trait::async_trait;
 use domain::user::events::UserEvent;
 use sqlx::PgPool;
 use tracing::debug;
-
-use super::{Projection, ProjectionResult};
 
 /// Projection that maintains the users read model table.
 pub struct UserProjection {
@@ -24,11 +24,7 @@ impl Projection<UserEvent> for UserProjection {
         Cow::Borrowed("user_read_model")
     }
 
-    async fn handle(
-        &self,
-        event: &UserEvent,
-        global_sequence: i64,
-    ) -> ProjectionResult<()> {
+    async fn handle(&self, event: &UserEvent, global_sequence: i64) -> ApplicationResult<()> {
         debug!(
             global_sequence = global_sequence,
             "UserProjection handling event"

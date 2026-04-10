@@ -23,10 +23,13 @@ pub async fn get_test_pool() -> PgPool {
 
 /// Clean all data from test database
 pub async fn cleanup_test_db(pool: &PgPool) {
-    sqlx::query("TRUNCATE users, albums, media, medium_items, locations, media_tags CASCADE")
-        .execute(pool)
-        .await
-        .expect("Failed to clean test database");
+    sqlx::query(
+        "TRUNCATE users, albums, media, medium_items, locations, media_tags, \
+         tasks, metadata, events, snapshots, projection_checkpoints, processed_events CASCADE",
+    )
+    .execute(pool)
+    .await
+    .expect("Failed to clean test database");
 }
 
 /// Helper to run a test with a fresh database

@@ -1,4 +1,4 @@
-pub mod event_store;
+pub mod events;
 mod groups;
 pub mod medium;
 pub mod metadata;

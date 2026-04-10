@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// JWT claims structure - this is what comes from the OAuth2 provider
-/// This is an infrastructure concern, not a domain entity
+/// This is an infrastructure concern, not a event entity
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JwtUserClaims {
     pub sub: Uuid, // Subject - unique user identifier
@@ -27,7 +27,7 @@ impl JwtUserClaims {
             .or_else(|| self.given_name.clone())
     }
 
-    /// Convert JWT claims to domain user ID
+    /// Convert JWT claims to event user ID
     pub fn user_id(&self) -> Uuid {
         self.sub
     }

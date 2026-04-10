@@ -20,7 +20,7 @@ pub trait AggregateRoot: Send + Sync + Sized {
     /// Returns an error if the event is not a valid creation event.
     fn from_initial_event(event: &Self::Event) -> DomainResult<Self>;
 
-    /// Apply a domain event to mutate aggregate state.
+    /// Apply a event event to mutate aggregate state.
     /// Called both during reconstitution (replay) and after command execution.
     /// Must be infallible — events represent facts that already happened.
     fn apply(&mut self, event: &Self::Event);

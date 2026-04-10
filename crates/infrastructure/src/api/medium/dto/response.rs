@@ -221,7 +221,7 @@ impl From<&MediumListItem> for MediumListResponse {
         Self {
             id: list_item.id,
             medium_type: MediumTypeDto::from(list_item.medium_type),
-            album_id: None, // TODO: Add album_id to domain entity
+            album_id: None, // TODO: Add album_id to event entity
             taken_at: list_item.taken_at,
             camera_make: list_item.camera_make.clone(),
             camera_model: list_item.camera_model.clone(),
@@ -239,7 +239,7 @@ impl From<Medium> for MediumDetailResponse {
         Self {
             id: medium.id,
             medium_type: MediumTypeDto::from(medium.medium_type),
-            album_id: None, // TODO: Add album_id to domain entity
+            album_id: None, // TODO: Add album_id to event entity
             taken_at: medium.taken_at,
             camera_make: medium.camera_make.clone(),
             camera_model: medium.camera_model.clone(),

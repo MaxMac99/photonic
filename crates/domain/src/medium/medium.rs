@@ -91,14 +91,14 @@ impl AggregateRoot for Medium {
             id: e.medium_id,
             owner_id: e.user_id,
             medium_type: e.medium_type,
-            leading_item_id: e.leading_item_id,
+            leading_item_id: e.initial_item.id,
             taken_at: None,
             camera_make: None,
             camera_model: None,
             gps_coordinates: None,
             created_at: now,
             updated_at: now,
-            items: vec![],
+            items: vec![e.initial_item.clone()],
             version: 1,
         })
     }
@@ -109,7 +109,8 @@ impl AggregateRoot for Medium {
                 self.id = e.medium_id;
                 self.owner_id = e.user_id;
                 self.medium_type = e.medium_type;
-                self.leading_item_id = e.leading_item_id;
+                self.leading_item_id = e.initial_item.id;
+                self.items = vec![e.initial_item.clone()];
             }
             MediumEvent::MediumItemCreated(_e) => {
                 // Item data is added via add_item(); during replay this is a no-op
@@ -145,9 +146,7 @@ pub struct MediumListItem {
 }
 
 impl Medium {
-    pub fn new(
-        request: MediumCreateRequest,
-    ) -> DomainResult<(Self, MediumCreatedEvent, MediumItemCreatedEvent)> {
+    pub fn new(request: MediumCreateRequest) -> DomainResult<(Self, MediumCreatedEvent)> {
         ensure!(
             !request.medium_item.locations.is_empty(),
             ValidationSnafu {
@@ -157,40 +156,29 @@ impl Medium {
 
         let id = MediumId::new_v4();
         let now = Utc::now();
+        let item = MediumItem::new(id, request.medium_item);
 
         let mut medium = Self {
             id,
             owner_id: request.owner_id,
             medium_type: request.medium_type,
-            leading_item_id: MediumItemId::new_v4(),
+            leading_item_id: item.id,
             taken_at: request.taken_at,
             camera_make: request.camera_make,
             camera_model: request.camera_model,
             gps_coordinates: None,
             created_at: now,
             updated_at: now,
-            items: vec![],
+            items: vec![item.clone()],
             version: 0,
         };
 
-        let mut item_created_event = medium.add_item(request.medium_item)?;
-        medium.leading_item_id = medium.items[0].id;
+        let mut event =
+            MediumCreatedEvent::new(medium.id, medium.owner_id, medium.medium_type, item);
+        event.metadata.expected_version = 0;
+        medium.version = 1;
 
-        let mut medium_created_event = MediumCreatedEvent::new(
-            medium.id,
-            medium.owner_id,
-            medium.medium_type,
-            medium.leading_item_id,
-            medium.items[0].locations.first().unwrap().clone(),
-        );
-
-        // Set expected versions for optimistic concurrency:
-        // created event expects version 0 (new aggregate), item event expects version 1
-        medium_created_event.metadata.expected_version = 0;
-        item_created_event.metadata.expected_version = 1;
-        medium.version = 2;
-
-        Ok((medium, medium_created_event, item_created_event))
+        Ok((medium, event))
     }
 
     pub fn add_item(
@@ -206,12 +194,16 @@ impl Medium {
         let owner_id = request.owner_id;
         let item = MediumItem::new(self.id, request);
         let event = MediumItemCreatedEvent::new(
+            owner_id,
             self.id,
             item.id,
-            owner_id,
             item.medium_item_type,
             item.locations.first().unwrap().clone(),
             item.mime.clone(),
+            item.filename.clone(),
+            item.filesize,
+            item.priority,
+            item.dimensions,
         );
         self.items.push(item);
         self.updated_at = Utc::now();
@@ -222,7 +214,7 @@ impl Medium {
         self.items.iter_mut().find(|i| i.id == item_id)
     }
 
-    /// Update basic metadata fields (denormalized from Metadata domain)
+    /// Update basic metadata fields (denormalized from Metadata event)
     /// Called when MetadataExtractedEvent is received
     pub fn update_basic_metadata(
         &mut self,

@@ -1,5 +1,22 @@
 use std::{sync::Arc, time::Duration};
 
+use crate::events::PersistentEventBus;
+use crate::persistence::postgres::events::event_appender::PostgresEventAppender;
+use crate::persistence::postgres::events::event_store::PostgresEventStore;
+use crate::{
+    config::GlobalConfig,
+    events::{EventBus, EventualConsistentEventBus},
+    external::exif::{Exiftool, ExiftoolMetadataExtractor},
+    persistence::postgres::{
+        medium::PostgresMediumRepository, metadata::PostgresMetadataRepository,
+        snapshot_store::PostgresSnapshotStore, task::PostgresTaskRepository,
+        user::PostgresUserRepository,
+    },
+    projections::{
+        MediumProjection, MetadataProjection, ProjectionEngine, TaskProjection, UserProjection,
+    },
+    storage::{cleanup::spawn_cleanup_task, filesystem::repo::FilesystemStorageAdapter},
+};
 use application::{
     aggregate_repository::AggregateRepository,
     config::{AuthConfig, QuotaConfig},
@@ -26,6 +43,7 @@ use application::{
     user::{ports::UserRepository, QuotaManager, UserApplicationHandlers},
 };
 use byte_unit::Byte;
+use domain::user::UserEvent;
 use domain::{
     medium::{events::MediumEvent, Medium, StoragePathService},
     metadata::{events::MetadataEvent, Metadata},
@@ -33,32 +51,14 @@ use domain::{
     user::User,
 };
 use snafu::Whatever;
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use tokio_util::sync::CancellationToken;
-
-use crate::{
-    config::GlobalConfig,
-    events::{EventBus, PersistentEventBus},
-    external::exif::{Exiftool, ExiftoolMetadataExtractor},
-    persistence::postgres::{
-        event_store::PostgresEventStore, medium::PostgresMediumRepository,
-        metadata::PostgresMetadataRepository, snapshot_store::PostgresSnapshotStore,
-        task::PostgresTaskRepository, user::PostgresUserRepository,
-    },
-    projections::{
-        MediumProjection, MetadataProjection, ProjectionEngine, TaskProjection, UserProjection,
-    },
-    storage::{cleanup::spawn_cleanup_task, filesystem::repo::FilesystemStorageAdapter},
-};
 
 /// Dependency injection container
 /// Manages the lifecycle and wiring of all application dependencies
 pub struct Container {
     // Configuration
     config: Arc<GlobalConfig>,
-
-    // Infrastructure - Event System
-    event_bus: Arc<EventBus>,
 
     // Event Sourcing - Aggregate Repositories
     medium_aggregate_repo: Arc<AggregateRepository<Medium>>,
@@ -84,21 +84,22 @@ impl Container {
         let storage = Self::build_storage(config.clone()).await?;
 
         // Phase 2: Event system
-        let event_bus = Arc::new(EventBus::new());
+        let event_bus = EventBus::new();
+        let event_appender = PostgresEventAppender::new(db_pool.clone());
         let persistent_event_bus = Arc::new(PersistentEventBus::new(
             db_pool.clone(),
-            event_bus.clone(),
+            event_appender,
+            event_bus,
         ));
 
         // Phase 3: Event sourcing infrastructure
         let aggregate_repos = Self::build_aggregate_repositories(&db_pool);
-        let projection_shutdown =
-            Self::start_projection_engine(&db_pool, &aggregate_repos).await;
+        let projection_shutdown = Self::start_projection_engine(&db_pool, &aggregate_repos).await;
 
         // Phase 4: Application services
         let quota_manager = Arc::new(QuotaManager::new(
             repositories.user.clone(),
-            event_bus.clone(),
+            persistent_event_bus.clone(),
         ));
 
         // Phase 5: Application handlers
@@ -107,13 +108,13 @@ impl Container {
             &repositories,
             &storage,
             quota_manager.clone(),
-            event_bus.clone(),
             persistent_event_bus.clone(),
             &aggregate_repos,
         );
 
-        // Phase 6: Start event listeners
-        let mut listener_handles = Self::start_listeners(&handlers, &event_bus).await?;
+        // Phase 6: Start event listeners (including projections)
+        let mut listener_handles =
+            Self::start_listeners(&handlers, &persistent_event_bus, &db_pool).await?;
 
         // Phase 7: Background tasks
         listener_handles.push(spawn_cleanup_task(
@@ -124,7 +125,6 @@ impl Container {
 
         Ok(Arc::new(Self {
             config,
-            event_bus,
             medium_aggregate_repo: aggregate_repos.medium,
             user_aggregate_repo: aggregate_repos.user,
             task_aggregate_repo: aggregate_repos.task,
@@ -225,8 +225,7 @@ impl Container {
         repositories: &Repositories,
         storage: &StorageServices,
         quota_manager: Arc<QuotaManager>,
-        event_bus: Arc<EventBus>,
-        persistent_event_bus: Arc<PersistentEventBus>,
+        event_bus: Arc<PersistentEventBus<UserEvent, PgPool, Transaction<Postgres>>>,
         _aggregate_repos: &AggregateRepositories,
     ) -> ApplicationHandlers {
         let quota_config = Arc::new(QuotaConfig {
@@ -247,7 +246,7 @@ impl Container {
             event_bus.clone(),
             event_bus.clone(),
             storage.storage_path_service.clone(),
-            persistent_event_bus.clone(),
+            event_bus.clone(),
         ));
 
         let metadata_handlers = Arc::new(MetadataApplicationHandlers::new(
@@ -279,9 +278,18 @@ impl Container {
 
     async fn start_listeners(
         handlers: &ApplicationHandlers,
-        event_bus: &Arc<EventBus>,
+        event_bus: &Arc<PersistentEventBus<UserEvent, PgPool, Transaction<'_, Postgres>>>,
+        db_pool: &PgPool,
     ) -> Result<Vec<tokio::task::JoinHandle<()>>, Whatever> {
         let mut handles = Vec::new();
+
+        // Read model projections (eventual consistency)
+        let medium_projection = MediumProjection::new(db_pool.clone());
+        handles.extend(
+            event_bus
+                .start_processor::<MediumEvent, _>(medium_projection)
+                .await?,
+        );
 
         let processing = handlers
             .processing
@@ -375,8 +383,7 @@ impl Container {
 
     fn build_aggregate_repositories(db_pool: &PgPool) -> AggregateRepositories {
         let medium_event_store = Arc::new(PostgresEventStore::<Medium>::new(db_pool.clone()));
-        let medium_snapshot_store =
-            Arc::new(PostgresSnapshotStore::<Medium>::new(db_pool.clone()));
+        let medium_snapshot_store = Arc::new(PostgresSnapshotStore::<Medium>::new(db_pool.clone()));
         let medium_repo = Arc::new(AggregateRepository::new(
             medium_event_store,
             Some(medium_snapshot_store),
@@ -392,8 +399,7 @@ impl Container {
         let task_event_store = Arc::new(PostgresEventStore::<Task>::new(db_pool.clone()));
         let task_repo = Arc::new(AggregateRepository::new(task_event_store, None));
 
-        let metadata_event_store =
-            Arc::new(PostgresEventStore::<Metadata>::new(db_pool.clone()));
+        let metadata_event_store = Arc::new(PostgresEventStore::<Metadata>::new(db_pool.clone()));
         let metadata_repo = Arc::new(AggregateRepository::new(metadata_event_store, None));
 
         AggregateRepositories {
@@ -409,18 +415,13 @@ impl Container {
         _aggregate_repos: &AggregateRepositories,
     ) -> CancellationToken {
         use domain::{
-            medium::events::MediumEvent, metadata::events::MetadataEvent,
-            task::events::TaskEvent, user::events::UserEvent,
+            metadata::events::MetadataEvent, task::events::TaskEvent, user::events::UserEvent,
         };
 
-        let mut engine = ProjectionEngine::new(
-            db_pool.clone(),
-            Duration::from_millis(100),
-            100,
-        );
+        let mut engine = ProjectionEngine::new(db_pool.clone(), Duration::from_millis(100), 100);
 
-        // Register read model projections
-        engine.register::<MediumEvent, _>(MediumProjection::new(db_pool.clone()));
+        // Register read model projections (for replay/catch-up only;
+        // live projections are registered as event bus listeners)
         engine.register::<UserEvent, _>(UserProjection::new(db_pool.clone()));
         engine.register::<MetadataEvent, _>(MetadataProjection::new(db_pool.clone()));
         engine.register::<TaskEvent, _>(TaskProjection::new(db_pool.clone()));

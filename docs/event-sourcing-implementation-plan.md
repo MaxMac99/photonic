@@ -1,38 +1,41 @@
 # Event Sourcing Implementation Plan for Photonic
 
 ## Goal
-Implement proper event sourcing to gain hands-on experience with ES patterns while building a real photo management application.
+
+Implement proper event sourcing to gain hands-on experience with ES patterns while building a real
+photo management application.
 
 ## Learning Objectives
 
 By implementing ES in Photonic, you'll gain experience with:
 
 1. **Core ES Patterns**
-   - Event-first design
-   - Aggregate roots with behavior
-   - Event replay and state reconstruction
-   - Optimistic concurrency control
+    - Event-first design
+    - Aggregate roots with behavior
+    - Event replay and state reconstruction
+    - Optimistic concurrency control
 
 2. **CQRS Implementation**
-   - Command/Query separation
-   - Projections (read models)
-   - Eventual consistency
+    - Command/Query separation
+    - Projections (read models)
+    - Eventual consistency
 
 3. **Domain-Driven Design**
-   - Rich domain models
-   - Value objects
-   - Bounded contexts
-   - Domain events
+    - Rich domain models
+    - Value objects
+    - Bounded contexts
+    - Domain events
 
 4. **Production ES Concepts**
-   - Event versioning and upcasting
-   - Snapshots for performance
-   - Event bus integration
-   - Projection rebuilding
+    - Event versioning and upcasting
+    - Snapshots for performance
+    - Event bus integration
+    - Projection rebuilding
 
 ## Implementation Strategy
 
 ### Phase 1: Foundation (Week 1-2)
+
 **Goal**: Set up event store infrastructure and implement first aggregate
 
 - [ ] Create event store schema
@@ -44,6 +47,7 @@ By implementing ES in Photonic, you'll gain experience with:
 **Learning Focus**: Event store basics, aggregate patterns, event replay
 
 ### Phase 2: Complete Album Aggregate (Week 3-4)
+
 **Goal**: Implement full album lifecycle with all operations
 
 - [ ] Add all album operations (rename, delete, add/remove media)
@@ -55,6 +59,7 @@ By implementing ES in Photonic, you'll gain experience with:
 **Learning Focus**: Domain events, projections, CQRS, eventual consistency
 
 ### Phase 3: Medium Aggregate (Week 5-6)
+
 **Goal**: Apply ES patterns to a more complex aggregate with processing workflow
 
 - [ ] Implement Medium aggregate with ES
@@ -65,6 +70,7 @@ By implementing ES in Photonic, you'll gain experience with:
 **Learning Focus**: Complex workflows, cross-aggregate communication, process managers
 
 ### Phase 4: Advanced Patterns (Week 7-8)
+
 **Goal**: Learn production ES patterns
 
 - [ ] Implement snapshots for performance
@@ -76,6 +82,7 @@ By implementing ES in Photonic, you'll gain experience with:
 **Learning Focus**: Snapshots, event versioning, production concerns
 
 ### Phase 5: Production Readiness (Week 9-10)
+
 **Goal**: Make it production-ready
 
 - [ ] Monitoring and observability
@@ -280,7 +287,7 @@ CREATE TABLE projection_state (
 ## Core Domain Events
 
 ```rust
-// src/domain/album/events.rs
+// src/event/album/events.rs
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -352,7 +359,7 @@ pub struct AlbumRestored {
 ## Rich Domain Model Example
 
 ```rust
-// src/domain/album/aggregate.rs
+// src/event/album/aggregate.rs
 use super::events::*;
 use super::value_objects::*;
 use chrono::{DateTime, Utc};
@@ -605,7 +612,7 @@ impl Default for Album {
 ## Value Objects Example
 
 ```rust
-// src/domain/album/value_objects.rs
+// src/event/album/value_objects.rs
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -699,29 +706,30 @@ Ready to start implementing? Here's what we'll build first:
 ### Week 1 Focus: Album Aggregate with Event Sourcing
 
 1. **Database setup**
-   - Create event_store table
-   - Create first projection (album_list_view)
+    - Create event_store table
+    - Create first projection (album_list_view)
 
 2. **Domain layer**
-   - Album aggregate with events
-   - Value objects (AlbumId, AlbumTitle, etc.)
-   - Domain events
+    - Album aggregate with events
+    - Value objects (AlbumId, AlbumTitle, etc.)
+    - Domain events
 
 3. **Infrastructure layer**
-   - Event store repository (PostgreSQL)
-   - Event serialization/deserialization
+    - Event store repository (PostgreSQL)
+    - Event serialization/deserialization
 
 4. **Application layer**
-   - CreateAlbumCommand handler
-   - GetAlbumsQuery handler
-   - Event bus wiring
+    - CreateAlbumCommand handler
+    - GetAlbumsQuery handler
+    - Event bus wiring
 
 5. **Tests**
-   - Unit tests for aggregate behavior
-   - Integration tests for event store
-   - Test event replay
+    - Unit tests for aggregate behavior
+    - Integration tests for event store
+    - Test event replay
 
 Would you like me to start implementing this? I can begin with:
+
 1. The database migrations for event store
 2. The Album aggregate with rich domain model
 3. The event store repository

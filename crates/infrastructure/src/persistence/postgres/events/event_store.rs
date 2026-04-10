@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use crate::persistence::postgres::events::storable_event::StorableEvent;
+use crate::persistence::postgres::repo_error;
 use application::{error::ApplicationResult, event_store::EventStore};
 use async_trait::async_trait;
 use domain::{
@@ -7,9 +9,6 @@ use domain::{
     event::DomainEvent,
 };
 use sqlx::{PgPool, Row};
-
-use super::repo_error;
-use crate::events::StorableEvent;
 
 pub struct PostgresEventStore<A: AggregateRoot> {
     pool: PgPool,
@@ -53,12 +52,11 @@ where
         let mut events = Vec::with_capacity(rows.len());
         for row in rows {
             let payload: serde_json::Value = row.get("payload");
-            let event: A::Event =
-                serde_json::from_value(payload).map_err(|e| {
-                    application::error::ApplicationError::Internal {
-                        message: format!("Failed to deserialize event: {}", e),
-                    }
-                })?;
+            let event: A::Event = serde_json::from_value(payload).map_err(|e| {
+                application::error::ApplicationError::Internal {
+                    message: format!("Failed to deserialize event: {}", e),
+                }
+            })?;
             events.push(event);
         }
 
@@ -72,11 +70,13 @@ where
         events: Vec<A::Event>,
     ) -> ApplicationResult<()> {
         let stream_id = format!("{}-{}", A::aggregate_type(), aggregate_id);
-        let mut tx = self.pool.begin().await.map_err(|e| {
-            application::error::ApplicationError::Domain {
-                source: repo_error(e),
-            }
-        })?;
+        let mut tx =
+            self.pool
+                .begin()
+                .await
+                .map_err(|e| application::error::ApplicationError::Domain {
+                    source: repo_error(e),
+                })?;
 
         for (i, event) in events.iter().enumerate() {
             let version = expected_version + i as i64 + 1;
@@ -114,11 +114,11 @@ where
             })?;
         }
 
-        tx.commit().await.map_err(|e| {
-            application::error::ApplicationError::Domain {
+        tx.commit()
+            .await
+            .map_err(|e| application::error::ApplicationError::Domain {
                 source: repo_error(e),
-            }
-        })?;
+            })?;
 
         Ok(())
     }

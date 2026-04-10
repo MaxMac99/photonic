@@ -37,12 +37,12 @@ impl MetadataExtractor for ExiftoolMetadataExtractor {
         let path = self.file_storage.get_local_path(location).await?;
         let exif_data = self.exiftool.read_file(path, false).await?;
 
-        // Convert exiftool output to domain Metadata
+        // Convert exiftool output to event Metadata
         Ok(convert_exif_to_metadata(&exif_data, medium_id))
     }
 }
 
-/// Convert exiftool's raw output to our domain Metadata
+/// Convert exiftool's raw output to our event Metadata
 fn convert_exif_to_metadata(exif: &HashMap<String, Field>, medium_id: MediumId) -> Metadata {
     // Extract basic file info
     let file_info = FileInfo {

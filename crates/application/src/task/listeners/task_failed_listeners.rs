@@ -24,7 +24,7 @@ impl EventProcessor<MetadataEvent> for TaskFailedListeners {
         name = "TaskFailedListeners::MetadataEvent",
         skip(self, event),
     )]
-    async fn process(&self, event: MetadataEvent) -> ApplicationResult<()> {
+    async fn process(&self, event: &MetadataEvent) -> ApplicationResult<()> {
         let MetadataEvent::ExtractionFailed(event) = event else { return Ok(()) };
         info!(
             "Failed metadata extraction task for medium_id={} (leading_item_id={})",
@@ -36,7 +36,7 @@ impl EventProcessor<MetadataEvent> for TaskFailedListeners {
                 reference_id: event.leading_item_id,
                 user_id: event.owner_id,
                 task_type: TaskType::MetadataExtraction,
-                error: event.error,
+                error: event.error.clone(),
             })
             .await?;
 
@@ -59,7 +59,7 @@ impl EventProcessor<TempCleanupFailedEvent> for TaskFailedListeners {
             sweep_id = %event.sweep_id,
         )
     )]
-    async fn process(&self, event: TempCleanupFailedEvent) -> ApplicationResult<()> {
+    async fn process(&self, event: &TempCleanupFailedEvent) -> ApplicationResult<()> {
         info!(
             sweep_id = %event.sweep_id,
             error = %event.error,
@@ -71,7 +71,7 @@ impl EventProcessor<TempCleanupFailedEvent> for TaskFailedListeners {
                 reference_id: event.sweep_id,
                 user_id: Uuid::nil(),
                 task_type: TaskType::TempCleanup,
-                error: event.error,
+                error: event.error.clone(),
             })
             .await?;
 

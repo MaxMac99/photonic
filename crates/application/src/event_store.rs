@@ -3,6 +3,8 @@ use domain::aggregate::{AggregateRoot, AggregateVersion};
 
 use crate::error::ApplicationResult;
 
+/// Port for loading and appending events for a specific aggregate type.
+/// Used by AggregateRepository for replay.
 #[async_trait]
 pub trait EventStore<A: AggregateRoot>: Send + Sync {
     /// Load all events for an aggregate since a given version.

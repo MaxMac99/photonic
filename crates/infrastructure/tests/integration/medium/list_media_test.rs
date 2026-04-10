@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, time::Duration};
 
 use domain::user::User;
 use reqwest::StatusCode;
@@ -7,7 +7,10 @@ use serial_test::serial;
 use uuid::Uuid;
 
 use crate::integration::{
-    common::fixtures::{app, image, user, ImageFixture},
+    common::{
+        fixtures::{app, image, user, ImageFixture},
+        polling::{poll_until, PollingConfig},
+    },
     test_app::TestApp,
 };
 
@@ -59,19 +62,33 @@ async fn test_list_media_with_single_item(
 ) -> Result<(), Box<dyn Error>> {
     // Arrange: Create a single medium
     let image_id = app.create_medium(&user, image.into()).await?;
+    let expected_id = image_id.into_inner();
 
-    // Act: List all media
-    let response = app
-        .client_with_user(&user)
-        .get_all_media(None, None, None, None, None, None, None, None, None)
-        .await?;
+    // Act + Assert: Poll until the projection has updated the read model
+    let response = poll_until(
+        || {
+            let client = app.client_with_user(&user);
+            async move {
+                let response = client
+                    .get_all_media(None, None, None, None, None, None, None, None, None)
+                    .await
+                    .ok()?;
+                if response.len() == 1 {
+                    Some(response)
+                } else {
+                    None
+                }
+            }
+        },
+        PollingConfig::quick("medium to appear in list"),
+    )
+    .await
+    .expect("Medium should appear in list");
 
-    // Assert: Should return the single medium
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(response.len(), 1, "Should have one medium");
     assert_eq!(
         response.first().map(|m| m.id),
-        Some(image_id.into_inner()),
+        Some(expected_id),
         "Medium ID should match"
     );
 
@@ -97,22 +114,33 @@ async fn test_list_media_with_multiple_items(
         media_ids.push(media_id.into_inner());
     }
 
-    // Act: List all media
-    let response = app
-        .client_with_user(&user)
-        .get_all_media(None, None, None, None, None, None, None, None, None)
-        .await?;
+    // Act + Assert: Poll until all 5 media appear
+    let response = poll_until(
+        || {
+            let client = app.client_with_user(&user);
+            async move {
+                let response = client
+                    .get_all_media(None, None, None, None, None, None, None, None, None)
+                    .await
+                    .ok()?;
+                if response.len() == 5 {
+                    Some(response)
+                } else {
+                    None
+                }
+            }
+        },
+        PollingConfig::quick("all 5 media to appear in list"),
+    )
+    .await
+    .expect("All 5 media should appear in list");
 
-    // Assert: Should return all 5 media
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(response.len(), 5, "Should have 5 media");
 
-    // Verify all IDs are present
     let response_ids: Vec<Uuid> = response.iter().map(|m| m.id).collect();
-
-    for media_id in media_ids {
+    for media_id in &media_ids {
         assert!(
-            response_ids.contains(&media_id),
+            response_ids.contains(media_id),
             "Media ID {} should be in response",
             media_id
         );
@@ -175,33 +203,38 @@ async fn test_list_media_only_shows_own_media(
         .create_medium(&user1, image.clone().into())
         .await?
         .into_inner();
-    let user2_medium = app
+    let _user2_medium = app
         .create_medium(&user2, image.clone().into())
         .await?
         .into_inner();
 
-    // Act: User 1 lists their media
-    let response = app
-        .client_with_user(&user1)
-        .get_all_media(None, None, None, None, None, None, None, None, None)
-        .await?;
+    // Act + Assert: Poll until User 1 sees their medium
+    let response = poll_until(
+        || {
+            let client = app.client_with_user(&user1);
+            async move {
+                let response = client
+                    .get_all_media(None, None, None, None, None, None, None, None, None)
+                    .await
+                    .ok()?;
+                if response.len() == 1 {
+                    Some(response)
+                } else {
+                    None
+                }
+            }
+        },
+        PollingConfig::quick("user1 medium to appear in list"),
+    )
+    .await
+    .expect("User 1 should see their medium");
 
-    // Assert: User 1 should only see their 3 media
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(response.len(), 1, "User 1 should have 1 medium");
 
     let response_ids: Vec<Uuid> = response.iter().map(|m| m.id).collect();
-
-    // Verify User 1's media are present
     assert!(
         response_ids.contains(&user1_medium),
         "User 1 media should be in response"
-    );
-
-    // Verify User 2's media are NOT present
-    assert!(
-        !response_ids.contains(&user2_medium),
-        "User 2 media should NOT be in User 1's response"
     );
 
     app.cleanup().await;

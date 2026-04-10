@@ -22,7 +22,7 @@ impl EventProcessor<MediumEvent> for MoveToPermanentStorageListener {
         name = "MoveToPermanentStorageListener::MediumEvent",
         skip(self, event),
     )]
-    async fn process(&self, event: MediumEvent) -> ApplicationResult<()> {
+    async fn process(&self, event: &MediumEvent) -> ApplicationResult<()> {
         let MediumEvent::MediumUpdated(event) = event else { return Ok(()) };
 
         info!(

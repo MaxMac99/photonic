@@ -14,7 +14,7 @@ mod find_all;
 mod find_by_id;
 mod find_expired_temp;
 mod save;
-mod types;
+pub mod types;
 
 pub struct PostgresMediumRepository {
     pool: PgPool,

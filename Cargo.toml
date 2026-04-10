@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/application", "crates/domain",
+members = ["crates/application", "crates/domain", "crates/event_sourcing",
     "crates/infrastructure",
     "crates/photonic-client",
     "crates/xtask",

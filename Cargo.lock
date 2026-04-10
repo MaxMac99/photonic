@@ -1129,6 +1129,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "event_sourcing"
+version = "0.1.0"
+dependencies = [
+ "async-channel",
+ "async-trait",
+ "chrono",
+ "futures-util",
+ "serde",
+ "serde_json",
+ "snafu",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "fake"
 version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
