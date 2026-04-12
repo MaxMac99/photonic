@@ -40,6 +40,15 @@ impl EventType {
         }
     }
 
+    /// Construct from a raw `TypeId`. The name is a placeholder since
+    /// the concrete type name is not available from a `TypeId` alone.
+    pub fn from_type_id(id: TypeId) -> Self {
+        Self {
+            id,
+            name: "<unknown>".to_string(),
+        }
+    }
+
     pub fn id(&self) -> TypeId {
         self.id
     }

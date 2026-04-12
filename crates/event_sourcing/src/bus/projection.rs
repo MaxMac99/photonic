@@ -28,25 +28,26 @@ const REPLAY_BATCH_SIZE: usize = 100;
 trait ErasedProjection<Seq, Tx>: Send + Sync {
     fn name(&self) -> &str;
     fn matches_dyn(&self, event: &dyn DomainEvent) -> bool;
-    /// Run the projection on an event within an existing transaction.
-    async fn handle(&self, event: &dyn DomainEvent, tx: &mut Tx) -> error::Result<()>;
+    async fn handle(&self, event: &dyn DomainEvent, sequence: Seq, tx: &mut Tx) -> error::Result<()>;
 }
 
-struct SingleHandler<E, H, Tx>
+struct SingleHandler<E, Seq, H, Tx>
 where
     E: DomainEvent,
-    H: ProjectionHandler<E, Tx>,
+    Seq: Sequence,
+    H: ProjectionHandler<E, Seq, Tx>,
 {
     handler: H,
     event_type: EventType,
-    _phantom: std::marker::PhantomData<(E, Tx)>,
+    _phantom: std::marker::PhantomData<(E, Seq, Tx)>,
 }
 
 #[async_trait]
-impl<E, H, Tx> ErasedProjection<(), Tx> for SingleHandler<E, H, Tx>
+impl<E, Seq, H, Tx> ErasedProjection<Seq, Tx> for SingleHandler<E, Seq, H, Tx>
 where
     E: DomainEvent,
-    H: ProjectionHandler<E, Tx>,
+    Seq: Sequence,
+    H: ProjectionHandler<E, Seq, Tx>,
     Tx: Send + Sync + 'static,
 {
     fn name(&self) -> &str {
@@ -57,28 +58,30 @@ where
         self.event_type.id() == (*event).type_id()
     }
 
-    async fn handle(&self, event: &dyn DomainEvent, tx: &mut Tx) -> error::Result<()> {
+    async fn handle(&self, event: &dyn DomainEvent, sequence: Seq, tx: &mut Tx) -> error::Result<()> {
         let any = event as &dyn std::any::Any;
         let typed = any
             .downcast_ref::<E>()
             .expect("type mismatch in projection dispatch");
-        self.handler.handle(typed, tx).await
+        self.handler.handle(typed, sequence, tx).await
     }
 }
 
-struct MultiHandler<H, Tx>
+struct MultiHandler<Seq, H, Tx>
 where
-    H: MultiEventProjectionHandler<Tx>,
+    Seq: Sequence,
+    H: MultiEventProjectionHandler<Seq, Tx>,
 {
     handler: H,
     event_types: Vec<EventType>,
-    _phantom: std::marker::PhantomData<Tx>,
+    _phantom: std::marker::PhantomData<(Seq, Tx)>,
 }
 
 #[async_trait]
-impl<H, Tx> ErasedProjection<(), Tx> for MultiHandler<H, Tx>
+impl<Seq, H, Tx> ErasedProjection<Seq, Tx> for MultiHandler<Seq, H, Tx>
 where
-    H: MultiEventProjectionHandler<Tx>,
+    Seq: Sequence,
+    H: MultiEventProjectionHandler<Seq, Tx>,
     Tx: Send + Sync + 'static,
 {
     fn name(&self) -> &str {
@@ -90,8 +93,8 @@ where
         self.event_types.iter().any(|et| et.id() == type_id)
     }
 
-    async fn handle(&self, event: &dyn DomainEvent, tx: &mut Tx) -> error::Result<()> {
-        self.handler.handle(event, tx).await
+    async fn handle(&self, event: &dyn DomainEvent, sequence: Seq, tx: &mut Tx) -> error::Result<()> {
+        self.handler.handle(event, sequence, tx).await
     }
 }
 
@@ -112,7 +115,7 @@ pub struct ProjectionEventBus<Seq, Tx> {
     checkpoint_store: Arc<dyn TxCheckpointStore<Seq, Tx>>,
     tx_provider: Arc<dyn TransactionProvider<Tx>>,
     inmem: Arc<InMemEventBus>,
-    projections: std::sync::Mutex<Vec<Arc<dyn ErasedProjection<(), Tx>>>>,
+    projections: std::sync::Mutex<Vec<Arc<dyn ErasedProjection<Seq, Tx>>>>,
     started: AtomicBool,
 }
 
@@ -140,7 +143,7 @@ where
     pub fn register<E, H>(&self, handler: H) -> error::Result<()>
     where
         E: DomainEvent,
-        H: ProjectionHandler<E, Tx>,
+        H: ProjectionHandler<E, Seq, Tx>,
     {
         if self.started.load(AtomicOrdering::SeqCst) {
             return Err(error::EventSourcingError::Bus {
@@ -158,7 +161,7 @@ where
     /// Register a multi-event projection. Must be called before `start()`.
     pub fn register_multi<H>(&self, handler: H) -> error::Result<()>
     where
-        H: MultiEventProjectionHandler<Tx>,
+        H: MultiEventProjectionHandler<Seq, Tx>,
     {
         if self.started.load(AtomicOrdering::SeqCst) {
             return Err(error::EventSourcingError::Bus {
@@ -184,7 +187,7 @@ where
             });
         }
 
-        let projections: Vec<Arc<dyn ErasedProjection<(), Tx>>> =
+        let projections: Vec<Arc<dyn ErasedProjection<Seq, Tx>>> =
             self.projections.lock().unwrap().clone();
 
         if projections.is_empty() {
@@ -195,7 +198,7 @@ where
         // Load each projection's checkpoint. Each (projection, checkpoint)
         // pair is tracked independently — a projection only receives events
         // with sequence > its own checkpoint.
-        let mut tracked: Vec<(Arc<dyn ErasedProjection<(), Tx>>, Seq)> =
+        let mut tracked: Vec<(Arc<dyn ErasedProjection<Seq, Tx>>, Seq)> =
             Vec::with_capacity(projections.len());
         for projection in projections {
             let mut tx = self.tx_provider.begin().await?;
@@ -232,7 +235,7 @@ where
                 let shared: SharedEvent = Arc::from(stored.event);
 
                 // Only dispatch to projections whose checkpoint is behind this event
-                let active: Vec<Arc<dyn ErasedProjection<(), Tx>>> = tracked
+                let active: Vec<Arc<dyn ErasedProjection<Seq, Tx>>> = tracked
                     .iter()
                     .filter(|(_, cp)| cp.is_behind(&seq))
                     .map(|(p, _)| p.clone())
@@ -262,7 +265,7 @@ where
     /// work via the transactional checkpoint store.
     async fn run_projections(
         &self,
-        projections: &[Arc<dyn ErasedProjection<(), Tx>>],
+        projections: &[Arc<dyn ErasedProjection<Seq, Tx>>],
         event: &SharedEvent,
         sequence: Seq,
     ) {
@@ -283,7 +286,7 @@ where
     }
 
     async fn run_projection(
-        projection: Arc<dyn ErasedProjection<(), Tx>>,
+        projection: Arc<dyn ErasedProjection<Seq, Tx>>,
         tx_provider: Arc<dyn TransactionProvider<Tx>>,
         checkpoint_store: Arc<dyn TxCheckpointStore<Seq, Tx>>,
         event: SharedEvent,
@@ -297,7 +300,7 @@ where
             }
         };
 
-        if let Err(e) = projection.handle(event.as_ref(), &mut tx).await {
+        if let Err(e) = projection.handle(event.as_ref(), sequence, &mut tx).await {
             error!(error = %e, projection = projection.name(), "Projection failed");
             if let Err(e) = tx_provider.rollback(tx).await {
                 error!(error = %e, "Failed to rollback transaction");
@@ -331,7 +334,7 @@ where
 
         // 2. Run projections in parallel
         let shared: SharedEvent = Arc::new(event);
-        let projections: Vec<Arc<dyn ErasedProjection<(), Tx>>> =
+        let projections: Vec<Arc<dyn ErasedProjection<Seq, Tx>>> =
             self.projections.lock().unwrap().clone();
         self.run_projections(&projections, &shared, seq).await;
 
@@ -529,12 +532,12 @@ mod tests {
     }
 
     #[async_trait]
-    impl<E: DomainEvent> ProjectionHandler<E, MockTx> for CountingProjection<E> {
+    impl<E: DomainEvent> ProjectionHandler<E, i64, MockTx> for CountingProjection<E> {
         fn name(&self) -> &str {
             &self.name
         }
 
-        async fn handle(&self, _event: &E, _tx: &mut MockTx) -> error::Result<()> {
+        async fn handle(&self, _event: &E, _sequence: i64, _tx: &mut MockTx) -> error::Result<()> {
             self.count.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
@@ -545,12 +548,12 @@ mod tests {
     }
 
     #[async_trait]
-    impl ProjectionHandler<TestEvent, MockTx> for FailingProjection {
+    impl ProjectionHandler<TestEvent, i64, MockTx> for FailingProjection {
         fn name(&self) -> &str {
             &self.name
         }
 
-        async fn handle(&self, _event: &TestEvent, _tx: &mut MockTx) -> error::Result<()> {
+        async fn handle(&self, _event: &TestEvent, _sequence: i64, _tx: &mut MockTx) -> error::Result<()> {
             Err(EventSourcingError::Store {
                 message: "projection failed".into(),
             })
