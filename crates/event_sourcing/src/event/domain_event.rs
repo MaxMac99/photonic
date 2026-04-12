@@ -41,4 +41,17 @@ pub(crate) mod fixtures {
             &self.metadata
         }
     }
+
+    /// Minimal DomainEvent for use as the loaded type in mock event stores.
+    /// The mock store stores metadata on append and returns StoredTestEvent on load.
+    #[derive(Debug)]
+    pub struct StoredTestEvent {
+        pub metadata: EventMetadata,
+    }
+
+    impl DomainEvent for StoredTestEvent {
+        fn metadata(&self) -> &EventMetadata {
+            &self.metadata
+        }
+    }
 }

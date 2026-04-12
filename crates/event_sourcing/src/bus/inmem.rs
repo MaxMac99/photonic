@@ -112,7 +112,7 @@ impl InMemEventBus {
         &self,
         name: String,
         consumer: F,
-    ) -> Result<task::JoinHandle<()>, Whatever>
+    ) -> Result<JoinHandle<()>, Whatever>
     where
         E: DomainEvent,
         F: Fn(Arc<E>) -> Fut + Send + Sync + Clone + 'static,

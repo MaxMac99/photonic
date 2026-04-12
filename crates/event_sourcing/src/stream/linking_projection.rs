@@ -3,10 +3,10 @@ use std::sync::Arc;
 use crate::error;
 use crate::event::domain_event::DomainEvent;
 use crate::event::event_type::EventType;
-use crate::event::stream::StreamExtract;
 use crate::persistence::sequence::Sequence;
-use crate::persistence::stream_link_store::StreamLinkStore;
 use crate::projection::handler::MultiEventProjectionHandler;
+use crate::stream::definition::StreamExtract;
+use crate::stream::link_store::StreamLinkStore;
 use async_trait::async_trait;
 
 /// A projection that writes stream link records when events are published.
@@ -72,10 +72,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::aggregate::{Aggregate, ApplyEvent};
+    use crate::aggregate::traits::{Aggregate, ApplyEvent};
     use crate::event::event_metadata::EventMetadata;
-    use crate::event::stream::StreamDefinition;
-    use std::sync::Mutex;
+    use crate::stream::definition::StreamDefinition;
+    use crate::stream::link_store::fixtures::MockStreamLinkStore;
 
     // -- Test events --
 
@@ -118,45 +118,7 @@ mod tests {
         fn apply(&mut self, _event: &TestEvent) {}
     }
 
-    // -- Mock link store --
-
-    struct MockLinkStore {
-        links: Mutex<Vec<(i64, String)>>, // (sequence, storage_key)
-    }
-
-    impl MockLinkStore {
-        fn new() -> Self {
-            Self {
-                links: Mutex::new(Vec::new()),
-            }
-        }
-
-        fn link_count(&self) -> usize {
-            self.links.lock().unwrap().len()
-        }
-
-        fn links(&self) -> Vec<(i64, String)> {
-            self.links.lock().unwrap().clone()
-        }
-    }
-
     struct MockTx;
-
-    #[async_trait]
-    impl StreamLinkStore<i64, MockTx> for MockLinkStore {
-        async fn link(
-            &self,
-            sequence: i64,
-            stream: &crate::event::stream::StreamId,
-            _tx: &mut MockTx,
-        ) -> error::Result<()> {
-            self.links
-                .lock()
-                .unwrap()
-                .push((sequence, stream.to_storage_key()));
-            Ok(())
-        }
-    }
 
     fn test_stream() -> StreamDefinition<TestAggregate> {
         StreamDefinition::<TestAggregate>::builder()
@@ -166,7 +128,7 @@ mod tests {
 
     #[tokio::test]
     async fn links_matching_events() {
-        let link_store = Arc::new(MockLinkStore::new());
+        let link_store = Arc::new(MockStreamLinkStore::new());
         let stream_def: Arc<StreamDefinition<TestAggregate>> = Arc::new(test_stream());
         let projection =
             StreamLinkingProjection::new(vec![stream_def], link_store.clone());
@@ -186,7 +148,7 @@ mod tests {
 
     #[tokio::test]
     async fn skips_non_matching_events() {
-        let link_store = Arc::new(MockLinkStore::new());
+        let link_store = Arc::new(MockStreamLinkStore::new());
         let stream_def: Arc<StreamDefinition<TestAggregate>> = Arc::new(test_stream());
         let projection =
             StreamLinkingProjection::new(vec![stream_def], link_store.clone());
@@ -203,9 +165,9 @@ mod tests {
     #[test]
     fn event_types_is_union_of_extractors() {
         let stream_def: Arc<StreamDefinition<TestAggregate>> = Arc::new(test_stream());
-        let link_store = Arc::new(MockLinkStore::new());
+        let link_store = Arc::new(MockStreamLinkStore::new());
         let projection =
-            StreamLinkingProjection::new(vec![stream_def], link_store);
+            StreamLinkingProjection::<i64, MockTx>::new(vec![stream_def], link_store);
 
         let types = projection.event_types();
         assert_eq!(types.len(), 1);

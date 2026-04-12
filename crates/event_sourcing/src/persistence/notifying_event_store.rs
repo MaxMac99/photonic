@@ -61,16 +61,18 @@ mod tests {
     use super::*;
     use crate::event::domain_event::fixtures::TestEvent;
     use crate::persistence::event_store::fixtures::MockEventStore;
+    use async_trait::async_trait;
     use futures_util::StreamExt;
     use tokio::time::{timeout, Duration};
     use tokio_stream::wrappers::ReceiverStream;
 
-    struct MockListener {
-        rx: tokio::sync::Mutex<Option<tokio::sync::mpsc::Receiver<()>>>,
+    /// Listener that produces i64 sequences, matching MockEventStore<i64>.
+    struct MockI64Listener {
+        rx: tokio::sync::Mutex<Option<tokio::sync::mpsc::Receiver<i64>>>,
     }
 
-    impl MockListener {
-        fn new() -> (Self, tokio::sync::mpsc::Sender<()>) {
+    impl MockI64Listener {
+        fn new() -> (Self, tokio::sync::mpsc::Sender<i64>) {
             let (tx, rx) = tokio::sync::mpsc::channel(16);
             (
                 Self {
@@ -82,11 +84,11 @@ mod tests {
     }
 
     #[async_trait]
-    impl EventListener<()> for MockListener {
+    impl EventListener<i64> for MockI64Listener {
         async fn listen(
             &self,
             _event_types: Vec<EventType>,
-        ) -> error::Result<impl Stream<Item = ()> + Send> {
+        ) -> error::Result<impl Stream<Item = i64> + Send> {
             let rx = self
                 .rx
                 .lock()
@@ -99,7 +101,7 @@ mod tests {
 
     #[tokio::test]
     async fn append_delegates_to_inner_store() {
-        let (listener, _tx) = MockListener::new();
+        let (listener, _tx) = MockI64Listener::new();
         let store = NotifyingEventStore::new(MockEventStore::new(), listener);
 
         store.append(&TestEvent::new("hello")).await.unwrap();
@@ -110,22 +112,22 @@ mod tests {
 
     #[tokio::test]
     async fn load_delegates_to_inner_store() {
-        let (listener, _tx) = MockListener::new();
+        let (listener, _tx) = MockI64Listener::new();
         let store = NotifyingEventStore::new(MockEventStore::new(), listener);
 
-        let events = store.load((), vec![], 100).await.unwrap();
+        let events = store.load(0i64, vec![], 100).await.unwrap();
         assert!(events.is_empty());
     }
 
     #[tokio::test]
     async fn listen_returns_stream_from_listener() {
-        let (listener, tx) = MockListener::new();
+        let (listener, tx) = MockI64Listener::new();
         let store = NotifyingEventStore::new(MockEventStore::new(), listener);
 
-        let mut stream = store.listen::<()>(vec![]).await.unwrap();
+        let mut stream = store.listen::<i64>(vec![]).await.unwrap();
 
-        tx.send(()).await.unwrap();
-        tx.send(()).await.unwrap();
+        tx.send(1).await.unwrap();
+        tx.send(2).await.unwrap();
 
         timeout(Duration::from_secs(1), stream.next())
             .await
@@ -140,13 +142,13 @@ mod tests {
 
     #[tokio::test]
     async fn listen_passes_event_types_through() {
-        let (listener, tx) = MockListener::new();
+        let (listener, tx) = MockI64Listener::new();
         let store = NotifyingEventStore::new(MockEventStore::new(), listener);
 
         let event_types = vec![EventType::of::<TestEvent>()];
-        let mut stream = store.listen::<()>(event_types).await.unwrap();
+        let mut stream = store.listen::<i64>(event_types).await.unwrap();
 
-        tx.send(()).await.unwrap();
+        tx.send(1).await.unwrap();
 
         timeout(Duration::from_secs(1), stream.next())
             .await

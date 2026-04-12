@@ -2,40 +2,11 @@ use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::aggregate::{Aggregate, AggregateType, ApplyEvent};
+use crate::aggregate::traits::{Aggregate, AggregateType, ApplyEvent};
 use crate::event::domain_event::DomainEvent;
 use crate::event::event_type::EventType;
 use crate::persistence::event_store::StoredEvent;
-
-/// A typed stream identifier. Combines an aggregate type (category) with
-/// a specific aggregate instance id.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct StreamId {
-    aggregate_type: AggregateType,
-    id: String,
-}
-
-impl StreamId {
-    pub fn new(aggregate_type: AggregateType, id: impl Into<String>) -> Self {
-        Self {
-            aggregate_type,
-            id: id.into(),
-        }
-    }
-
-    pub fn aggregate_type(&self) -> &AggregateType {
-        &self.aggregate_type
-    }
-
-    pub fn id(&self) -> &str {
-        &self.id
-    }
-
-    /// Returns the string representation used for storage (e.g. "Medium-uuid").
-    pub fn to_storage_key(&self) -> String {
-        format!("{}-{}", self.aggregate_type.name(), self.id)
-    }
-}
+use crate::stream::stream_id::StreamId;
 
 type StreamIdExtractor = Arc<dyn Fn(&dyn DomainEvent) -> Option<String> + Send + Sync>;
 type EventApplier<A> = Box<dyn Fn(&mut A, &dyn DomainEvent) + Send + Sync>;
@@ -169,7 +140,7 @@ impl<A: Aggregate> StreamExtract for StreamDefinition<A> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::aggregate::{Aggregate, ApplyEvent};
+    use crate::aggregate::traits::{Aggregate, ApplyEvent};
     use crate::event::event_metadata::EventMetadata;
 
     // -- Test aggregates and events --
@@ -383,58 +354,12 @@ mod tests {
 
     // -- AggregateRepository tests --
 
-    use crate::aggregate::AggregateRepository;
-    use crate::persistence::aggregate_event_store::AggregateEventStore;
-    use async_trait::async_trait;
-
-    type EventFactory = Box<dyn Fn() -> Box<dyn DomainEvent> + Send + Sync>;
-
-    struct MockAggregateStore {
-        streams: std::sync::Mutex<HashMap<String, Vec<(i64, EventFactory)>>>,
-    }
-
-    impl MockAggregateStore {
-        fn new() -> Self {
-            Self {
-                streams: std::sync::Mutex::new(HashMap::new()),
-            }
-        }
-
-        fn add_event(&self, stream_key: &str, seq: i64, factory: EventFactory) {
-            self.streams
-                .lock()
-                .unwrap()
-                .entry(stream_key.to_string())
-                .or_default()
-                .push((seq, factory));
-        }
-    }
-
-    #[async_trait]
-    impl AggregateEventStore<i64> for MockAggregateStore {
-        async fn load_stream(
-            &self,
-            stream: &StreamId,
-        ) -> crate::error::Result<Vec<StoredEvent<i64>>> {
-            let streams = self.streams.lock().unwrap();
-            Ok(streams
-                .get(&stream.to_storage_key())
-                .map(|entries| {
-                    entries
-                        .iter()
-                        .map(|(seq, factory)| StoredEvent {
-                            sequence: *seq,
-                            event: factory(),
-                        })
-                        .collect()
-                })
-                .unwrap_or_default())
-        }
-    }
+    use crate::aggregate::event_store::fixtures::MockAggregateEventStore;
+    use crate::aggregate::repository::AggregateRepository;
 
     #[test]
     fn streams_for_matches_multiple_streams() {
-        let mut repo = AggregateRepository::new(Arc::new(MockAggregateStore::new()));
+        let mut repo = AggregateRepository::new(Arc::new(MockAggregateEventStore::new()));
         repo.register(medium_stream());
         repo.register(task_stream());
 
@@ -453,7 +378,7 @@ mod tests {
 
     #[test]
     fn streams_for_matches_none() {
-        let mut repo = AggregateRepository::new(Arc::new(MockAggregateStore::new()));
+        let mut repo = AggregateRepository::new(Arc::new(MockAggregateEventStore::new()));
         repo.register(medium_stream());
 
         let event = UnrelatedEvent {
@@ -464,7 +389,7 @@ mod tests {
 
     #[test]
     fn streams_for_matches_one_only() {
-        let mut repo = AggregateRepository::new(Arc::new(MockAggregateStore::new()));
+        let mut repo = AggregateRepository::new(Arc::new(MockAggregateEventStore::new()));
         repo.register(medium_stream());
         repo.register(task_stream());
 
@@ -480,7 +405,7 @@ mod tests {
 
     #[tokio::test]
     async fn load_reconstitutes_aggregate() {
-        let store = Arc::new(MockAggregateStore::new());
+        let store = Arc::new(MockAggregateEventStore::new());
         store.add_event("Medium-abc", 1, Box::new(|| {
             Box::new(MediumCreated {
                 metadata: EventMetadata::default(),
@@ -507,7 +432,7 @@ mod tests {
 
     #[tokio::test]
     async fn load_returns_error_for_unregistered_aggregate() {
-        let store = Arc::new(MockAggregateStore::new());
+        let store = Arc::new(MockAggregateEventStore::new());
         let repo = AggregateRepository::new(store);
 
         let result = repo.load::<Medium>(&"abc".to_string()).await;
@@ -516,7 +441,7 @@ mod tests {
 
     #[tokio::test]
     async fn load_returns_default_for_empty_stream() {
-        let store = Arc::new(MockAggregateStore::new());
+        let store = Arc::new(MockAggregateEventStore::new());
         let mut repo = AggregateRepository::new(store);
         repo.register(medium_stream());
 

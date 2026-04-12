@@ -361,19 +361,21 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::event::domain_event::fixtures::TestEvent;
-    use crate::event::event_metadata::EventMetadata;
+    use crate::event::domain_event::fixtures::{StoredTestEvent, TestEvent};
     use crate::event::event_type::EventType;
-    use crate::persistence::event_store::StoredEvent;
+    use crate::persistence::event_store::fixtures::FailingEventStore;
     use crate::persistence::listener::EventListener;
     use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
     use tokio::time::{timeout, Duration};
     use tokio_stream::wrappers::ReceiverStream;
 
+    /// Local mock store that uses tokio::sync::Mutex (async) for compatibility
+    /// with the NotifyingPersistentEventBus tests, which require async locking
+    /// in the append path (the centralized MockEventStore uses std::sync::Mutex).
     struct MockStore {
         append_count: AtomicUsize,
         next_seq: AtomicI64,
-        events: Mutex<Vec<StoredEvent<i64>>>,
+        events: Mutex<Vec<crate::persistence::event_store::StoredEvent<i64>>>,
     }
 
     impl MockStore {
@@ -392,7 +394,7 @@ mod tests {
             self.append_count.fetch_add(1, Ordering::SeqCst);
             let seq = self.next_seq.fetch_add(1, Ordering::SeqCst);
             let metadata = event.metadata().clone();
-            self.events.lock().await.push(StoredEvent {
+            self.events.lock().await.push(crate::persistence::event_store::StoredEvent {
                 sequence: seq,
                 event: Box::new(StoredTestEvent { metadata }),
             });
@@ -404,30 +406,19 @@ mod tests {
             after_sequence: i64,
             _filter: Vec<EventType>,
             limit: usize,
-        ) -> error::Result<Vec<StoredEvent<i64>>> {
+        ) -> error::Result<Vec<crate::persistence::event_store::StoredEvent<i64>>> {
             let events = self.events.lock().await;
             Ok(events
                 .iter()
                 .filter(|e| e.sequence > after_sequence)
                 .take(limit)
-                .map(|e| StoredEvent {
+                .map(|e| crate::persistence::event_store::StoredEvent {
                     sequence: e.sequence,
                     event: Box::new(StoredTestEvent {
                         metadata: e.event.metadata().clone(),
                     }),
                 })
                 .collect())
-        }
-    }
-
-    #[derive(Debug)]
-    struct StoredTestEvent {
-        metadata: EventMetadata,
-    }
-
-    impl DomainEvent for StoredTestEvent {
-        fn metadata(&self) -> &EventMetadata {
-            &self.metadata
         }
     }
 
@@ -523,7 +514,7 @@ mod tests {
     async fn publish_returns_error_when_store_fails() {
         let (listener, _tx) = MockFailingListener::new();
         let bus: NotifyingPersistentEventBus<i64, _, _> =
-            NotifyingPersistentEventBus::new(NotifyingEventStore::new(FailingStore, listener));
+            NotifyingPersistentEventBus::new(NotifyingEventStore::new(FailingEventStore, listener));
 
         let result = bus.publish(TestEvent::new("will fail")).await;
         assert!(result.is_err());
@@ -533,7 +524,7 @@ mod tests {
     async fn failed_publish_does_not_dispatch() {
         let (fail_listener, _) = MockFailingListener::new();
         let fail_bus: NotifyingPersistentEventBus<i64, _, _> =
-            NotifyingPersistentEventBus::new(NotifyingEventStore::new(FailingStore, fail_listener));
+            NotifyingPersistentEventBus::new(NotifyingEventStore::new(FailingEventStore, fail_listener));
         let mut stream = fail_bus.subscribe::<TestEvent>().await;
 
         let _ = fail_bus.publish(TestEvent::new("should abort")).await;
@@ -593,26 +584,6 @@ mod tests {
             .unwrap();
         assert_eq!(e1.value, "broadcast");
         assert_eq!(e2.value, "broadcast");
-    }
-
-    struct FailingStore;
-
-    #[async_trait]
-    impl EventStore<i64> for FailingStore {
-        async fn append(&self, _event: &dyn DomainEvent) -> error::Result<i64> {
-            Err(error::EventSourcingError::Store {
-                message: "simulated failure".to_string(),
-            })
-        }
-
-        async fn load(
-            &self,
-            _after_sequence: i64,
-            _filter: Vec<EventType>,
-            _limit: usize,
-        ) -> error::Result<Vec<StoredEvent<i64>>> {
-            Ok(vec![])
-        }
     }
 
     struct MockFailingListener;

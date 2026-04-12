@@ -373,147 +373,15 @@ where
 mod tests {
     use super::*;
     use crate::error::EventSourcingError;
-    use crate::event::domain_event::fixtures::TestEvent;
-    use crate::event::event_metadata::EventMetadata;
-    use crate::persistence::event_store::StoredEvent;
+    use crate::event::domain_event::fixtures::{StoredTestEvent, TestEvent};
+    use crate::persistence::checkpoint_store::fixtures::MockTxCheckpointStore;
+    use crate::persistence::event_store::fixtures::MockEventStore;
+    use crate::persistence::transaction::fixtures::{MockTx, MockTxProvider};
     use futures_util::StreamExt;
-    use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use tokio::time::{timeout, Duration};
 
-    // -- Mock EventStore --
-
-    struct MockStore {
-        next_seq: AtomicI64,
-        events: std::sync::Mutex<Vec<(i64, EventMetadata)>>,
-    }
-
-    impl MockStore {
-        fn new() -> Self {
-            Self {
-                next_seq: AtomicI64::new(1),
-                events: std::sync::Mutex::new(Vec::new()),
-            }
-        }
-    }
-
-    #[async_trait]
-    impl EventStore<i64> for MockStore {
-        async fn append(&self, event: &dyn DomainEvent) -> error::Result<i64> {
-            let seq = self.next_seq.fetch_add(1, Ordering::SeqCst);
-            self.events
-                .lock()
-                .unwrap()
-                .push((seq, event.metadata().clone()));
-            Ok(seq)
-        }
-
-        async fn load(
-            &self,
-            after_sequence: i64,
-            _filter: Vec<EventType>,
-            limit: usize,
-        ) -> error::Result<Vec<StoredEvent<i64>>> {
-            let events = self.events.lock().unwrap();
-            Ok(events
-                .iter()
-                .filter(|(seq, _)| *seq > after_sequence)
-                .take(limit)
-                .map(|(seq, metadata)| StoredEvent {
-                    sequence: *seq,
-                    event: Box::new(StoredTestEvent {
-                        metadata: metadata.clone(),
-                    }),
-                })
-                .collect())
-        }
-    }
-
-    #[derive(Debug)]
-    struct StoredTestEvent {
-        metadata: EventMetadata,
-    }
-
-    impl DomainEvent for StoredTestEvent {
-        fn metadata(&self) -> &EventMetadata {
-            &self.metadata
-        }
-    }
-
-    // -- Mock transactional checkpoint store --
-
-    struct MockTx;
-
-    struct MockCheckpointStore {
-        checkpoints: std::sync::Mutex<std::collections::HashMap<String, i64>>,
-    }
-
-    impl MockCheckpointStore {
-        fn new() -> Self {
-            Self {
-                checkpoints: std::sync::Mutex::new(std::collections::HashMap::new()),
-            }
-        }
-    }
-
-    #[async_trait]
-    impl TxCheckpointStore<i64, MockTx> for MockCheckpointStore {
-        async fn load(&self, consumer_name: &str, _tx: &mut MockTx) -> error::Result<i64> {
-            Ok(*self
-                .checkpoints
-                .lock()
-                .unwrap()
-                .get(consumer_name)
-                .unwrap_or(&0))
-        }
-
-        async fn save(
-            &self,
-            consumer_name: &str,
-            sequence: i64,
-            _tx: &mut MockTx,
-        ) -> error::Result<()> {
-            self.checkpoints
-                .lock()
-                .unwrap()
-                .insert(consumer_name.to_string(), sequence);
-            Ok(())
-        }
-    }
-
-    // -- Mock transaction provider --
-
-    struct MockTxProvider {
-        commits: AtomicUsize,
-        rollbacks: AtomicUsize,
-    }
-
-    impl MockTxProvider {
-        fn new() -> Self {
-            Self {
-                commits: AtomicUsize::new(0),
-                rollbacks: AtomicUsize::new(0),
-            }
-        }
-    }
-
-    #[async_trait]
-    impl TransactionProvider<MockTx> for MockTxProvider {
-        async fn begin(&self) -> error::Result<MockTx> {
-            Ok(MockTx)
-        }
-
-        async fn commit(&self, _tx: MockTx) -> error::Result<()> {
-            self.commits.fetch_add(1, Ordering::SeqCst);
-            Ok(())
-        }
-
-        async fn rollback(&self, _tx: MockTx) -> error::Result<()> {
-            self.rollbacks.fetch_add(1, Ordering::SeqCst);
-            Ok(())
-        }
-    }
-
-    // -- Mock projection handlers --
+    // -- Test-specific projection handlers --
 
     struct CountingProjection<E: DomainEvent> {
         name: String,
@@ -562,8 +430,8 @@ mod tests {
 
     fn make_bus() -> ProjectionEventBus<i64, MockTx> {
         ProjectionEventBus::new(
-            MockStore::new(),
-            MockCheckpointStore::new(),
+            MockEventStore::new(),
+            MockTxCheckpointStore::new(),
             MockTxProvider::new(),
         )
     }
@@ -602,13 +470,13 @@ mod tests {
 
     #[tokio::test]
     async fn replay_runs_projections_for_existing_events() {
-        let store = MockStore::new();
+        let store = MockEventStore::new();
         store.append(&TestEvent::new("first")).await.unwrap();
         store.append(&TestEvent::new("second")).await.unwrap();
 
         let bus = ProjectionEventBus::new(
             store,
-            MockCheckpointStore::new(),
+            MockTxCheckpointStore::new(),
             MockTxProvider::new(),
         );
 
@@ -626,12 +494,12 @@ mod tests {
 
     #[tokio::test]
     async fn replay_resumes_from_checkpoint() {
-        let store = MockStore::new();
+        let store = MockEventStore::new();
         store.append(&TestEvent::new("first")).await.unwrap();
         store.append(&TestEvent::new("second")).await.unwrap();
         store.append(&TestEvent::new("third")).await.unwrap();
 
-        let checkpoint_store = MockCheckpointStore::new();
+        let checkpoint_store = MockTxCheckpointStore::new();
         checkpoint_store
             .checkpoints
             .lock()

@@ -398,126 +398,14 @@ where
 mod tests {
     use super::*;
     use crate::error::EventSourcingError;
-    use crate::event::domain_event::fixtures::TestEvent;
-    use crate::event::event_metadata::EventMetadata;
-    use crate::event::event_type::EventType;
-    use crate::persistence::event_store::StoredEvent;
+    use crate::event::domain_event::fixtures::{StoredTestEvent, TestEvent};
+    use crate::persistence::checkpoint_store::fixtures::MockCheckpointStore;
+    use crate::persistence::event_store::fixtures::{FailingEventStore, MockEventStore};
     use futures_util::StreamExt;
-    use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use tokio::time::{timeout, Duration};
 
-    // -- Mocks --
-
-    struct MockStore {
-        next_seq: AtomicI64,
-        events: std::sync::Mutex<Vec<(i64, EventMetadata)>>,
-    }
-
-    impl MockStore {
-        fn new() -> Self {
-            Self {
-                next_seq: AtomicI64::new(1),
-                events: std::sync::Mutex::new(Vec::new()),
-            }
-        }
-    }
-
-    #[async_trait]
-    impl EventStore<i64> for MockStore {
-        async fn append(&self, event: &dyn DomainEvent) -> error::Result<i64> {
-            let seq = self.next_seq.fetch_add(1, Ordering::SeqCst);
-            self.events
-                .lock()
-                .unwrap()
-                .push((seq, event.metadata().clone()));
-            Ok(seq)
-        }
-
-        async fn load(
-            &self,
-            after_sequence: i64,
-            _filter: Vec<EventType>,
-            limit: usize,
-        ) -> error::Result<Vec<StoredEvent<i64>>> {
-            let events = self.events.lock().unwrap();
-            Ok(events
-                .iter()
-                .filter(|(seq, _)| *seq > after_sequence)
-                .take(limit)
-                .map(|(seq, metadata)| StoredEvent {
-                    sequence: *seq,
-                    event: Box::new(StoredTestEvent {
-                        metadata: metadata.clone(),
-                    }),
-                })
-                .collect())
-        }
-    }
-
-    #[derive(Debug)]
-    struct StoredTestEvent {
-        metadata: EventMetadata,
-    }
-
-    impl DomainEvent for StoredTestEvent {
-        fn metadata(&self) -> &EventMetadata {
-            &self.metadata
-        }
-    }
-
-    struct MockCheckpointStore {
-        checkpoints: std::sync::Mutex<std::collections::HashMap<String, i64>>,
-    }
-
-    impl MockCheckpointStore {
-        fn new() -> Self {
-            Self {
-                checkpoints: std::sync::Mutex::new(std::collections::HashMap::new()),
-            }
-        }
-    }
-
-    #[async_trait]
-    impl CheckpointStore<i64> for MockCheckpointStore {
-        async fn load(&self, consumer_name: &str) -> error::Result<i64> {
-            Ok(*self
-                .checkpoints
-                .lock()
-                .unwrap()
-                .get(consumer_name)
-                .unwrap_or(&0))
-        }
-
-        async fn save(&self, consumer_name: &str, sequence: i64) -> error::Result<()> {
-            self.checkpoints
-                .lock()
-                .unwrap()
-                .insert(consumer_name.to_string(), sequence);
-            Ok(())
-        }
-    }
-
-    struct FailingStore;
-
-    #[async_trait]
-    impl EventStore<i64> for FailingStore {
-        async fn append(&self, _event: &dyn DomainEvent) -> error::Result<i64> {
-            Err(EventSourcingError::Store {
-                message: "simulated failure".to_string(),
-            })
-        }
-
-        async fn load(
-            &self,
-            _after_sequence: i64,
-            _filter: Vec<EventType>,
-            _limit: usize,
-        ) -> error::Result<Vec<StoredEvent<i64>>> {
-            Ok(vec![])
-        }
-    }
-
-    fn make_bus(store: MockStore) -> PersistentEventBus<i64> {
+    fn make_bus(store: MockEventStore) -> PersistentEventBus<i64> {
         PersistentEventBus::new(store, MockCheckpointStore::new())
     }
 
@@ -525,7 +413,7 @@ mod tests {
 
     #[tokio::test]
     async fn publish_dispatches_to_latest_consumer() {
-        let bus = make_bus(MockStore::new());
+        let bus = make_bus(MockEventStore::new());
         bus.start().unwrap();
 
         let mut stream = bus.subscribe::<TestEvent>().await;
@@ -540,7 +428,7 @@ mod tests {
 
     #[tokio::test]
     async fn publish_returns_error_when_store_fails() {
-        let bus = PersistentEventBus::new(FailingStore, MockCheckpointStore::new());
+        let bus = PersistentEventBus::new(FailingEventStore, MockCheckpointStore::new());
         bus.start().unwrap();
 
         let result = bus.publish(TestEvent::new("will fail")).await;
@@ -549,7 +437,7 @@ mod tests {
 
     #[tokio::test]
     async fn beginning_consumer_replays_all_events() {
-        let store = MockStore::new();
+        let store = MockEventStore::new();
         store.append(&TestEvent::new("first")).await.unwrap();
         store.append(&TestEvent::new("second")).await.unwrap();
 
@@ -579,7 +467,7 @@ mod tests {
 
     #[tokio::test]
     async fn checkpoint_consumer_resumes_from_saved_position() {
-        let store = MockStore::new();
+        let store = MockEventStore::new();
         store.append(&TestEvent::new("first")).await.unwrap();
         store.append(&TestEvent::new("second")).await.unwrap();
         store.append(&TestEvent::new("third")).await.unwrap();
@@ -615,7 +503,7 @@ mod tests {
 
     #[tokio::test]
     async fn checkpoint_saved_on_successful_replay() {
-        let store = MockStore::new();
+        let store = MockEventStore::new();
         store.append(&TestEvent::new("first")).await.unwrap();
         store.append(&TestEvent::new("second")).await.unwrap();
 
@@ -642,7 +530,7 @@ mod tests {
 
     #[tokio::test]
     async fn checkpoint_not_saved_on_consumer_error() {
-        let store = MockStore::new();
+        let store = MockEventStore::new();
         store.append(&TestEvent::new("first")).await.unwrap();
 
         let cs = MockCheckpointStore::new();
@@ -672,7 +560,7 @@ mod tests {
 
     #[tokio::test]
     async fn replayable_consumer_receives_live_events_after_replay() {
-        let bus = make_bus(MockStore::new());
+        let bus = make_bus(MockEventStore::new());
 
         let counter = Arc::new(AtomicUsize::new(0));
         let c = counter.clone();
@@ -703,7 +591,7 @@ mod tests {
 
     #[tokio::test]
     async fn reject_replayable_consumer_after_start() {
-        let bus = make_bus(MockStore::new());
+        let bus = make_bus(MockEventStore::new());
         bus.start().unwrap();
 
         let result = bus
@@ -719,7 +607,7 @@ mod tests {
 
     #[tokio::test]
     async fn start_can_only_be_called_once() {
-        let bus = make_bus(MockStore::new());
+        let bus = make_bus(MockEventStore::new());
         assert!(bus.start().is_ok());
         assert!(bus.start().is_err());
     }
