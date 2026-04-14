@@ -5,6 +5,7 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
+event_sourcing = { workspace = true }
 async-trait.workspace = true
 byte-unit.workspace = true
 chrono.workspace = true

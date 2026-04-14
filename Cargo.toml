@@ -20,6 +20,7 @@ edition = "2021"
 # Internal crates
 domain = { path = "crates/domain" }
 application = { path = "crates/application" }
+event_sourcing = { path = "crates/event_sourcing" }
 infrastructure = { path = "crates/infrastructure" }
 photonic-client = { path = "crates/photonic-client" }
 xtask = { path = "crates/xtask" }
