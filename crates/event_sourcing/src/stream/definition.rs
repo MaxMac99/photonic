@@ -59,9 +59,16 @@ impl<A: Aggregate> StreamDefinition<A> {
             .collect()
     }
 
-    /// Reconstitute an aggregate from a sequence of stored events.
+    /// Reconstitute an aggregate from a sequence of stored events,
+    /// starting from the default state.
     pub fn reconstitute<Seq>(&self, events: &[StoredEvent<Seq>]) -> A {
-        let mut agg = A::default();
+        self.reconstitute_from(A::default(), events)
+    }
+
+    /// Reconstitute an aggregate from a starting state by applying events.
+    /// Used with snapshots: start from the snapshot state and replay only
+    /// events that occurred after the snapshot.
+    pub fn reconstitute_from<Seq>(&self, mut agg: A, events: &[StoredEvent<Seq>]) -> A {
         for stored in events {
             self.apply_event(&mut agg, stored.event.as_ref());
         }

@@ -14,8 +14,13 @@ use async_trait::async_trait;
 /// publish.
 #[async_trait]
 pub trait AggregateEventStore<Seq>: Send + Sync + 'static {
-    /// Load all events in a stream, ordered by stream version.
-    async fn load_stream(&self, stream: &StreamId) -> error::Result<Vec<StoredEvent<Seq>>>;
+    /// Load events in a stream after `after_version`, ordered by stream version.
+    /// Pass `Seq::default()` to load all events from the beginning.
+    async fn load_stream(
+        &self,
+        stream: &StreamId,
+        after_version: Seq,
+    ) -> error::Result<Vec<StoredEvent<Seq>>>;
 }
 
 #[cfg(test)]
@@ -49,13 +54,18 @@ pub(crate) mod fixtures {
 
     #[async_trait]
     impl AggregateEventStore<i64> for MockAggregateEventStore {
-        async fn load_stream(&self, stream: &StreamId) -> error::Result<Vec<StoredEvent<i64>>> {
+        async fn load_stream(
+            &self,
+            stream: &StreamId,
+            after_version: i64,
+        ) -> error::Result<Vec<StoredEvent<i64>>> {
             let streams = self.streams.lock().unwrap();
             Ok(streams
                 .get(&stream.to_storage_key())
                 .map(|entries| {
                     entries
                         .iter()
+                        .filter(|(seq, _)| *seq > after_version)
                         .map(|(seq, factory)| StoredEvent {
                             sequence: *seq,
                             event: factory(),
