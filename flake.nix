@@ -109,12 +109,26 @@
                     default = mkShell {
                         inputsFrom = [ bin ];
                         buildInputs = [ openapi-down-convert ];
+
+                        shellHook = ''
+                            # Isolate CARGO_HOME so cargo's subcommand search doesn't
+                            # pick up rustup shims from ~/.cargo/bin, which would
+                            # shadow the Nix toolchain (e.g. `cargo fmt`).
+                            export CARGO_HOME="$PWD/tmpdata/.cargo"
+                            mkdir -p "$CARGO_HOME"
+                        '';
                     };
 
                     test = mkShell {
                         inputsFrom = [ bin ];
 
                         shellHook = ''
+                            # Isolate CARGO_HOME so cargo's subcommand search doesn't
+                            # pick up rustup shims from ~/.cargo/bin, which would
+                            # shadow the Nix toolchain (e.g. `cargo fmt`).
+                            export CARGO_HOME="$PWD/tmpdata/.cargo"
+                            mkdir -p "$CARGO_HOME"
+
                             # Set up test database
                             export PGDATA="$PWD/tmpdata/.pgdata-test"
                             export TEST_DATABASE_URL="postgresql:///$USER?host=$PGDATA"
