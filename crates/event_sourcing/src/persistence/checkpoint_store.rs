@@ -1,5 +1,6 @@
-use crate::error;
 use async_trait::async_trait;
+
+use crate::error;
 
 /// Persists the last-processed sequence per named consumer.
 ///
@@ -26,8 +27,9 @@ pub trait TxCheckpointStore<Seq, Tx>: Send + Sync + 'static {
 
 #[cfg(test)]
 pub(crate) mod fixtures {
-    use super::*;
     use std::collections::HashMap;
+
+    use super::*;
 
     pub struct MockCheckpointStore {
         pub checkpoints: std::sync::Mutex<HashMap<String, i64>>,

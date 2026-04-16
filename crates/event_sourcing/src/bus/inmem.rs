@@ -1,11 +1,3 @@
-use crate::bus::subscription::SubscriptionOptions;
-use crate::bus::EventBus;
-use crate::error;
-use crate::event::domain_event::DomainEvent;
-use async_channel::Receiver;
-use async_trait::async_trait;
-use futures_util::StreamExt;
-use snafu::{ResultExt, Whatever};
 use std::{
     any::{type_name, Any, TypeId},
     collections::HashMap,
@@ -13,11 +5,22 @@ use std::{
     sync::Arc,
 };
 
+use async_channel::Receiver;
+use async_trait::async_trait;
+use futures_util::StreamExt;
+use snafu::{ResultExt, Whatever};
+
+use crate::{
+    bus::{subscription::SubscriptionOptions, EventBus},
+    error,
+    event::domain_event::DomainEvent,
+};
+
 pub type SharedEvent = Arc<dyn DomainEvent>;
-use tokio::task::JoinHandle;
 use tokio::{
     sync::{broadcast, Mutex},
     task,
+    task::JoinHandle,
 };
 use tokio_stream::{wrappers::BroadcastStream, Stream};
 use tracing::{debug, error, info, warn};
@@ -221,10 +224,12 @@ impl Default for InMemEventBus {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use tokio::time::{timeout, Duration};
+
     use super::*;
     use crate::event::domain_event::fixtures::{OtherEvent, TestEvent};
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use tokio::time::{timeout, Duration};
 
     #[tokio::test]
     async fn publish_and_subscribe_receives_event() {

@@ -1,6 +1,6 @@
-use crate::error;
-use crate::stream::stream_id::StreamId;
 use async_trait::async_trait;
+
+use crate::{error, stream::stream_id::StreamId};
 
 /// Writes stream link records within a transaction.
 ///
@@ -11,18 +11,14 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait StreamLinkStore<Seq, Tx>: Send + Sync + 'static {
     /// Link an event (by global sequence) to a stream within a transaction.
-    async fn link(
-        &self,
-        sequence: Seq,
-        stream: &StreamId,
-        tx: &mut Tx,
-    ) -> error::Result<()>;
+    async fn link(&self, sequence: Seq, stream: &StreamId, tx: &mut Tx) -> error::Result<()>;
 }
 
 #[cfg(test)]
 pub(crate) mod fixtures {
-    use super::*;
     use std::sync::Mutex;
+
+    use super::*;
 
     pub struct MockStreamLinkStore {
         links: Mutex<Vec<(i64, String)>>,
@@ -46,12 +42,7 @@ pub(crate) mod fixtures {
 
     #[async_trait]
     impl<Tx: Send + Sync + 'static> StreamLinkStore<i64, Tx> for MockStreamLinkStore {
-        async fn link(
-            &self,
-            sequence: i64,
-            stream: &StreamId,
-            _tx: &mut Tx,
-        ) -> error::Result<()> {
+        async fn link(&self, sequence: i64, stream: &StreamId, _tx: &mut Tx) -> error::Result<()> {
             self.links
                 .lock()
                 .unwrap()

@@ -5,18 +5,16 @@ pub mod persistent;
 pub mod projection;
 pub mod subscription;
 
-use crate::bus::subscription::SubscriptionOptions;
-use crate::error;
-use crate::event::domain_event::DomainEvent;
+use std::{any::type_name, future::Future, sync::Arc};
+
 use async_trait::async_trait;
 pub use event_processor::EventProcessor;
 use snafu::Whatever;
-use std::any::type_name;
-use std::future::Future;
-use std::sync::Arc;
 use tokio::task;
 use tokio_stream::Stream;
 use tracing::error;
+
+use crate::{bus::subscription::SubscriptionOptions, error, event::domain_event::DomainEvent};
 
 #[async_trait]
 pub trait EventBus {

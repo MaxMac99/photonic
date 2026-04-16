@@ -1,8 +1,8 @@
-use async_trait::async_trait;
 use std::sync::Arc;
 
-use crate::error::Result;
-use crate::event::domain_event::DomainEvent;
+use async_trait::async_trait;
+
+use crate::{error::Result, event::domain_event::DomainEvent};
 
 #[async_trait]
 pub trait EventProcessor<E: DomainEvent>: Send + Sync + 'static {

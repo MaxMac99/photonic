@@ -1,7 +1,7 @@
-use crate::error;
-use crate::event::event_type::EventType;
 use async_trait::async_trait;
 use tokio_stream::Stream;
+
+use crate::{error, event::event_type::EventType};
 
 #[async_trait]
 pub trait EventListener<Seq>: Send + Sync + 'static {
@@ -14,9 +14,10 @@ pub trait EventListener<Seq>: Send + Sync + 'static {
 
 #[cfg(test)]
 pub(crate) mod fixtures {
-    use super::*;
     use tokio::sync::Mutex;
     use tokio_stream::wrappers::ReceiverStream;
+
+    use super::*;
 
     pub struct MockListener {
         rx: Mutex<Option<tokio::sync::mpsc::Receiver<()>>>,

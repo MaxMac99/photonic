@@ -1,25 +1,33 @@
-use std::fmt::Debug;
-use std::future::Future;
-use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
-use std::sync::Arc;
+use std::{
+    fmt::Debug,
+    future::Future,
+    sync::{
+        atomic::{AtomicBool, Ordering as AtomicOrdering},
+        Arc,
+    },
+};
 
-use crate::bus::inmem::{InMemEventBus, SharedEvent};
-use crate::bus::subscription::SubscriptionOptions;
-use crate::bus::EventBus;
-use crate::error;
-use crate::event::domain_event::DomainEvent;
-use crate::event::event_type::EventType;
-use crate::persistence::checkpoint_store::TxCheckpointStore;
-use crate::persistence::event_store::EventStore;
-use crate::persistence::sequence::Sequence;
-use crate::persistence::transaction::TransactionProvider;
-use crate::projection::handler::{MultiEventProjectionHandler, ProjectionHandler};
 use async_trait::async_trait;
 use futures_util::future::join_all;
 use snafu::Whatever;
 use tokio::task::JoinHandle;
 use tokio_stream::Stream;
 use tracing::{error, info};
+
+use crate::{
+    bus::{
+        inmem::{InMemEventBus, SharedEvent},
+        subscription::SubscriptionOptions,
+        EventBus,
+    },
+    error,
+    event::{domain_event::DomainEvent, event_type::EventType},
+    persistence::{
+        checkpoint_store::TxCheckpointStore, event_store::EventStore, sequence::Sequence,
+        transaction::TransactionProvider,
+    },
+    projection::handler::{CatchAllProjectionHandler, ProjectionHandler},
+};
 
 const REPLAY_BATCH_SIZE: usize = 100;
 
@@ -28,7 +36,12 @@ const REPLAY_BATCH_SIZE: usize = 100;
 trait ErasedProjection<Seq, Tx>: Send + Sync {
     fn name(&self) -> &str;
     fn matches_dyn(&self, event: &dyn DomainEvent) -> bool;
-    async fn handle(&self, event: &dyn DomainEvent, sequence: Seq, tx: &mut Tx) -> error::Result<()>;
+    async fn handle(
+        &self,
+        event: &dyn DomainEvent,
+        sequence: Seq,
+        tx: &mut Tx,
+    ) -> error::Result<()>;
 }
 
 struct SingleHandler<E, Seq, H, Tx>
@@ -58,7 +71,12 @@ where
         self.event_type.id() == (*event).type_id()
     }
 
-    async fn handle(&self, event: &dyn DomainEvent, sequence: Seq, tx: &mut Tx) -> error::Result<()> {
+    async fn handle(
+        &self,
+        event: &dyn DomainEvent,
+        sequence: Seq,
+        tx: &mut Tx,
+    ) -> error::Result<()> {
         let any = event as &dyn std::any::Any;
         let typed = any
             .downcast_ref::<E>()
@@ -67,33 +85,31 @@ where
     }
 }
 
-struct MultiHandler<Seq, H, Tx>
-where
-    Seq: Sequence,
-    H: MultiEventProjectionHandler<Seq, Tx>,
-{
+struct CatchAllWrapper<H> {
     handler: H,
-    event_types: Vec<EventType>,
-    _phantom: std::marker::PhantomData<(Seq, Tx)>,
 }
 
 #[async_trait]
-impl<Seq, H, Tx> ErasedProjection<Seq, Tx> for MultiHandler<Seq, H, Tx>
+impl<Seq, H, Tx> ErasedProjection<Seq, Tx> for CatchAllWrapper<H>
 where
     Seq: Sequence,
-    H: MultiEventProjectionHandler<Seq, Tx>,
+    H: CatchAllProjectionHandler<Seq, Tx>,
     Tx: Send + Sync + 'static,
 {
     fn name(&self) -> &str {
         self.handler.name()
     }
 
-    fn matches_dyn(&self, event: &dyn DomainEvent) -> bool {
-        let type_id = (*event).type_id();
-        self.event_types.iter().any(|et| et.id() == type_id)
+    fn matches_dyn(&self, _event: &dyn DomainEvent) -> bool {
+        true
     }
 
-    async fn handle(&self, event: &dyn DomainEvent, sequence: Seq, tx: &mut Tx) -> error::Result<()> {
+    async fn handle(
+        &self,
+        event: &dyn DomainEvent,
+        sequence: Seq,
+        tx: &mut Tx,
+    ) -> error::Result<()> {
         self.handler.handle(event, sequence, tx).await
     }
 }
@@ -150,30 +166,33 @@ where
                 message: "Cannot register projection after bus has started".into(),
             });
         }
-        self.projections.lock().unwrap().push(Arc::new(SingleHandler {
-            handler,
-            event_type: EventType::of::<E>(),
-            _phantom: std::marker::PhantomData,
-        }));
+        self.projections
+            .lock()
+            .unwrap()
+            .push(Arc::new(SingleHandler {
+                handler,
+                event_type: EventType::of::<E>(),
+                _phantom: std::marker::PhantomData,
+            }));
         Ok(())
     }
 
-    /// Register a multi-event projection. Must be called before `start()`.
-    pub fn register_multi<H>(&self, handler: H) -> error::Result<()>
+    /// Register a catch-all projection that receives every event.
+    /// Used for infrastructure projections like `StreamLinkingProjection`.
+    /// Must be called before `start()`.
+    pub fn register_catch_all<H>(&self, handler: H) -> error::Result<()>
     where
-        H: MultiEventProjectionHandler<Seq, Tx>,
+        H: CatchAllProjectionHandler<Seq, Tx>,
     {
         if self.started.load(AtomicOrdering::SeqCst) {
             return Err(error::EventSourcingError::Bus {
                 message: "Cannot register projection after bus has started".into(),
             });
         }
-        let event_types = handler.event_types();
-        self.projections.lock().unwrap().push(Arc::new(MultiHandler {
-            handler,
-            event_types,
-            _phantom: std::marker::PhantomData,
-        }));
+        self.projections
+            .lock()
+            .unwrap()
+            .push(Arc::new(CatchAllWrapper { handler }));
         Ok(())
     }
 
@@ -202,7 +221,10 @@ where
             Vec::with_capacity(projections.len());
         for projection in projections {
             let mut tx = self.tx_provider.begin().await?;
-            let seq = self.checkpoint_store.load(projection.name(), &mut tx).await?;
+            let seq = self
+                .checkpoint_store
+                .load(projection.name(), &mut tx)
+                .await?;
             self.tx_provider.commit(tx).await?;
             tracked.push((projection, seq));
         }
@@ -221,10 +243,7 @@ where
 
         let mut last_seq = replay_start;
         loop {
-            let stored_events = self
-                .store
-                .load(last_seq, vec![], REPLAY_BATCH_SIZE)
-                .await?;
+            let stored_events = self.store.load(last_seq, vec![], REPLAY_BATCH_SIZE).await?;
 
             if stored_events.is_empty() {
                 break;
@@ -308,7 +327,10 @@ where
             return;
         }
 
-        if let Err(e) = checkpoint_store.save(projection.name(), sequence, &mut tx).await {
+        if let Err(e) = checkpoint_store
+            .save(projection.name(), sequence, &mut tx)
+            .await
+        {
             error!(error = %e, projection = projection.name(), "Failed to save checkpoint");
             if let Err(e) = tx_provider.rollback(tx).await {
                 error!(error = %e, "Failed to rollback transaction");
@@ -371,15 +393,21 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::error::EventSourcingError;
-    use crate::event::domain_event::fixtures::{StoredTestEvent, TestEvent};
-    use crate::persistence::checkpoint_store::fixtures::MockTxCheckpointStore;
-    use crate::persistence::event_store::fixtures::MockEventStore;
-    use crate::persistence::transaction::fixtures::{MockTx, MockTxProvider};
-    use futures_util::StreamExt;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use futures_util::StreamExt;
     use tokio::time::{timeout, Duration};
+
+    use super::*;
+    use crate::{
+        error::EventSourcingError,
+        event::domain_event::fixtures::{StoredTestEvent, TestEvent},
+        persistence::{
+            checkpoint_store::fixtures::MockTxCheckpointStore,
+            event_store::fixtures::MockEventStore,
+            transaction::fixtures::{MockTx, MockTxProvider},
+        },
+    };
 
     // -- Test-specific projection handlers --
 
@@ -421,7 +449,12 @@ mod tests {
             &self.name
         }
 
-        async fn handle(&self, _event: &TestEvent, _sequence: i64, _tx: &mut MockTx) -> error::Result<()> {
+        async fn handle(
+            &self,
+            _event: &TestEvent,
+            _sequence: i64,
+            _tx: &mut MockTx,
+        ) -> error::Result<()> {
             Err(EventSourcingError::Store {
                 message: "projection failed".into(),
             })
@@ -474,11 +507,8 @@ mod tests {
         store.append(&TestEvent::new("first")).await.unwrap();
         store.append(&TestEvent::new("second")).await.unwrap();
 
-        let bus = ProjectionEventBus::new(
-            store,
-            MockTxCheckpointStore::new(),
-            MockTxProvider::new(),
-        );
+        let bus =
+            ProjectionEventBus::new(store, MockTxCheckpointStore::new(), MockTxProvider::new());
 
         let count = Arc::new(AtomicUsize::new(0));
         bus.register(CountingProjection::<StoredTestEvent>::new(
@@ -506,11 +536,7 @@ mod tests {
             .unwrap()
             .insert("proj".to_string(), 2);
 
-        let bus = ProjectionEventBus::new(
-            store,
-            checkpoint_store,
-            MockTxProvider::new(),
-        );
+        let bus = ProjectionEventBus::new(store, checkpoint_store, MockTxProvider::new());
 
         let count = Arc::new(AtomicUsize::new(0));
         bus.register(CountingProjection::<StoredTestEvent>::new(
@@ -521,7 +547,11 @@ mod tests {
 
         bus.start().await.unwrap();
 
-        assert_eq!(count.load(Ordering::SeqCst), 1, "only event after checkpoint");
+        assert_eq!(
+            count.load(Ordering::SeqCst),
+            1,
+            "only event after checkpoint"
+        );
     }
 
     #[tokio::test]

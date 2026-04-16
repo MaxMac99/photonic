@@ -1,10 +1,14 @@
-use crate::error;
-use crate::event::domain_event::DomainEvent;
-use crate::event::event_type::EventType;
-use crate::persistence::event_store::{EventStore, StoredEvent};
-use crate::persistence::listener::EventListener;
 use async_trait::async_trait;
 use tokio_stream::Stream;
+
+use crate::{
+    error,
+    event::{domain_event::DomainEvent, event_type::EventType},
+    persistence::{
+        event_store::{EventStore, StoredEvent},
+        listener::EventListener,
+    },
+};
 
 /// Event store decorator that composes an inner store with an event listener.
 ///
@@ -58,13 +62,16 @@ impl<S, L> NotifyingEventStore<S, L> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::event::domain_event::fixtures::TestEvent;
-    use crate::persistence::event_store::fixtures::MockEventStore;
     use async_trait::async_trait;
     use futures_util::StreamExt;
     use tokio::time::{timeout, Duration};
     use tokio_stream::wrappers::ReceiverStream;
+
+    use super::*;
+    use crate::{
+        event::domain_event::fixtures::TestEvent,
+        persistence::event_store::fixtures::MockEventStore,
+    };
 
     /// Listener that produces i64 sequences, matching MockEventStore<i64>.
     struct MockI64Listener {

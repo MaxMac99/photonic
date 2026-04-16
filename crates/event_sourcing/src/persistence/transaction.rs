@@ -1,5 +1,6 @@
-use crate::error;
 use async_trait::async_trait;
+
+use crate::error;
 
 #[async_trait]
 pub trait TransactionProvider<Tx>: Send + Sync + 'static {
@@ -10,8 +11,9 @@ pub trait TransactionProvider<Tx>: Send + Sync + 'static {
 
 #[cfg(test)]
 pub(crate) mod fixtures {
-    use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::*;
 
     pub struct MockTx;
 

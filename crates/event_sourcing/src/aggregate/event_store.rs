@@ -1,7 +1,6 @@
-use crate::error;
-use crate::persistence::event_store::StoredEvent;
-use crate::stream::stream_id::StreamId;
 use async_trait::async_trait;
+
+use crate::{error, persistence::event_store::StoredEvent, stream::stream_id::StreamId};
 
 /// Store for loading aggregate event streams.
 ///
@@ -25,9 +24,10 @@ pub trait AggregateEventStore<Seq>: Send + Sync + 'static {
 
 #[cfg(test)]
 pub(crate) mod fixtures {
+    use std::collections::HashMap;
+
     use super::*;
     use crate::event::domain_event::DomainEvent;
-    use std::collections::HashMap;
 
     type EventFactory = Box<dyn Fn() -> Box<dyn DomainEvent> + Send + Sync>;
 

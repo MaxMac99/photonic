@@ -1,22 +1,28 @@
-use std::fmt::Debug;
-use std::future::Future;
-use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
-use std::sync::Arc;
+use std::{
+    fmt::Debug,
+    future::Future,
+    sync::{
+        atomic::{AtomicBool, Ordering as AtomicOrdering},
+        Arc,
+    },
+};
 
-use crate::bus::inmem::{InMemEventBus, SharedEvent};
-use crate::bus::subscription::{StartFrom, SubscriptionOptions};
-use crate::bus::EventBus;
-use crate::error;
-use crate::event::domain_event::DomainEvent;
-use crate::event::event_metadata::EventMetadata;
-use crate::persistence::checkpoint_store::CheckpointStore;
-use crate::persistence::event_store::EventStore;
-use crate::persistence::sequence::Sequence;
 use async_trait::async_trait;
 use snafu::Whatever;
 use tokio::task::JoinHandle;
 use tokio_stream::Stream;
 use tracing::{error, info, warn};
+
+use crate::{
+    bus::{
+        inmem::{InMemEventBus, SharedEvent},
+        subscription::{StartFrom, SubscriptionOptions},
+        EventBus,
+    },
+    error,
+    event::{domain_event::DomainEvent, event_metadata::EventMetadata},
+    persistence::{checkpoint_store::CheckpointStore, event_store::EventStore, sequence::Sequence},
+};
 
 const REPLAY_BATCH_SIZE: usize = 100;
 
@@ -161,10 +167,7 @@ impl<Seq> PersistentEventBus<Seq>
 where
     Seq: Sequence + Debug,
 {
-    pub fn new(
-        store: impl EventStore<Seq>,
-        checkpoint_store: impl CheckpointStore<Seq>,
-    ) -> Self {
+    pub fn new(store: impl EventStore<Seq>, checkpoint_store: impl CheckpointStore<Seq>) -> Self {
         Self {
             store: Arc::new(store),
             checkpoint_store: Arc::new(checkpoint_store),
@@ -336,7 +339,10 @@ where
 
         // Register all on inmem for live events
         for consumer in active {
-            if let Err(e) = consumer.register_live(&inmem, checkpoint_store.clone()).await {
+            if let Err(e) = consumer
+                .register_live(&inmem, checkpoint_store.clone())
+                .await
+            {
                 error!(error = %e, "Failed to register consumer for live events");
             }
         }
@@ -396,14 +402,20 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::error::EventSourcingError;
-    use crate::event::domain_event::fixtures::{StoredTestEvent, TestEvent};
-    use crate::persistence::checkpoint_store::fixtures::MockCheckpointStore;
-    use crate::persistence::event_store::fixtures::{FailingEventStore, MockEventStore};
-    use futures_util::StreamExt;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use futures_util::StreamExt;
     use tokio::time::{timeout, Duration};
+
+    use super::*;
+    use crate::{
+        error::EventSourcingError,
+        event::domain_event::fixtures::{StoredTestEvent, TestEvent},
+        persistence::{
+            checkpoint_store::fixtures::MockCheckpointStore,
+            event_store::fixtures::{FailingEventStore, MockEventStore},
+        },
+    };
 
     fn make_bus(store: MockEventStore) -> PersistentEventBus<i64> {
         PersistentEventBus::new(store, MockCheckpointStore::new())

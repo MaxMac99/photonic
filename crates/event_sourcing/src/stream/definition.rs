@@ -1,12 +1,15 @@
-use std::any::{Any, TypeId};
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{
+    any::{Any, TypeId},
+    collections::HashMap,
+    sync::Arc,
+};
 
-use crate::aggregate::traits::{Aggregate, AggregateType, ApplyEvent};
-use crate::event::domain_event::DomainEvent;
-use crate::event::event_type::EventType;
-use crate::persistence::event_store::StoredEvent;
-use crate::stream::stream_id::StreamId;
+use crate::{
+    aggregate::traits::{Aggregate, AggregateType, ApplyEvent},
+    event::domain_event::DomainEvent,
+    persistence::event_store::StoredEvent,
+    stream::stream_id::StreamId,
+};
 
 type StreamIdExtractor = Arc<dyn Fn(&dyn DomainEvent) -> Option<String> + Send + Sync>;
 type EventApplier<A> = Box<dyn Fn(&mut A, &dyn DomainEvent) + Send + Sync>;
@@ -44,19 +47,6 @@ impl<A: Aggregate> StreamDefinition<A> {
     /// Construct a `StreamId` for a known aggregate instance id.
     pub fn stream_id_for(&self, id: &str) -> StreamId {
         StreamId::new(self.aggregate_type.clone(), id)
-    }
-
-    /// Returns all event types registered with this stream.
-    pub fn event_types(&self) -> Vec<EventType> {
-        // We store TypeIds but EventType also needs a name.
-        // Since we can't recover the name from TypeId alone at runtime,
-        // we store EventType during registration instead.
-        // For now, return TypeId-based EventTypes without names.
-        // The bus uses TypeId for matching, so the name is cosmetic.
-        self.extractors
-            .keys()
-            .map(|&id| EventType::from_type_id(id))
-            .collect()
     }
 
     /// Reconstitute an aggregate from a sequence of stored events,
@@ -131,24 +121,21 @@ impl<A: Aggregate> StreamDefinitionBuilder<A> {
 /// an event belongs to, without knowing the aggregate type.
 pub trait StreamExtract: Send + Sync {
     fn stream_id(&self, event: &dyn DomainEvent) -> Option<StreamId>;
-    fn event_types(&self) -> Vec<EventType>;
 }
 
 impl<A: Aggregate> StreamExtract for StreamDefinition<A> {
     fn stream_id(&self, event: &dyn DomainEvent) -> Option<StreamId> {
         self.stream_id(event)
     }
-
-    fn event_types(&self) -> Vec<EventType> {
-        self.event_types()
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::aggregate::traits::{Aggregate, ApplyEvent};
-    use crate::event::event_metadata::EventMetadata;
+    use crate::{
+        aggregate::traits::{Aggregate, ApplyEvent},
+        event::event_metadata::EventMetadata,
+    };
 
     // -- Test aggregates and events --
 
@@ -344,13 +331,6 @@ mod tests {
     }
 
     #[test]
-    fn event_types_returns_registered_types() {
-        let stream = medium_stream();
-        let types = stream.event_types();
-        assert_eq!(types.len(), 3);
-    }
-
-    #[test]
     fn stream_id_for_constructs_id() {
         let stream = medium_stream();
         let id = stream.stream_id_for("abc");
@@ -361,8 +341,9 @@ mod tests {
 
     // -- AggregateRepository tests --
 
-    use crate::aggregate::event_store::fixtures::MockAggregateEventStore;
-    use crate::aggregate::repository::AggregateRepository;
+    use crate::aggregate::{
+        event_store::fixtures::MockAggregateEventStore, repository::AggregateRepository,
+    };
 
     #[test]
     fn streams_for_matches_multiple_streams() {
@@ -413,20 +394,28 @@ mod tests {
     #[tokio::test]
     async fn load_reconstitutes_aggregate() {
         let store = Arc::new(MockAggregateEventStore::new());
-        store.add_event("Medium-abc", 1, Box::new(|| {
-            Box::new(MediumCreated {
-                metadata: EventMetadata::default(),
-                medium_id: "abc".to_string(),
-                title: "Original".to_string(),
-            })
-        }));
-        store.add_event("Medium-abc", 2, Box::new(|| {
-            Box::new(MediumUpdated {
-                metadata: EventMetadata::default(),
-                medium_id: "abc".to_string(),
-                title: "Updated".to_string(),
-            })
-        }));
+        store.add_event(
+            "Medium-abc",
+            1,
+            Box::new(|| {
+                Box::new(MediumCreated {
+                    metadata: EventMetadata::default(),
+                    medium_id: "abc".to_string(),
+                    title: "Original".to_string(),
+                })
+            }),
+        );
+        store.add_event(
+            "Medium-abc",
+            2,
+            Box::new(|| {
+                Box::new(MediumUpdated {
+                    metadata: EventMetadata::default(),
+                    medium_id: "abc".to_string(),
+                    title: "Updated".to_string(),
+                })
+            }),
+        );
 
         let mut repo = AggregateRepository::new(store);
         repo.register(medium_stream());
@@ -452,7 +441,10 @@ mod tests {
         let mut repo = AggregateRepository::new(store);
         repo.register(medium_stream());
 
-        let (medium, version) = repo.load::<Medium>(&"nonexistent".to_string()).await.unwrap();
+        let (medium, version) = repo
+            .load::<Medium>(&"nonexistent".to_string())
+            .await
+            .unwrap();
         assert_eq!(medium.id, "");
         assert_eq!(medium.title, "");
         assert_eq!(version, 0);

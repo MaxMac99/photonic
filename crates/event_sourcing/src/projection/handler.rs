@@ -1,25 +1,37 @@
-use crate::error;
-use crate::event::domain_event::DomainEvent;
-use crate::event::event_type::EventType;
-use crate::persistence::sequence::Sequence;
 use async_trait::async_trait;
 
+use crate::{error, event::domain_event::DomainEvent, persistence::sequence::Sequence};
+
 /// A projection handler that processes a single event type within a transaction.
+///
+/// For projections that handle multiple event types, implement this trait
+/// once per event type and register each with the bus separately. This
+/// ensures full type safety — no downcasting needed.
+///
+/// Multiple impls on the same struct share the same checkpoint name by default
+/// (derived from `type_name::<Self>()`), so they advance as a single cursor
+/// through the event stream.
 #[async_trait]
 pub trait ProjectionHandler<E: DomainEvent, Seq: Sequence, Tx>: Send + Sync + 'static {
-    /// Unique name for this projection, used as the checkpoint key.
-    fn name(&self) -> &str;
+    /// Checkpoint key identifying this projection. Defaults to the struct's
+    /// type name. All handlers sharing the same name share one checkpoint.
+    fn name(&self) -> &str {
+        std::any::type_name::<Self>()
+    }
 
     async fn handle(&self, event: &E, sequence: Seq, tx: &mut Tx) -> error::Result<()>;
 }
 
-/// A projection handler that processes multiple event types within a transaction.
+/// A catch-all projection handler that receives every event as `&dyn DomainEvent`.
+///
+/// Used for infrastructure projections that need to process all event types
+/// dynamically (e.g. `StreamLinkingProjection`). Business projections should
+/// use [`ProjectionHandler`] for type safety.
 #[async_trait]
-pub trait MultiEventProjectionHandler<Seq: Sequence, Tx>: Send + Sync + 'static {
-    /// Unique name for this projection, used as the checkpoint key.
-    fn name(&self) -> &str;
-
-    fn event_types(&self) -> Vec<EventType>;
+pub trait CatchAllProjectionHandler<Seq: Sequence, Tx>: Send + Sync + 'static {
+    fn name(&self) -> &str {
+        std::any::type_name::<Self>()
+    }
 
     async fn handle(
         &self,

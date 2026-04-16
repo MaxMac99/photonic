@@ -1,8 +1,9 @@
-use crate::aggregate::traits::Aggregate;
-use crate::error;
-use crate::persistence::sequence::Sequence;
-use crate::stream::stream_id::StreamId;
 use async_trait::async_trait;
+
+use crate::{
+    aggregate::traits::Aggregate, error, persistence::sequence::Sequence,
+    stream::stream_id::StreamId,
+};
 
 /// A point-in-time snapshot of an aggregate's state.
 pub struct Snapshot<A, Seq> {

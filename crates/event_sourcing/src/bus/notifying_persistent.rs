@@ -1,27 +1,31 @@
-use std::collections::{HashMap, HashSet};
-use std::future::Future;
-use std::pin::pin;
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    future::Future,
+    pin::pin,
+    sync::Arc,
+};
 
-use crate::bus::inmem::InMemEventBus;
-use crate::bus::subscription::SubscriptionOptions;
-use crate::bus::inmem::SharedEvent;
-use crate::bus::EventBus;
-use crate::error;
-use crate::event::domain_event::DomainEvent;
-use crate::event::event_type::EventType;
-use crate::persistence::event_store::EventStore;
-use crate::persistence::listener::EventListener;
-use crate::persistence::notifying_event_store::NotifyingEventStore;
-use crate::persistence::sequence::Sequence;
 use async_trait::async_trait;
 use futures_util::StreamExt;
 use snafu::Whatever;
-use tokio::sync::Mutex;
-use tokio::task::JoinHandle;
+use tokio::{sync::Mutex, task::JoinHandle};
 use tokio_stream::Stream;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
+
+use crate::{
+    bus::{
+        inmem::{InMemEventBus, SharedEvent},
+        subscription::SubscriptionOptions,
+        EventBus,
+    },
+    error,
+    event::{domain_event::DomainEvent, event_type::EventType},
+    persistence::{
+        event_store::EventStore, listener::EventListener,
+        notifying_event_store::NotifyingEventStore, sequence::Sequence,
+    },
+};
 
 /// Unique identifier for correlating Pending with Committed/Abort.
 type PublishId = u64;
@@ -320,7 +324,9 @@ where
                     .await
                     .is_err()
                 {
-                    error!("Listener task is dead — committed event will not be dispatched locally");
+                    error!(
+                        "Listener task is dead — committed event will not be dispatched locally"
+                    );
                 }
                 Ok(())
             }
@@ -360,14 +366,19 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::event::domain_event::fixtures::{StoredTestEvent, TestEvent};
-    use crate::event::event_type::EventType;
-    use crate::persistence::event_store::fixtures::FailingEventStore;
-    use crate::persistence::listener::EventListener;
     use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+
     use tokio::time::{timeout, Duration};
     use tokio_stream::wrappers::ReceiverStream;
+
+    use super::*;
+    use crate::{
+        event::{
+            domain_event::fixtures::{StoredTestEvent, TestEvent},
+            event_type::EventType,
+        },
+        persistence::{event_store::fixtures::FailingEventStore, listener::EventListener},
+    };
 
     /// Local mock store that uses tokio::sync::Mutex (async) for compatibility
     /// with the NotifyingPersistentEventBus tests, which require async locking
@@ -394,10 +405,13 @@ mod tests {
             self.append_count.fetch_add(1, Ordering::SeqCst);
             let seq = self.next_seq.fetch_add(1, Ordering::SeqCst);
             let metadata = event.metadata().clone();
-            self.events.lock().await.push(crate::persistence::event_store::StoredEvent {
-                sequence: seq,
-                event: Box::new(StoredTestEvent { metadata }),
-            });
+            self.events
+                .lock()
+                .await
+                .push(crate::persistence::event_store::StoredEvent {
+                    sequence: seq,
+                    event: Box::new(StoredTestEvent { metadata }),
+                });
             Ok(seq)
         }
 
@@ -523,8 +537,9 @@ mod tests {
     #[tokio::test]
     async fn failed_publish_does_not_dispatch() {
         let (fail_listener, _) = MockFailingListener::new();
-        let fail_bus: NotifyingPersistentEventBus<i64, _, _> =
-            NotifyingPersistentEventBus::new(NotifyingEventStore::new(FailingEventStore, fail_listener));
+        let fail_bus: NotifyingPersistentEventBus<i64, _, _> = NotifyingPersistentEventBus::new(
+            NotifyingEventStore::new(FailingEventStore, fail_listener),
+        );
         let mut stream = fail_bus.subscribe::<TestEvent>().await;
 
         let _ = fail_bus.publish(TestEvent::new("should abort")).await;

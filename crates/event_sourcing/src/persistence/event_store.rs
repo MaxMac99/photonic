@@ -1,7 +1,9 @@
-use crate::error;
-use crate::event::domain_event::DomainEvent;
-use crate::event::event_type::EventType;
 use async_trait::async_trait;
+
+use crate::{
+    error,
+    event::{domain_event::DomainEvent, event_type::EventType},
+};
 
 pub struct StoredEvent<Seq> {
     pub sequence: Seq,
@@ -22,10 +24,10 @@ pub trait EventStore<Seq>: Send + Sync + 'static {
 
 #[cfg(test)]
 pub(crate) mod fixtures {
-    use super::*;
-    use crate::event::domain_event::fixtures::StoredTestEvent;
-    use crate::event::event_metadata::EventMetadata;
     use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+
+    use super::*;
+    use crate::event::{domain_event::fixtures::StoredTestEvent, event_metadata::EventMetadata};
 
     /// Mock event store that records appended events with sequence tracking.
     pub struct MockEventStore {

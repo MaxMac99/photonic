@@ -1,15 +1,19 @@
-use std::any::Any;
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{any::Any, collections::HashMap, sync::Arc};
 
-use crate::aggregate::event_store::AggregateEventStore;
-use crate::aggregate::snapshot_store::SnapshotStore;
-use crate::aggregate::traits::{Aggregate, AggregateType};
-use crate::error;
-use crate::event::domain_event::DomainEvent;
-use crate::persistence::sequence::Sequence;
-use crate::stream::definition::{StreamDefinition, StreamExtract};
-use crate::stream::stream_id::StreamId;
+use crate::{
+    aggregate::{
+        event_store::AggregateEventStore,
+        snapshot_store::SnapshotStore,
+        traits::{Aggregate, AggregateType},
+    },
+    error,
+    event::domain_event::DomainEvent,
+    persistence::sequence::Sequence,
+    stream::{
+        definition::{StreamDefinition, StreamExtract},
+        stream_id::StreamId,
+    },
+};
 
 /// Registration for a single aggregate type, holding the stream definition
 /// and optional snapshot store.
@@ -112,15 +116,9 @@ impl<Seq: Sequence> AggregateRepository<Seq> {
         };
 
         // Load events after the snapshot version
-        let events = self
-            .store
-            .load_stream(&stream_id, after_version)
-            .await?;
+        let events = self.store.load_stream(&stream_id, after_version).await?;
 
-        let version = events
-            .last()
-            .map(|e| e.sequence)
-            .unwrap_or(after_version);
+        let version = events.last().map(|e| e.sequence).unwrap_or(after_version);
 
         let aggregate = stream_def.reconstitute_from(initial_state, &events);
         Ok((aggregate, version))
@@ -141,13 +139,13 @@ impl<Seq: Sequence> AggregateRepository<Seq> {
 
     fn registration<A: Aggregate>(&self) -> error::Result<&AggregateRegistration> {
         let agg_type = AggregateType::of::<A>();
-        self.registrations.get(&agg_type).ok_or_else(|| {
-            error::EventSourcingError::Store {
+        self.registrations
+            .get(&agg_type)
+            .ok_or_else(|| error::EventSourcingError::Store {
                 message: format!(
                     "No stream definition registered for aggregate '{}'",
                     A::aggregate_type()
                 ),
-            }
-        })
+            })
     }
 }

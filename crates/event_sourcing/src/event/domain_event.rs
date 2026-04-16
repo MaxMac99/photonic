@@ -1,6 +1,6 @@
+use std::{any::Any, fmt::Debug};
+
 use crate::event::event_metadata::EventMetadata;
-use std::any::Any;
-use std::fmt::Debug;
 
 pub trait DomainEvent: Any + Send + Sync + Debug {
     fn metadata(&self) -> &EventMetadata;
