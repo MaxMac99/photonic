@@ -181,7 +181,7 @@
                         '';
 
                         # Add PostgreSQL tools to the shell
-                        buildInputs = [ postgresql openapi-down-convert ];
+                        buildInputs = [ postgresql sqlx-cli openapi-down-convert ];
                     };
                 };
             }

@@ -6,6 +6,7 @@ edition.workspace = true
 
 [dependencies]
 domain = { workspace = true }
+event_sourcing = { workspace = true }
 
 async-trait.workspace = true
 byte-unit.workspace = true

@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use domain::{
     error::DomainResult,
     medium::{
-        events::MediumEvent,
+        events::{MediumCreatedEvent, MediumUpdatedEvent},
         FileLocation, FileMetadata, Medium, MediumFilter, MediumId, MediumItemId, MediumListItem,
     },
     user::UserId,
@@ -61,6 +61,12 @@ pub trait FileStorage: Send + Sync {
     async fn get_file_metadata(&self, location: &FileLocation) -> DomainResult<FileMetadata>;
 }
 
-pub trait PublishMediumEvent: PublishEvent<MediumEvent> {}
+pub trait PublishMediumEvent:
+    PublishEvent<MediumCreatedEvent> + PublishEvent<MediumUpdatedEvent>
+{
+}
 
-impl<T> PublishMediumEvent for T where T: PublishEvent<MediumEvent> {}
+impl<T> PublishMediumEvent for T where
+    T: PublishEvent<MediumCreatedEvent> + PublishEvent<MediumUpdatedEvent>
+{
+}

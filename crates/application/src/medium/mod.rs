@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use commands::PublishCleanupEvent;
-use domain::medium::{events::MediumEvent, StoragePathService};
+use domain::medium::{events::MediumCreatedEvent, StoragePathService};
 
 use crate::{
     event_bus::PublishEvent,
@@ -10,7 +10,6 @@ use crate::{
 };
 
 pub mod commands;
-pub mod events;
 pub mod listeners;
 pub mod ports;
 pub mod queries;
@@ -32,7 +31,7 @@ impl MediumApplicationHandlers {
         event_bus: Arc<dyn PublishMediumEvent>,
         cleanup_event_bus: Arc<dyn PublishCleanupEvent>,
         storage_path_service: Arc<StoragePathService>,
-        medium_event_bus: Arc<dyn PublishEvent<MediumEvent>>,
+        medium_event_bus: Arc<dyn PublishEvent<MediumCreatedEvent>>,
     ) -> Self {
         Self {
             create_medium_stream: Arc::new(commands::CreateMediumStreamHandler::new(

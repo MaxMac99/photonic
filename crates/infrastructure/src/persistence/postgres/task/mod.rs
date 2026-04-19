@@ -12,7 +12,7 @@ mod entity;
 mod find_all;
 mod find_by_reference_id;
 mod save;
-mod task_types;
+pub(crate) mod task_types;
 
 pub struct PostgresTaskRepository {
     pool: PgPool,

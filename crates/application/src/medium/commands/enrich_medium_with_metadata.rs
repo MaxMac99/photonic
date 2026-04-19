@@ -4,7 +4,7 @@ use chrono::{DateTime, FixedOffset};
 use derive_new::new;
 use domain::{
     error::EntityNotFoundSnafu,
-    medium::{camera::GpsCoordinates, events::MediumEvent, MediumId},
+    medium::{camera::GpsCoordinates, MediumId},
     user::UserId,
 };
 use snafu::OptionExt;
@@ -57,7 +57,7 @@ impl EnrichMediumWithMetadataHandler {
             "Medium enriched with metadata"
         );
 
-        if let Err(e) = self.event_bus.publish(MediumEvent::from(event)).await {
+        if let Err(e) = self.event_bus.publish(event).await {
             warn!(
                 medium_id = %command.medium_id,
                 error = %e,

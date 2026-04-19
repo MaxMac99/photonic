@@ -1,18 +1,16 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, FixedOffset, Utc};
+use event_sourcing::aggregate::traits::{Aggregate, ApplyEvent};
 use mime::Mime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::error::InvariantViolationSnafu;
 use crate::{
     aggregate::{AggregateRoot, AggregateVersion},
-    error::DomainResult,
     medium::{MediumId, MediumItemId},
     metadata::events::{
-        MetadataEvent, MetadataExtractedEvent, MetadataExtractionFailedEvent,
-        MetadataExtractionStartedEvent,
+        MetadataExtractedEvent, MetadataExtractionFailedEvent, MetadataExtractionStartedEvent,
     },
     user::UserId,
 };
@@ -33,9 +31,31 @@ pub struct Metadata {
     pub version: AggregateVersion,
 }
 
-impl AggregateRoot for Metadata {
-    type Event = MetadataEvent;
+impl Default for Metadata {
+    fn default() -> Self {
+        Self {
+            id: Uuid::nil(),
+            medium_id: Uuid::nil(),
+            extracted_at: DateTime::default(),
+            file_info: FileInfo {
+                mime_type: mime::APPLICATION_OCTET_STREAM,
+                file_size: 0,
+                file_modified_at: None,
+            },
+            camera_info: None,
+            location: None,
+            technical: TechnicalInfo {
+                width: None,
+                height: None,
+                orientation: None,
+            },
+            additional: HashMap::new(),
+            version: 0,
+        }
+    }
+}
 
+impl AggregateRoot for Metadata {
     fn aggregate_type() -> &'static str {
         "Metadata"
     }
@@ -43,38 +63,40 @@ impl AggregateRoot for Metadata {
     fn version(&self) -> AggregateVersion {
         self.version
     }
+}
 
-    fn from_initial_event(event: &MetadataEvent) -> DomainResult<Self> {
-        let MetadataEvent::Extracted(e) = event else {
-            return InvariantViolationSnafu {
-                message: "Metadata aggregate must start with MetadataExtracted event",
-            }
-            .fail();
-        };
-        let mut metadata = e.metadata.clone();
-        metadata.version = 1;
-        Ok(metadata)
+impl Aggregate for Metadata {
+    type Id = Uuid;
+
+    fn aggregate_type() -> &'static str {
+        "Metadata"
     }
+}
 
-    fn apply(&mut self, event: &MetadataEvent) {
-        match event {
-            MetadataEvent::ExtractionStarted(_) => {
-                // Extraction started — no state change on the metadata entity
-            }
-            MetadataEvent::Extracted(e) => {
-                self.id = e.metadata.id;
-                self.medium_id = e.metadata.medium_id;
-                self.extracted_at = e.metadata.extracted_at;
-                self.file_info = e.metadata.file_info.clone();
-                self.camera_info = e.metadata.camera_info.clone();
-                self.location = e.metadata.location.clone();
-                self.technical = e.metadata.technical.clone();
-                self.additional = e.metadata.additional.clone();
-            }
-            MetadataEvent::ExtractionFailed(_) => {
-                // Extraction failed — no state change
-            }
-        }
+impl ApplyEvent<MetadataExtractionStartedEvent> for Metadata {
+    fn apply(&mut self, _e: &MetadataExtractionStartedEvent) {
+        // Extraction started -- no state change on the metadata entity
+        self.version += 1;
+    }
+}
+
+impl ApplyEvent<MetadataExtractedEvent> for Metadata {
+    fn apply(&mut self, e: &MetadataExtractedEvent) {
+        self.id = e.metadata.id;
+        self.medium_id = e.metadata.medium_id;
+        self.extracted_at = e.metadata.extracted_at;
+        self.file_info = e.metadata.file_info.clone();
+        self.camera_info = e.metadata.camera_info.clone();
+        self.location = e.metadata.location.clone();
+        self.technical = e.metadata.technical.clone();
+        self.additional = e.metadata.additional.clone();
+        self.version += 1;
+    }
+}
+
+impl ApplyEvent<MetadataExtractionFailedEvent> for Metadata {
+    fn apply(&mut self, _e: &MetadataExtractionFailedEvent) {
+        // Extraction failed -- no state change
         self.version += 1;
     }
 }

@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use event_sourcing::aggregate::traits::{Aggregate, ApplyEvent};
 use serde::{Deserialize, Serialize};
 use snafu::OptionExt;
 use uuid::Uuid;
@@ -8,9 +9,7 @@ use crate::{
     aggregate::{AggregateRoot, AggregateVersion},
     error::{DomainResult, InvariantViolationSnafu},
     task::{
-        events::{
-            TaskCompletedEvent, TaskCreatedEvent, TaskEvent, TaskFailedEvent, TaskStartedEvent,
-        },
+        events::{TaskCompletedEvent, TaskCreatedEvent, TaskFailedEvent, TaskStartedEvent},
         TaskTransition, TaskType,
     },
     user::UserId,
@@ -31,9 +30,23 @@ pub struct Task {
     pub version: AggregateVersion,
 }
 
-impl AggregateRoot for Task {
-    type Event = TaskEvent;
+impl Default for Task {
+    fn default() -> Self {
+        Self {
+            id: Uuid::nil(),
+            task_type: TaskType::MetadataExtraction,
+            reference_id: Uuid::nil(),
+            user_id: Uuid::nil(),
+            status: TaskStatus::Pending,
+            created_at: DateTime::default(),
+            started_at: None,
+            completed_at: None,
+            version: 0,
+        }
+    }
+}
 
+impl AggregateRoot for Task {
     fn aggregate_type() -> &'static str {
         "Task"
     }
@@ -41,49 +54,47 @@ impl AggregateRoot for Task {
     fn version(&self) -> AggregateVersion {
         self.version
     }
+}
 
-    fn from_initial_event(event: &TaskEvent) -> DomainResult<Self> {
-        let TaskEvent::TaskCreated(e) = event else {
-            return InvariantViolationSnafu {
-                message: "Task aggregate must start with TaskCreated event",
-            }
-            .fail();
-        };
-        Ok(Self {
-            id: e.task_id,
-            task_type: e.task_type,
-            reference_id: e.reference_id,
-            user_id: e.user_id,
-            status: TaskStatus::Pending,
-            created_at: e.metadata.occurred_at,
-            started_at: None,
-            completed_at: None,
-            version: 1,
-        })
+impl Aggregate for Task {
+    type Id = Uuid;
+
+    fn aggregate_type() -> &'static str {
+        "Task"
     }
+}
 
-    fn apply(&mut self, event: &TaskEvent) {
-        match event {
-            TaskEvent::TaskCreated(e) => {
-                self.id = e.task_id;
-                self.task_type = e.task_type;
-                self.reference_id = e.reference_id;
-                self.user_id = e.user_id;
-                self.status = TaskStatus::Pending;
-            }
-            TaskEvent::TaskStarted(_) => {
-                self.status = TaskStatus::InProgress;
-                self.started_at = Some(Utc::now());
-            }
-            TaskEvent::TaskCompleted(_) => {
-                self.status = TaskStatus::Completed;
-                self.completed_at = Some(Utc::now());
-            }
-            TaskEvent::TaskFailed(e) => {
-                self.status = TaskStatus::Failed(e.error.clone());
-                self.completed_at = Some(Utc::now());
-            }
-        }
+impl ApplyEvent<TaskCreatedEvent> for Task {
+    fn apply(&mut self, e: &TaskCreatedEvent) {
+        self.id = e.task_id;
+        self.task_type = e.task_type;
+        self.reference_id = e.reference_id;
+        self.user_id = e.user_id;
+        self.status = TaskStatus::Pending;
+        self.version += 1;
+    }
+}
+
+impl ApplyEvent<TaskStartedEvent> for Task {
+    fn apply(&mut self, _e: &TaskStartedEvent) {
+        self.status = TaskStatus::InProgress;
+        self.started_at = Some(Utc::now());
+        self.version += 1;
+    }
+}
+
+impl ApplyEvent<TaskCompletedEvent> for Task {
+    fn apply(&mut self, _e: &TaskCompletedEvent) {
+        self.status = TaskStatus::Completed;
+        self.completed_at = Some(Utc::now());
+        self.version += 1;
+    }
+}
+
+impl ApplyEvent<TaskFailedEvent> for Task {
+    fn apply(&mut self, e: &TaskFailedEvent) {
+        self.status = TaskStatus::Failed(e.error.clone());
+        self.completed_at = Some(Utc::now());
         self.version += 1;
     }
 }

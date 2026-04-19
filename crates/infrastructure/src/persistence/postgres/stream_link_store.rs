@@ -1,7 +1,8 @@
 use async_trait::async_trait;
-use event_sourcing::error::{EventSourcingError, Result};
-use event_sourcing::stream::link_store::StreamLinkStore;
-use event_sourcing::stream::stream_id::StreamId;
+use event_sourcing::{
+    error::{EventSourcingError, Result},
+    stream::{link_store::StreamLinkStore, stream_id::StreamId},
+};
 use sqlx::{Postgres, Transaction};
 
 pub struct PostgresStreamLinkStore;

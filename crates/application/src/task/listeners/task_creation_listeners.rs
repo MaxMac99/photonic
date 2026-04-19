@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use derive_new::new;
-use domain::{medium::events::MediumEvent, task::TaskType};
+use domain::{medium::events::MediumCreatedEvent, task::TaskType};
 use tracing::{debug, info, instrument};
 
 use crate::{
@@ -17,13 +17,11 @@ pub struct TaskCreationListeners {
 }
 
 #[async_trait]
-impl EventProcessor<MediumEvent> for TaskCreationListeners {
-    #[instrument(
-        name = "TaskCreationListeners::MediumEvent",
-        skip(self, event),
-    )]
-    async fn process(&self, event: &MediumEvent) -> ApplicationResult<()> {
-        let MediumEvent::MediumCreated(event) = event else { return Ok(()) };
+impl EventProcessor<MediumCreatedEvent> for TaskCreationListeners {
+    type Error = crate::error::ApplicationError;
+
+    #[instrument(name = "TaskCreationListeners::MediumCreatedEvent", skip(self, event))]
+    async fn process(&self, event: &MediumCreatedEvent) -> ApplicationResult<()> {
         let item = &event.initial_item;
         info!(
             "Creating metadata extraction task for medium_id={} (leading_item_id={})",
@@ -35,7 +33,11 @@ impl EventProcessor<MediumEvent> for TaskCreationListeners {
                 reference_id: item.id,
                 user_id: event.user_id,
                 task_type: TaskType::MetadataExtraction,
-                file_location: item.locations.first().expect("Item must have a location").clone(),
+                file_location: item
+                    .locations
+                    .first()
+                    .expect("Item must have a location")
+                    .clone(),
             })
             .await?;
 

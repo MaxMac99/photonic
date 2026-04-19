@@ -2,11 +2,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use crate::{error::Result, event::domain_event::DomainEvent};
+use crate::event::domain_event::DomainEvent;
 
 #[async_trait]
 pub trait EventProcessor<E: DomainEvent>: Send + Sync + 'static {
-    async fn process(&self, event: &E) -> Result<()>;
+    type Error: std::fmt::Display + Send;
+
+    async fn process(&self, event: &E) -> Result<(), Self::Error>;
 }
 
 #[async_trait]
@@ -15,7 +17,9 @@ where
     E: DomainEvent,
     T: EventProcessor<E>,
 {
-    async fn process(&self, event: &E) -> Result<()> {
+    type Error = T::Error;
+
+    async fn process(&self, event: &E) -> Result<(), Self::Error> {
         T::process(self, event).await
     }
 }

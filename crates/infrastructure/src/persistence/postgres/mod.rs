@@ -4,7 +4,6 @@ pub mod events;
 mod groups;
 pub mod medium;
 pub mod metadata;
-pub mod snapshot_store;
 pub mod stream_link_store;
 pub mod task;
 pub mod transaction_provider;

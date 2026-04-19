@@ -2,14 +2,16 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use derive_new::new;
-use domain::{metadata::events::MetadataEvent, task::TaskType};
+use domain::{
+    medium::events::TempCleanupCompletedEvent, metadata::events::MetadataExtractedEvent,
+    task::TaskType,
+};
 use tracing::{debug, info, instrument};
 use uuid::Uuid;
 
 use crate::{
     error::ApplicationResult,
     event_bus::EventProcessor,
-    medium::events::TempCleanupCompletedEvent,
     task::commands::{CompleteTaskCommand, CompleteTaskHandler},
 };
 
@@ -19,13 +21,14 @@ pub struct TaskCompletedListeners {
 }
 
 #[async_trait]
-impl EventProcessor<MetadataEvent> for TaskCompletedListeners {
+impl EventProcessor<MetadataExtractedEvent> for TaskCompletedListeners {
+    type Error = crate::error::ApplicationError;
+
     #[instrument(
-        name = "TaskCompletedListeners::MetadataEvent",
-        skip(self, event),
+        name = "TaskCompletedListeners::MetadataExtractedEvent",
+        skip(self, event)
     )]
-    async fn process(&self, event: &MetadataEvent) -> ApplicationResult<()> {
-        let MetadataEvent::Extracted(event) = event else { return Ok(()) };
+    async fn process(&self, event: &MetadataExtractedEvent) -> ApplicationResult<()> {
         info!(
             "Completing metadata extraction task for medium_id={} (leading_item_id={})",
             event.medium_id, event.leading_item_id,
@@ -50,6 +53,8 @@ impl EventProcessor<MetadataEvent> for TaskCompletedListeners {
 
 #[async_trait]
 impl EventProcessor<TempCleanupCompletedEvent> for TaskCompletedListeners {
+    type Error = crate::error::ApplicationError;
+
     #[instrument(
         name = "TaskCompletedListeners::TempCleanupCompletedEvent",
         skip(self, event),

@@ -130,6 +130,7 @@ dependencies = [
  "chrono",
  "derive-new",
  "domain",
+ "event_sourcing",
  "mime",
  "snafu",
  "tokio",

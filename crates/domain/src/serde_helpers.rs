@@ -38,7 +38,10 @@ pub mod option_mime_serde {
     {
         let s: Option<String> = Option::deserialize(deserializer)?;
         match s {
-            Some(s) => s.parse::<Mime>().map(Some).map_err(serde::de::Error::custom),
+            Some(s) => s
+                .parse::<Mime>()
+                .map(Some)
+                .map_err(serde::de::Error::custom),
             None => Ok(None),
         }
     }

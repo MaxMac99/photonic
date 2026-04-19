@@ -2,7 +2,12 @@ use async_trait::async_trait;
 use domain::{
     error::DomainResult,
     medium::{FileLocation, MediumId},
-    metadata::{events::MetadataEvent, Metadata, MetadataId},
+    metadata::{
+        events::{
+            MetadataExtractedEvent, MetadataExtractionFailedEvent, MetadataExtractionStartedEvent,
+        },
+        Metadata, MetadataId,
+    },
 };
 
 use crate::event_bus::PublishEvent;
@@ -22,6 +27,16 @@ pub trait MetadataExtractor: Send + Sync {
         -> DomainResult<Metadata>;
 }
 
-pub trait PublishMetadataEvent: PublishEvent<MetadataEvent> {}
+pub trait PublishMetadataEvent:
+    PublishEvent<MetadataExtractionStartedEvent>
+    + PublishEvent<MetadataExtractedEvent>
+    + PublishEvent<MetadataExtractionFailedEvent>
+{
+}
 
-impl<T> PublishMetadataEvent for T where T: PublishEvent<MetadataEvent> {}
+impl<T> PublishMetadataEvent for T where
+    T: PublishEvent<MetadataExtractionStartedEvent>
+        + PublishEvent<MetadataExtractedEvent>
+        + PublishEvent<MetadataExtractionFailedEvent>
+{
+}

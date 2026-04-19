@@ -1,10 +1,12 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use async_trait::async_trait;
-use event_sourcing::aggregate::event_store::AggregateEventStore;
-use event_sourcing::error::{EventSourcingError, Result};
-use event_sourcing::persistence::event_store::StoredEvent;
-use event_sourcing::stream::stream_id::StreamId;
+use event_sourcing::{
+    aggregate::event_store::AggregateEventStore,
+    error::{EventSourcingError, Result},
+    persistence::event_store::StoredEvent,
+    stream::stream_id::StreamId,
+};
 use sqlx::{PgPool, Row};
 
 use super::type_registry::EventTypeRegistry;
@@ -15,11 +17,11 @@ use super::type_registry::EventTypeRegistry;
 /// Read-only — writing is handled by the event bus + `StreamLinkingProjection`.
 pub struct PostgresAggregateEventStore {
     pool: PgPool,
-    registry: Arc<EventTypeRegistry>,
+    registry: Arc<RwLock<EventTypeRegistry>>,
 }
 
 impl PostgresAggregateEventStore {
-    pub fn new(pool: PgPool, registry: Arc<EventTypeRegistry>) -> Self {
+    pub fn new(pool: PgPool, registry: Arc<RwLock<EventTypeRegistry>>) -> Self {
         Self { pool, registry }
     }
 }
@@ -53,7 +55,8 @@ impl AggregateEventStore<i64> for PostgresAggregateEventStore {
             let event_type: String = row.get("event_type");
             let payload: serde_json::Value = row.get("payload");
 
-            let event = self.registry.deserialize(&event_type, &payload)?;
+            let registry = self.registry.read().unwrap();
+            let event = registry.deserialize(&event_type, &payload)?;
             events.push(StoredEvent {
                 sequence: global_sequence,
                 event,

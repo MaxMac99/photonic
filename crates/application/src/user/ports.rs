@@ -1,7 +1,13 @@
 use async_trait::async_trait;
 use domain::{
     error::DomainResult,
-    user::{events::UserEvent, User, UserId},
+    user::{
+        events::{
+            QuotaCommittedEvent, QuotaReleasedEvent, QuotaReservedEvent, UserCreatedEvent,
+            UserUpdatedEvent,
+        },
+        User, UserId,
+    },
 };
 
 use crate::event_bus::PublishEvent;
@@ -13,6 +19,20 @@ pub trait UserRepository: Send + Sync {
     async fn update(&self, user: &User) -> DomainResult<()>;
 }
 
-pub trait PublishUserEvent: PublishEvent<UserEvent> {}
+pub trait PublishUserEvent:
+    PublishEvent<UserCreatedEvent>
+    + PublishEvent<UserUpdatedEvent>
+    + PublishEvent<QuotaReservedEvent>
+    + PublishEvent<QuotaCommittedEvent>
+    + PublishEvent<QuotaReleasedEvent>
+{
+}
 
-impl<T> PublishUserEvent for T where T: PublishEvent<UserEvent> {}
+impl<T> PublishUserEvent for T where
+    T: PublishEvent<UserCreatedEvent>
+        + PublishEvent<UserUpdatedEvent>
+        + PublishEvent<QuotaReservedEvent>
+        + PublishEvent<QuotaCommittedEvent>
+        + PublishEvent<QuotaReleasedEvent>
+{
+}

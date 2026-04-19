@@ -1,5 +1,4 @@
-use infrastructure::config::GlobalConfig;
-use infrastructure::{run_server, setup_tracing};
+use infrastructure::{config::GlobalConfig, run_server, setup_tracing};
 use snafu::Whatever;
 
 #[tokio::main]

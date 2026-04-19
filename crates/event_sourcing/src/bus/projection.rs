@@ -81,7 +81,11 @@ where
         let typed = any
             .downcast_ref::<E>()
             .expect("type mismatch in projection dispatch");
-        self.handler.handle(typed, sequence, tx).await
+        self.handler.handle(typed, sequence, tx).await.map_err(|e| {
+            error::EventSourcingError::Projection {
+                message: format!("{e}"),
+            }
+        })
     }
 }
 
@@ -110,7 +114,11 @@ where
         sequence: Seq,
         tx: &mut Tx,
     ) -> error::Result<()> {
-        self.handler.handle(event, sequence, tx).await
+        self.handler.handle(event, sequence, tx).await.map_err(|e| {
+            error::EventSourcingError::Projection {
+                message: format!("{e}"),
+            }
+        })
     }
 }
 
@@ -429,6 +437,8 @@ mod tests {
 
     #[async_trait]
     impl<E: DomainEvent> ProjectionHandler<E, i64, MockTx> for CountingProjection<E> {
+        type Error = EventSourcingError;
+
         fn name(&self) -> &str {
             &self.name
         }
@@ -445,6 +455,8 @@ mod tests {
 
     #[async_trait]
     impl ProjectionHandler<TestEvent, i64, MockTx> for FailingProjection {
+        type Error = EventSourcingError;
+
         fn name(&self) -> &str {
             &self.name
         }

@@ -5,8 +5,7 @@ use std::env;
 
 use domain::user::User;
 use dotenv::dotenv;
-use infrastructure::config::GlobalConfig;
-use infrastructure::{run_server, setup_test_tracing, ServerHandle};
+use infrastructure::{config::GlobalConfig, run_server, setup_test_tracing, ServerHandle};
 use jsonwebtoken::EncodingKey;
 use photonic_client::Client as GeneratedClient;
 use reqwest::Client;

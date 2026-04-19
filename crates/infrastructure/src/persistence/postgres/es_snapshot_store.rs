@@ -1,8 +1,12 @@
 use async_trait::async_trait;
-use event_sourcing::aggregate::snapshot_store::{Snapshot, SnapshotStore};
-use event_sourcing::aggregate::traits::Aggregate;
-use event_sourcing::error::{EventSourcingError, Result};
-use event_sourcing::stream::stream_id::StreamId;
+use event_sourcing::{
+    aggregate::{
+        snapshot_store::{Snapshot, SnapshotStore},
+        traits::Aggregate,
+    },
+    error::{EventSourcingError, Result},
+    stream::stream_id::StreamId,
+};
 use serde::{de::DeserializeOwned, Serialize};
 use sqlx::{PgPool, Row};
 
@@ -40,10 +44,8 @@ where
             Some(row) => {
                 let payload: serde_json::Value = row.get("payload");
                 let version: i64 = row.get("version");
-                let state: A =
-                    serde_json::from_value(payload).map_err(|e| EventSourcingError::Deserialization {
-                        source: e,
-                    })?;
+                let state: A = serde_json::from_value(payload)
+                    .map_err(|e| EventSourcingError::Deserialization { source: e })?;
                 Ok(Some(Snapshot { state, version }))
             }
             None => Ok(None),
@@ -52,10 +54,8 @@ where
 
     async fn save(&self, stream: &StreamId, snapshot: &Snapshot<A, i64>) -> Result<()> {
         let storage_key = stream.to_storage_key();
-        let payload =
-            serde_json::to_value(&snapshot.state).map_err(|e| EventSourcingError::Serialization {
-                source: e,
-            })?;
+        let payload = serde_json::to_value(&snapshot.state)
+            .map_err(|e| EventSourcingError::Serialization { source: e })?;
 
         sqlx::query(
             "INSERT INTO snapshots (stream_id, version, payload, created_at)

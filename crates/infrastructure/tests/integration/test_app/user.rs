@@ -1,11 +1,12 @@
 use std::env;
 
-use crate::integration::test_app::TestApp;
 use chrono::{Duration, Utc};
 use domain::user::User;
 use infrastructure::auth::JwtUserClaims;
 use jsonwebtoken::{encode, Header};
 use serde::{Deserialize, Serialize};
+
+use crate::integration::test_app::TestApp;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct TokenClaims {

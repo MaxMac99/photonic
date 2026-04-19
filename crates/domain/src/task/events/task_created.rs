@@ -17,7 +17,12 @@ pub struct TaskCreatedEvent {
 }
 
 impl TaskCreatedEvent {
-    pub(crate) fn new(task_id: Uuid, task_type: TaskType, reference_id: Uuid, user_id: UserId) -> Self {
+    pub(crate) fn new(
+        task_id: Uuid,
+        task_type: TaskType,
+        reference_id: Uuid,
+        user_id: UserId,
+    ) -> Self {
         Self {
             task_id,
             task_type,

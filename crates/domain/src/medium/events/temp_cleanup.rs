@@ -1,7 +1,9 @@
-use domain::event::{DomainEvent, EventMetadata};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+use crate::event::{DomainEvent, EventMetadata};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TempCleanupStartedEvent {
     pub sweep_id: Uuid,
     pub metadata: EventMetadata,
@@ -22,7 +24,7 @@ impl DomainEvent for TempCleanupStartedEvent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TempCleanupCompletedEvent {
     pub sweep_id: Uuid,
     pub items_cleaned: usize,
@@ -45,7 +47,7 @@ impl DomainEvent for TempCleanupCompletedEvent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TempCleanupFailedEvent {
     pub sweep_id: Uuid,
     pub error: String,

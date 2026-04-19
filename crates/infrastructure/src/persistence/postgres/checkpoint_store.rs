@@ -1,6 +1,8 @@
 use async_trait::async_trait;
-use event_sourcing::error::{EventSourcingError, Result};
-use event_sourcing::persistence::checkpoint_store::{CheckpointStore, TxCheckpointStore};
+use event_sourcing::{
+    error::{EventSourcingError, Result},
+    persistence::checkpoint_store::{CheckpointStore, TxCheckpointStore},
+};
 use sqlx::{PgPool, Postgres, Transaction};
 
 /// Non-transactional checkpoint store using a connection pool.

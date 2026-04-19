@@ -1,5 +1,5 @@
 mod delete;
-mod entity;
+pub(crate) mod entity;
 mod find_by_id;
 mod find_by_medium_id;
 mod save;

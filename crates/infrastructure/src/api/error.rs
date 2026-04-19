@@ -44,9 +44,7 @@ impl IntoResponse for ApiError {
             ApplicationError::Internal { .. } => {
                 (StatusCode::INTERNAL_SERVER_ERROR, self.0.to_string())
             }
-            ApplicationError::Conflict { .. } => {
-                (StatusCode::CONFLICT, self.0.to_string())
-            }
+            ApplicationError::Conflict { .. } => (StatusCode::CONFLICT, self.0.to_string()),
         };
 
         warn!(

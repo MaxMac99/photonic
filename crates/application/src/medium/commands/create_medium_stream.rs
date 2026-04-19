@@ -6,7 +6,7 @@ use derive_new::new;
 use domain::{
     error::format_error_with_backtrace as format_domain_error,
     medium::{
-        events::MediumEvent,
+        events::MediumCreatedEvent,
         storage::{FileLocation, StorageTier},
         Filename, Medium, MediumCreateRequest, MediumId, MediumItemCreateRequest, MediumItemType,
         MediumType, Priority,
@@ -42,7 +42,7 @@ pub struct CreateMediumStreamCommand {
 pub struct CreateMediumStreamHandler {
     file_storage: Arc<dyn FileStorage>,
     quota_manager: Arc<QuotaManager>,
-    event_bus: Arc<dyn PublishEvent<MediumEvent>>,
+    event_bus: Arc<dyn PublishEvent<MediumCreatedEvent>>,
 }
 
 impl CreateMediumStreamHandler {
@@ -57,9 +57,9 @@ impl CreateMediumStreamHandler {
 
         self.quota_manager
             .with_quota(command.user_id, command.file_size, || async {
-                let medium_type = command.medium_type.unwrap_or_else(|| {
-                    MediumType::from(command.mime_type.clone())
-                });
+                let medium_type = command
+                    .medium_type
+                    .unwrap_or_else(|| MediumType::from(command.mime_type.clone()));
                 let filename = Filename::new(&command.filename)
                     .map_err(|e| ApplicationError::Domain { source: e })?;
                 let priority = command.priority.map(Priority::new).unwrap_or_default();
@@ -112,17 +112,14 @@ impl CreateMediumStreamHandler {
                     })?;
 
                 // Publish event — persists to event store, then dispatches to listeners
-                self.event_bus
-                    .publish(MediumEvent::from(created_event))
-                    .await
-                    .map_err(|e| {
-                        error!(
-                            medium_id = %medium_id,
-                            error = %e,
-                            "Failed to publish event"
-                        );
-                        e
-                    })?;
+                self.event_bus.publish(created_event).await.map_err(|e| {
+                    error!(
+                        medium_id = %medium_id,
+                        error = %e,
+                        "Failed to publish event"
+                    );
+                    e
+                })?;
 
                 info!(
                     medium_id = %medium_id,

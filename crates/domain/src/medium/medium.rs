@@ -1,5 +1,6 @@
 use byte_unit::Byte;
 use chrono::{DateTime, FixedOffset, Utc};
+use event_sourcing::aggregate::traits::{Aggregate, ApplyEvent};
 use mime::Mime;
 use serde::{Deserialize, Serialize};
 use snafu::ensure;
@@ -10,11 +11,10 @@ use super::{
     file::{Dimensions, Filename, Priority},
     storage::{FileLocation, StorageTier},
 };
-use crate::error::InvariantViolationSnafu;
 use crate::{
     aggregate::{AggregateRoot, AggregateVersion},
     error::{DomainResult, ValidationSnafu},
-    medium::events::{MediumCreatedEvent, MediumEvent, MediumItemCreatedEvent, MediumUpdatedEvent},
+    medium::events::{MediumCreatedEvent, MediumItemCreatedEvent, MediumUpdatedEvent},
     user::UserId,
 };
 
@@ -68,9 +68,26 @@ pub struct Medium {
     pub version: AggregateVersion,
 }
 
-impl AggregateRoot for Medium {
-    type Event = MediumEvent;
+impl Default for Medium {
+    fn default() -> Self {
+        Self {
+            id: Uuid::nil(),
+            owner_id: Uuid::nil(),
+            medium_type: MediumType::Other,
+            leading_item_id: Uuid::nil(),
+            taken_at: None,
+            camera_make: None,
+            camera_model: None,
+            gps_coordinates: None,
+            created_at: DateTime::default(),
+            updated_at: DateTime::default(),
+            items: Vec::new(),
+            version: 0,
+        }
+    }
+}
 
+impl AggregateRoot for Medium {
     fn aggregate_type() -> &'static str {
         "Medium"
     }
@@ -78,53 +95,43 @@ impl AggregateRoot for Medium {
     fn version(&self) -> AggregateVersion {
         self.version
     }
+}
 
-    fn from_initial_event(event: &MediumEvent) -> DomainResult<Self> {
-        let MediumEvent::MediumCreated(e) = event else {
-            return InvariantViolationSnafu {
-                message: "Medium aggregate must start with MediumCreated event",
-            }
-            .fail();
-        };
-        let now = e.metadata.occurred_at;
-        Ok(Self {
-            id: e.medium_id,
-            owner_id: e.user_id,
-            medium_type: e.medium_type,
-            leading_item_id: e.initial_item.id,
-            taken_at: None,
-            camera_make: None,
-            camera_model: None,
-            gps_coordinates: None,
-            created_at: now,
-            updated_at: now,
-            items: vec![e.initial_item.clone()],
-            version: 1,
-        })
+impl Aggregate for Medium {
+    type Id = Uuid;
+
+    fn aggregate_type() -> &'static str {
+        "Medium"
     }
+}
 
-    fn apply(&mut self, event: &MediumEvent) {
-        match event {
-            MediumEvent::MediumCreated(e) => {
-                self.id = e.medium_id;
-                self.owner_id = e.user_id;
-                self.medium_type = e.medium_type;
-                self.leading_item_id = e.initial_item.id;
-                self.items = vec![e.initial_item.clone()];
-            }
-            MediumEvent::MediumItemCreated(_e) => {
-                // Item data is added via add_item(); during replay this is a no-op
-                // because the item is already constructed from the event data.
-                // Full reconstruction from events will be implemented when
-                // MediumItemCreatedEvent is enriched with all item fields.
-            }
-            MediumEvent::MediumUpdated(e) => {
-                self.taken_at = e.taken_at.clone();
-                self.camera_make = e.camera_make.clone();
-                self.camera_model = e.camera_model.clone();
-                self.gps_coordinates = e.gps_coordinates;
-            }
-        }
+impl ApplyEvent<MediumCreatedEvent> for Medium {
+    fn apply(&mut self, e: &MediumCreatedEvent) {
+        self.id = e.medium_id;
+        self.owner_id = e.user_id;
+        self.medium_type = e.medium_type;
+        self.leading_item_id = e.initial_item.id;
+        self.items = vec![e.initial_item.clone()];
+        self.version += 1;
+    }
+}
+
+impl ApplyEvent<MediumItemCreatedEvent> for Medium {
+    fn apply(&mut self, _e: &MediumItemCreatedEvent) {
+        // Item data is added via add_item(); during replay this is a no-op
+        // because the item is already constructed from the event data.
+        // Full reconstruction from events will be implemented when
+        // MediumItemCreatedEvent is enriched with all item fields.
+        self.version += 1;
+    }
+}
+
+impl ApplyEvent<MediumUpdatedEvent> for Medium {
+    fn apply(&mut self, e: &MediumUpdatedEvent) {
+        self.taken_at = e.taken_at.clone();
+        self.camera_make = e.camera_make.clone();
+        self.camera_model = e.camera_model.clone();
+        self.gps_coordinates = e.gps_coordinates;
         self.version += 1;
     }
 }

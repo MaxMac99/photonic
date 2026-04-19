@@ -1,16 +1,16 @@
 use byte_unit::Byte;
 use derive_builder::Builder;
+use event_sourcing::aggregate::traits::{Aggregate, ApplyEvent};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::{
     events::{
-        QuotaCommittedEvent, QuotaReleasedEvent, QuotaReservedEvent, UserCreatedEvent, UserEvent,
+        QuotaCommittedEvent, QuotaReleasedEvent, QuotaReservedEvent, UserCreatedEvent,
         UserUpdatedEvent, UserUpdatedEventBuilder,
     },
     quota::QuotaState,
 };
-use crate::error::InvariantViolationSnafu;
 use crate::{
     aggregate::{AggregateRoot, AggregateVersion},
     error::DomainResult,
@@ -27,9 +27,19 @@ pub struct User {
     pub quota: QuotaState,
 }
 
-impl AggregateRoot for User {
-    type Event = UserEvent;
+impl Default for User {
+    fn default() -> Self {
+        Self {
+            id: Uuid::nil(),
+            version: 0,
+            username: String::new(),
+            email: None,
+            quota: QuotaState::new_unchecked(Byte::from_u64(0), Byte::from_u64(0)),
+        }
+    }
+}
 
+impl AggregateRoot for User {
     fn aggregate_type() -> &'static str {
         "User"
     }
@@ -37,51 +47,57 @@ impl AggregateRoot for User {
     fn version(&self) -> AggregateVersion {
         self.version
     }
+}
 
-    fn from_initial_event(event: &UserEvent) -> DomainResult<Self> {
-        let UserEvent::UserCreated(e) = event else {
-            return InvariantViolationSnafu {
-                message: "User aggregate must start with UserCreated event",
-            }
-            .fail();
-        };
-        Ok(Self {
-            id: e.user_id,
-            version: 1,
-            username: e.username.clone(),
-            email: e.email.clone(),
-            quota: QuotaState::new_unchecked(Byte::from_u64(0), e.quota),
-        })
+impl Aggregate for User {
+    type Id = Uuid;
+
+    fn aggregate_type() -> &'static str {
+        "User"
     }
+}
 
-    fn apply(&mut self, event: &UserEvent) {
-        match event {
-            UserEvent::UserCreated(e) => {
-                self.id = e.user_id;
-                self.username = e.username.clone();
-                self.email = e.email.clone();
-            }
-            UserEvent::UserUpdated(e) => {
-                if let Some(ref username) = e.new_username {
-                    self.username = username.clone();
-                }
-                if let Some(ref email) = e.new_email {
-                    self.email = Some(email.clone());
-                }
-                if let Some(new_quota) = e.new_quota {
-                    self.quota = QuotaState::new_unchecked(self.quota.used(), new_quota);
-                }
-            }
-            UserEvent::QuotaReserved(e) => {
-                let _ = self.quota.reserve_quota(e.bytes);
-            }
-            UserEvent::QuotaCommitted(_) => {
-                // Quota is already reserved, commit is a no-op on state
-            }
-            UserEvent::QuotaReleased(e) => {
-                self.quota.release_quota(e.bytes);
-            }
+impl ApplyEvent<UserCreatedEvent> for User {
+    fn apply(&mut self, e: &UserCreatedEvent) {
+        self.id = e.user_id;
+        self.username = e.username.clone();
+        self.email = e.email.clone();
+        self.version += 1;
+    }
+}
+
+impl ApplyEvent<UserUpdatedEvent> for User {
+    fn apply(&mut self, e: &UserUpdatedEvent) {
+        if let Some(ref username) = e.new_username {
+            self.username = username.clone();
         }
+        if let Some(ref email) = e.new_email {
+            self.email = Some(email.clone());
+        }
+        if let Some(new_quota) = e.new_quota {
+            self.quota = QuotaState::new_unchecked(self.quota.used(), new_quota);
+        }
+        self.version += 1;
+    }
+}
+
+impl ApplyEvent<QuotaReservedEvent> for User {
+    fn apply(&mut self, e: &QuotaReservedEvent) {
+        let _ = self.quota.reserve_quota(e.bytes);
+        self.version += 1;
+    }
+}
+
+impl ApplyEvent<QuotaCommittedEvent> for User {
+    fn apply(&mut self, _e: &QuotaCommittedEvent) {
+        // Quota is already reserved, commit is a no-op on state
+        self.version += 1;
+    }
+}
+
+impl ApplyEvent<QuotaReleasedEvent> for User {
+    fn apply(&mut self, e: &QuotaReleasedEvent) {
+        self.quota.release_quota(e.bytes);
         self.version += 1;
     }
 }

@@ -39,6 +39,8 @@ where
     Seq: Sequence,
     Tx: Send + Sync + 'static,
 {
+    type Error = error::EventSourcingError;
+
     fn name(&self) -> &str {
         "stream_linker"
     }

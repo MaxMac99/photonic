@@ -2,17 +2,17 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use derive_new::new;
-use domain::medium::StorageTier;
+use domain::medium::{
+    events::{TempCleanupCompletedEvent, TempCleanupFailedEvent, TempCleanupStartedEvent},
+    StorageTier,
+};
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use crate::{
     error::ApplicationResult,
     event_bus::PublishEvent,
-    medium::{
-        events::{TempCleanupCompletedEvent, TempCleanupFailedEvent, TempCleanupStartedEvent},
-        ports::{FileStorage, MediumRepository},
-    },
+    medium::ports::{FileStorage, MediumRepository},
 };
 
 pub trait PublishCleanupEvent:
