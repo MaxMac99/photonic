@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE users\n            SET username = $2,\n                email = $3,\n                quota = $4,\n                quota_used = $5,\n                version = version + 1,\n                updated_at = NOW()\n            WHERE id = $1 AND version = $6\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ad6b00118c4043cb5fab79f030d5072dfe3fd7decaabeca7cf6a91add7385c94"
+}

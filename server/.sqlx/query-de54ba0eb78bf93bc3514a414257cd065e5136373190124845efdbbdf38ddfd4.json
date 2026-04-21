@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO tasks (\n                id,\n                reference_id,\n                user_id,\n                task_type,\n                status,\n                error,\n                created_at,\n                started_at,\n                completed_at\n            )\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n            ON CONFLICT (id) DO UPDATE\n            SET status = CASE\n                    -- Only update status if transitioning forward in the state machine\n                    WHEN tasks.status = 'pending' THEN EXCLUDED.status\n                    WHEN tasks.status = 'in_progress' AND EXCLUDED.status IN ('completed', 'failed') THEN EXCLUDED.status\n                    ELSE tasks.status\n                END,\n                error = CASE\n                    WHEN tasks.status = 'pending' THEN EXCLUDED.error\n                    WHEN tasks.status = 'in_progress' AND EXCLUDED.status IN ('completed', 'failed') THEN EXCLUDED.error\n                    ELSE tasks.error\n                END,\n                started_at = COALESCE(tasks.started_at, EXCLUDED.started_at),\n                completed_at = COALESCE(tasks.completed_at, EXCLUDED.completed_at)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "task_type_enum",
+            "kind": {
+              "Enum": [
+                "metadata_extraction",
+                "temp_cleanup"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "task_status_enum",
+            "kind": {
+              "Enum": [
+                "pending",
+                "in_progress",
+                "completed",
+                "failed"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Timestamp",
+        "Timestamp",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "de54ba0eb78bf93bc3514a414257cd065e5136373190124845efdbbdf38ddfd4"
+}

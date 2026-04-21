@@ -1,0 +1,205 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                m.id,\n                m.owner_id,\n                m.medium_type as \"medium_type: MediumTypeDb\",\n                m.leading_item_id,\n                m.taken_at,\n                m.taken_at_timezone,\n                m.camera_make,\n                m.camera_model,\n                m.gps_latitude,\n                m.gps_longitude,\n                m.gps_altitude,\n                m.created_at,\n                m.updated_at,\n                mi.id as item_id,\n                mi.medium_item_type as \"medium_item_type: MediumItemTypeDb\",\n                mi.mime,\n                mi.filename,\n                mi.size,\n                mi.priority,\n                mi.width,\n                mi.height,\n                mi.created_at as item_created_at,\n                mi.updated_at as item_updated_at,\n                l.variant as \"storage_tier: StorageTierDb\",\n                l.path as relative_path\n            FROM media m\n            JOIN medium_items mi ON mi.medium_id = m.id AND mi.deleted_at IS NULL\n            JOIN locations l ON l.item_id = mi.id\n            WHERE m.id = $1 AND m.owner_id = $2\n            ORDER BY mi.priority ASC, mi.id, l.variant\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "owner_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "medium_type: MediumTypeDb",
+        "type_info": {
+          "Custom": {
+            "name": "medium_type_enum",
+            "kind": {
+              "Enum": [
+                "photo",
+                "video",
+                "live_photo",
+                "vector",
+                "sequence",
+                "gif",
+                "other"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "leading_item_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "taken_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "taken_at_timezone",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "camera_make",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "camera_model",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "gps_latitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "gps_longitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 10,
+        "name": "gps_altitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 12,
+        "name": "updated_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 13,
+        "name": "item_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 14,
+        "name": "medium_item_type: MediumItemTypeDb",
+        "type_info": {
+          "Custom": {
+            "name": "medium_item_type_enum",
+            "kind": {
+              "Enum": [
+                "original",
+                "preview",
+                "edit",
+                "sidecar"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "mime",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 16,
+        "name": "filename",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 17,
+        "name": "size",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 18,
+        "name": "priority",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 19,
+        "name": "width",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 20,
+        "name": "height",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 21,
+        "name": "item_created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 22,
+        "name": "item_updated_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 23,
+        "name": "storage_tier: StorageTierDb",
+        "type_info": {
+          "Custom": {
+            "name": "store_location_enum",
+            "kind": {
+              "Enum": [
+                "originals",
+                "cache",
+                "temp"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "relative_path",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "319f4ffb7bbf2811ecca66169b962b2bdc73bdf146e42bef5e6533d2d05ff218"
+}

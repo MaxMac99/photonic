@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                    INSERT INTO locations (item_id, path, variant)\n                    VALUES ($1, $2, $3)\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        {
+          "Custom": {
+            "name": "store_location_enum",
+            "kind": {
+              "Enum": [
+                "originals",
+                "cache",
+                "temp"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "170b2714ef158df8a625589924bb8faa96314df3e1e71174313e8fa1dccaef2f"
+}

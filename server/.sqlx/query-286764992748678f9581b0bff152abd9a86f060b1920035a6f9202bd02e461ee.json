@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                mi.id as item_id,\n                mi.medium_id,\n                m.owner_id,\n                l_temp.path as temp_path\n            FROM locations l_temp\n            JOIN locations l_perm ON l_temp.item_id = l_perm.item_id\n            JOIN medium_items mi ON l_temp.item_id = mi.id\n            JOIN media m ON mi.medium_id = m.id\n            WHERE l_temp.variant = 'temp'\n              AND l_perm.variant = 'originals'\n              AND mi.created_at < $1\n              AND mi.deleted_at IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "item_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "medium_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "owner_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "temp_path",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamp"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "286764992748678f9581b0bff152abd9a86f060b1920035a6f9202bd02e461ee"
+}

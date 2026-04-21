@@ -1,0 +1,104 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id,\n                reference_id,\n                user_id,\n                task_type as \"task_type: TaskTypeDb\",\n                status as \"status: TaskStatusDb\",\n                error,\n                created_at,\n                started_at,\n                completed_at\n            FROM tasks\n            WHERE reference_id = $1 AND task_type = $2 AND user_id = $3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "reference_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "task_type: TaskTypeDb",
+        "type_info": {
+          "Custom": {
+            "name": "task_type_enum",
+            "kind": {
+              "Enum": [
+                "metadata_extraction",
+                "temp_cleanup"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "status: TaskStatusDb",
+        "type_info": {
+          "Custom": {
+            "name": "task_status_enum",
+            "kind": {
+              "Enum": [
+                "pending",
+                "in_progress",
+                "completed",
+                "failed"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "error",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 7,
+        "name": "started_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 8,
+        "name": "completed_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "task_type_enum",
+            "kind": {
+              "Enum": [
+                "metadata_extraction",
+                "temp_cleanup"
+              ]
+            }
+          }
+        },
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "68cb652b7deb78473ad8b50730ca510edf89bedc6fedaab2c742c2f482bd451b"
+}

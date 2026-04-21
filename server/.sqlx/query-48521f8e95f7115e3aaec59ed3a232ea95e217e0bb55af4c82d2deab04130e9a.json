@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO medium_items (\n                    id,\n                    medium_id,\n                    medium_item_type,\n                    mime,\n                    filename,\n                    size,\n                    priority,\n                    width,\n                    height,\n                    updated_at\n                )\n                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\n                ON CONFLICT (id) DO UPDATE\n                SET medium_item_type = EXCLUDED.medium_item_type,\n                    mime = EXCLUDED.mime,\n                    filename = EXCLUDED.filename,\n                    size = EXCLUDED.size,\n                    priority = EXCLUDED.priority,\n                    width = EXCLUDED.width,\n                    height = EXCLUDED.height,\n                    updated_at = EXCLUDED.updated_at\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "medium_item_type_enum",
+            "kind": {
+              "Enum": [
+                "original",
+                "preview",
+                "edit",
+                "sidecar"
+              ]
+            }
+          }
+        },
+        "Varchar",
+        "Varchar",
+        "Int8",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "48521f8e95f7115e3aaec59ed3a232ea95e217e0bb55af4c82d2deab04130e9a"
+}

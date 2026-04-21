@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO media (\n                id,\n                owner_id,\n                medium_type,\n                leading_item_id,\n                taken_at,\n                taken_at_timezone,\n                camera_make,\n                camera_model,\n                gps_latitude,\n                gps_longitude,\n                gps_altitude,\n                updated_at\n            )\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)\n            ON CONFLICT (id) DO UPDATE\n            SET medium_type = EXCLUDED.medium_type,\n                leading_item_id = EXCLUDED.leading_item_id,\n                taken_at = EXCLUDED.taken_at,\n                taken_at_timezone = EXCLUDED.taken_at_timezone,\n                camera_make = EXCLUDED.camera_make,\n                camera_model = EXCLUDED.camera_model,\n                gps_latitude = EXCLUDED.gps_latitude,\n                gps_longitude = EXCLUDED.gps_longitude,\n                gps_altitude = EXCLUDED.gps_altitude,\n                updated_at = EXCLUDED.updated_at\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "medium_type_enum",
+            "kind": {
+              "Enum": [
+                "photo",
+                "video",
+                "live_photo",
+                "vector",
+                "sequence",
+                "gif",
+                "other"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Timestamptz",
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d3dadb9e6b2a619dd301008e799441b1b8b571e3afc0e4fd80df97e34ff75840"
+}
