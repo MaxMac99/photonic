@@ -9,7 +9,33 @@ Photonic is a photo management and processing API server written in Rust using t
 framework. It provides RESTful APIs for managing photo albums, media processing, and user management
 with JWT-based authentication.
 
+## Repository Layout
+
+This is a **monorepo**. The Rust backend lives in `server/`; a future native iOS/macOS Swift app
+will live in `apple/` (not yet scaffolded). Shared API contracts (`openapi.yaml`, `asyncapi.yaml`)
+stay at the repo root as the interface between server and client.
+
+```
+photonic/
+├── server/            # Rust backend (Cargo workspace)
+│   ├── Cargo.toml
+│   └── crates/        # application, domain, event_sourcing, infrastructure, photonic-client, xtask
+├── apple/             # (future) Swift/Xcode project
+├── openapi.yaml       # shared API contract
+├── asyncapi.yaml      # shared event contract
+├── flake.nix          # Nix dev shells (cd into server/ on entry)
+├── docker-compose.yml # local dev services (postgres, jaeger)
+└── docs/              # project docs
+```
+
+All `cargo` commands run from `server/`. The Nix devshells (`nix develop`, `nix develop .#test`)
+automatically `cd` into `server/` on entry, so inside a Nix shell you can run `cargo` directly.
+Outside Nix, `cd server` first.
+
 ## Development Commands
+
+All commands below assume you are inside `server/` (or inside a Nix devshell, which places you
+there automatically).
 
 ### Build and Run
 
@@ -74,11 +100,11 @@ Event DTOs are automatically generated from the AsyncAPI specification during th
 # Event DTOs are generated automatically during cargo build
 cargo build
 
-# The AsyncAPI spec is located at:
-# asyncapi.yaml
+# The AsyncAPI spec is located at (repo root, shared contract):
+# ../asyncapi.yaml   (from server/)
 
 # Generated DTOs are output to:
-# src/infrastructure/events/generated/
+# crates/infrastructure/src/infrastructure/events/generated/
 ```
 
 **How it works:**
@@ -111,11 +137,11 @@ cargo build
 # Manually generate just the OpenAPI spec (without full build)
 cargo xtask generate-openapi
 
-# View the generated spec
-cat openapi.yaml
+# View the generated spec (at repo root, shared contract)
+cat ../openapi.yaml
 
 # The typed client is generated to:
-# target/<profile>/build/infrastructure-<hash>/out/photonic_client.rs
+# server/target/<profile>/build/photonic-client-<hash>/out/photonic_client.rs
 ```
 
 **How it works:**
