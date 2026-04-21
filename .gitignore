@@ -12,6 +12,10 @@ tmpdata/
 result
 confluent-hub-components
 
+# openapi-3.0.yaml is a build artifact (progenitor down-conversion), never committed.
+# build.rs writes it to OUT_DIR; only `xtask convert-openapi` can drop one in the tree.
+openapi-3.0.yaml
+
 ### Xcode ###
 # User-specific Xcode state
 xcuserdata/
