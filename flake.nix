@@ -36,7 +36,7 @@
                   , stdenv }:
                     craneLib.buildPackage {
                         src = lib.cleanSourceWith {
-                            src = craneLib.path ./.; # The original, unfiltered source
+                            src = craneLib.path ./server; # The original, unfiltered source
                             filter = sqlOrCargo;
                         };
 
@@ -111,6 +111,10 @@
                         buildInputs = [ openapi-down-convert ];
 
                         shellHook = ''
+                            # Work inside the server subdirectory so cargo commands pick up
+                            # the workspace Cargo.toml automatically.
+                            cd "$PWD/server"
+
                             # Isolate CARGO_HOME so cargo's subcommand search doesn't
                             # pick up rustup shims from ~/.cargo/bin, which would
                             # shadow the Nix toolchain (e.g. `cargo fmt`).
@@ -123,6 +127,10 @@
                         inputsFrom = [ bin ];
 
                         shellHook = ''
+                            # Work inside the server subdirectory so cargo commands pick up
+                            # the workspace Cargo.toml automatically.
+                            cd "$PWD/server"
+
                             # Isolate CARGO_HOME so cargo's subcommand search doesn't
                             # pick up rustup shims from ~/.cargo/bin, which would
                             # shadow the Nix toolchain (e.g. `cargo fmt`).

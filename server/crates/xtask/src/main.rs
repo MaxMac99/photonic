@@ -15,15 +15,15 @@ enum Commands {
     /// Generate OpenAPI spec from utoipa definitions
     GenerateOpenapi {
         /// Output file path
-        #[arg(short, long, default_value = "openapi.yaml")]
+        #[arg(short, long, default_value = "../openapi.yaml")]
         output: String,
     },
     ConvertOpenapi {
         /// Input file path
-        #[arg(short, long, default_value = "openapi.yaml")]
+        #[arg(short, long, default_value = "../openapi.yaml")]
         input: String,
         /// Output file path
-        #[arg(short, long, default_value = "openapi-3.0.yaml")]
+        #[arg(short, long, default_value = "../openapi-3.0.yaml")]
         output: String,
     },
 }

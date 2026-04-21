@@ -17,7 +17,7 @@ async fn main() {
         .to_str()
         .unwrap()
         .to_string();
-    let openapi_path = "../../openapi.yaml";
+    let openapi_path = "../../../openapi.yaml";
 
     eprintln!("[build.rs] Generating OpenAPI spec at: {}", openapi_path);
     generate_openapi_spec(openapi_path)

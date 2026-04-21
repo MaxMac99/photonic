@@ -2,10 +2,10 @@
 /example/storage
 /example/cache
 /example/tmp
-/target
+target/
 /gen
 /docker
-/tmpdata
+tmpdata/
 .idea
 .env
 .direnv
