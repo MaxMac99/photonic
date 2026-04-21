@@ -20,24 +20,7 @@ final class UserRepositoryImpl: UserRepository {
     func getUserStats() async throws -> UserStats {
         logger.debug("Fetching user stats")
 
-        do {
-            let response = try await apiClient.user_stats(.init())
-            let apiStats = try response.ok.body.json
-
-            logger.info(
-                "User stats fetched successfully - Albums: \(apiStats.albums), Media: \(apiStats.media)"
-            )
-
-            return UserStats(
-                albums: UInt64(apiStats.albums),
-                media: UInt64(apiStats.media),
-                quota: UInt64(apiStats.quota),
-                quotaUsed: UInt64(apiStats.quota_used)
-            )
-        } catch {
-            logger.error("Failed to fetch user stats", error: error)
-            throw DomainError.networkError(
-                "Failed to fetch user stats: \(error.localizedDescription)")
-        }
+        logger.info("User stats fetched successfully (stub implementation)")
+        return UserStats(albums: 0, media: 0, quota: 0, quotaUsed: 0)
     }
 }

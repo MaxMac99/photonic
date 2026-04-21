@@ -15,7 +15,7 @@ struct MediaView: View {
     private static let pageSize = 60
 
     @Environment(\.apiClient) private var client
-    @State var media: [Components.Schemas.MediumResponse] = []
+    @State var media: [Components.Schemas.MediumListResponse] = []
     @State var errorMessage: String?
 
     var body: some View {
@@ -48,7 +48,7 @@ struct MediaView: View {
     }
 }
 
-extension Components.Schemas.MediumResponse: Identifiable {
+extension Components.Schemas.MediumListResponse: Identifiable {
 }
 
 #Preview {

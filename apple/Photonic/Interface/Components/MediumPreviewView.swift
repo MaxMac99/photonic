@@ -14,7 +14,7 @@ struct MediumPreviewView: View {
 
     @Environment(\.apiClient) var client
 
-    let medium: Components.Schemas.MediumResponse
+    let medium: Components.Schemas.MediumListResponse
     @State var image: Data?
 
     var body: some View {
