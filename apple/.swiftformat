@@ -1,0 +1,61 @@
+# SwiftFormat config for Photonic iOS/macOS app
+# Run: swiftformat .           (auto-fix)
+#      swiftformat --lint .    (CI check)
+
+--swiftversion 5.10
+
+# Paths to skip (generated code and build artefacts)
+--exclude Photonic/Infrastructure/API/Generated
+--exclude PhotonicClient
+--exclude **/.build
+--exclude **/DerivedData
+--exclude **/Pods
+
+# Formatting options
+--indent 4
+--tabwidth 4
+--maxwidth 140
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--closingparen balanced
+--commas inline
+--trimwhitespace always
+--semicolons never
+--ifdef no-indent
+--self remove
+--importgrouping testable-bottom
+--stripunusedargs closure-only
+--header ignore
+--redundanttype inferred
+--emptybraces no-space
+
+# Enable a conservative set of rules by default (opt in to the common ones)
+--enable isEmpty
+--enable redundantSelf
+--enable redundantParens
+--enable redundantReturn
+--enable redundantVoidReturnType
+--enable redundantType
+--enable trailingSpace
+--enable blankLinesAtStartOfScope
+--enable blankLinesAtEndOfScope
+--enable consecutiveBlankLines
+--enable consecutiveSpaces
+--enable duplicateImports
+--enable sortImports
+--enable spaceAroundBraces
+--enable spaceAroundBrackets
+--enable spaceAroundComments
+--enable spaceAroundGenerics
+--enable spaceAroundOperators
+--enable spaceAroundParens
+--enable spaceInsideBraces
+--enable spaceInsideBrackets
+--enable spaceInsideComments
+--enable spaceInsideGenerics
+--enable spaceInsideParens
+--enable todos
+--enable void
+--enable wrapArguments
+--enable wrapMultilineStatementBraces

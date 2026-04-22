@@ -108,7 +108,7 @@
                 devShells = {
                     default = mkShell {
                         inputsFrom = [ bin ];
-                        buildInputs = [ openapi-down-convert ];
+                        buildInputs = [ openapi-down-convert swiftlint swiftformat ];
 
                         shellHook = ''
                             # Work inside the server subdirectory so cargo commands pick up
