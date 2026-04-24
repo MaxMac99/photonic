@@ -10,7 +10,6 @@ import Foundation
 
 /// A description
 final class AuthRepositoryImpl: AuthRepository {
-    
     private let logger = LoggerFactory.logger(for: .auth)
 
     private let authManager: AuthManager
@@ -22,26 +21,26 @@ final class AuthRepositoryImpl: AuthRepository {
 
     func getUserAccount() async throws -> UserAccount {
         logger.debug("Fetching user account from token")
-        
+
         guard let token = await authManager.getCurrentToken() else {
             logger.error("No token available when fetching user account")
             throw AuthError.noToken
         }
-        
+
         let claims = token.jwt.claims
-        
+
         guard let email = claims.email else {
             logger.error("Missing email claim in JWT")
             throw AuthError.missingClaim("email")
         }
-        
-        var quota: UserAccount.Quota? = nil
+
+        var quota: UserAccount.Quota?
         if let quotaString = claims.quota {
             quota = parseQuota(from: quotaString)
         }
-        
+
         logger.info("Successfully retrieved user account for: \(claims.sub)")
-        
+
         return UserAccount(
             id: claims.sub,
             email: email,
@@ -57,15 +56,16 @@ final class AuthRepositoryImpl: AuthRepository {
             createdAt: claims.iat
         )
     }
-    
+
     private func parseQuota(from quotaString: String) -> UserAccount.Quota? {
         let components = quotaString.split(separator: "/")
         guard components.count == 2,
               let usedBytes = Int64(components[0]),
-              let totalBytes = Int64(components[1]) else {
+              let totalBytes = Int64(components[1])
+        else {
             return nil
         }
-        
+
         return UserAccount.Quota(
             totalBytes: totalBytes,
             usedBytes: usedBytes
@@ -74,7 +74,7 @@ final class AuthRepositoryImpl: AuthRepository {
 
     func signInInteractive() async throws -> (access: AccessToken, refresh: RefreshToken) {
         logger.info("Starting interactive sign-in")
-        
+
         let token = try await authManager.getAccessToken()
         logger.debug("Access token obtained")
 
@@ -93,7 +93,7 @@ final class AuthRepositoryImpl: AuthRepository {
 
         // Store tokens in Keychain
         logger.debug("Storing tokens in keychain")
-        
+
         if let accessTokenData = accessToken.value.data(using: .utf8) {
             try KeychainHelper.upsertData(
                 data: accessTokenData,

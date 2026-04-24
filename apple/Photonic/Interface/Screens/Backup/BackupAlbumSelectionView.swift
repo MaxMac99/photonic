@@ -9,7 +9,6 @@ import PhotosUI
 import SwiftUI
 
 public struct BackupAlbumSelectionView: View {
-
     @ObservedObject var viewModel: BackupAlbumSelectionViewModel
 
     public var body: some View {
@@ -77,7 +76,7 @@ public struct BackupAlbumSelectionView: View {
             }
         }
         .alert("Error", isPresented: $viewModel.showError) {
-            Button("OK") { }
+            Button("OK") {}
         } message: {
             Text(viewModel.errorMessage)
         }
@@ -85,8 +84,8 @@ public struct BackupAlbumSelectionView: View {
 
     private func tagColor(for type: AlbumSelectionType) -> Color {
         switch type {
-        case .included: return .green
-        case .excluded: return .red
+        case .included: .green
+        case .excluded: .red
         }
     }
 }
@@ -99,13 +98,17 @@ public struct BackupAlbumSelectionView: View {
     )
 }
 
-// Mock for preview
+/// Mock for preview
 private class MockBackupSelectionRepository: BackupSelectionRepository {
-    func fetchSelections() async throws -> [BackupAlbumSelectionEntity] { [] }
+    func fetchSelections() async throws -> [BackupAlbumSelectionEntity] {
+        []
+    }
+
     func saveSelection(_ selection: BackupAlbumSelectionEntity) async throws {}
     func deleteSelection(withId id: String) async throws {}
     func findSelection(byAlbumId albumId: String) async throws -> BackupAlbumSelectionEntity? {
         nil
     }
+
     func clearAllSelections() async throws {}
 }

@@ -9,7 +9,6 @@ import Foundation
 import OpenAPIURLSession
 
 final class ServerConfigurationRepositoryImpl: ServerConfigurationRepository {
-
     private let userDefaults: UserDefaults
     private let configurationKey = "de.photonic.serverConfiguration"
 
@@ -56,7 +55,7 @@ final class ServerConfigurationRepositoryImpl: ServerConfigurationRepository {
 
             // Map the API response to our domain model
             guard let authorizeUrl = URL(string: info.authorize_url),
-                let tokenUrl = URL(string: info.token_url)
+                  let tokenUrl = URL(string: info.token_url)
             else {
                 throw DomainError.unknown("Invalid OAuth URLs received from server")
             }
@@ -72,4 +71,3 @@ final class ServerConfigurationRepositoryImpl: ServerConfigurationRepository {
         }
     }
 }
-

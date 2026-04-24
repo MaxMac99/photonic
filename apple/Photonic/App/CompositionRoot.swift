@@ -11,7 +11,6 @@ import SwiftData
 import SwiftUI
 
 final class CompositionRoot {
-
     // MARK: - Properties
 
     private let serverInfo: ServerInfo
@@ -20,63 +19,47 @@ final class CompositionRoot {
 
     // MARK: - Repositories (Infrastructure)
 
-    private lazy var serverConfigRepository: ServerConfigurationRepository = {
-        ServerConfigurationRepositoryImpl()
-    }()
+    private lazy var serverConfigRepository: ServerConfigurationRepository = ServerConfigurationRepositoryImpl()
 
-    private lazy var authRepository: AuthRepository = {
-        AuthRepositoryImpl(authManager: authManager)
-    }()
+    private lazy var authRepository: AuthRepository = AuthRepositoryImpl(authManager: authManager)
 
-    private lazy var mediaRepository: MediaRepository = {
-        MediaRepositoryImpl(apiClient: apiClient)
-    }()
+    private lazy var mediaRepository: MediaRepository = MediaRepositoryImpl(apiClient: apiClient)
 
-    private lazy var albumRepository: AlbumRepository = {
-        AlbumRepositoryImpl(apiClient: apiClient)
-    }()
+    private lazy var albumRepository: AlbumRepository = AlbumRepositoryImpl(apiClient: apiClient)
 
-    private lazy var userRepository: UserRepository = {
-        UserRepositoryImpl(apiClient: apiClient)
-    }()
+    private lazy var userRepository: UserRepository = UserRepositoryImpl(apiClient: apiClient)
 
-    private lazy var photoLibraryAdapter: PhotoLibraryAdapter = {
-        PhotoLibraryAdapter()
-    }()
+    private lazy var photoLibraryAdapter = PhotoLibraryAdapter()
 
     // MARK: - Services (Infrastructure)
-    
-    private lazy var backupService: BackupServiceProtocol = {
-        BackupService(
-            mediaRepository: mediaRepository,
-            albumRepository: albumRepository,
-            photoLibraryAdapter: photoLibraryAdapter
-        )
-    }()
 
-    lazy var discoverServerUseCase: DiscoverServerUseCaseProtocol = {
-        DiscoverServerUseCase(
-            serverConfigurationRepository: serverConfigRepository
-        )
-    }()
+    private lazy var backupService: BackupServiceProtocol = BackupService(
+        mediaRepository: mediaRepository,
+        albumRepository: albumRepository,
+        photoLibraryAdapter: photoLibraryAdapter
+    )
+
+    lazy var discoverServerUseCase: DiscoverServerUseCaseProtocol = DiscoverServerUseCase(
+        serverConfigurationRepository: serverConfigRepository
+    )
 
     // MARK: - Initialization
 
     init(serverInfo: ServerInfo) {
         self.serverInfo = serverInfo
-        self.authManager = AuthManager(
+        authManager = AuthManager(
             clientId: serverInfo.clientId,
             authorizeUrl: serverInfo.authorizationUrl,
             tokenUrl: serverInfo.tokenUrl
         )
 
         // Create API client with logging and auth middleware
-        self.apiClient = Client(
+        apiClient = Client(
             serverURL: serverInfo.serverUrl,
             transport: URLSessionTransport(),
             middlewares: [
-                LoggingMiddleware(),  // Log requests/responses first
-                AuthMiddleware(manager: authManager),  // Then add auth
+                LoggingMiddleware(), // Log requests/responses first
+                AuthMiddleware(manager: authManager) // Then add auth
             ]
         )
     }

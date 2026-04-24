@@ -47,7 +47,6 @@ enum KeychainError: Error {
 /// - Important: This class uses static methods and does not maintain state.
 ///              All operations are atomic and thread-safe at the Security framework level.
 class KeychainHelper {
-
     /// Adds new data to the Keychain for the specified service and account.
     ///
     /// This method creates a new Keychain item with the provided data. It will fail
@@ -69,7 +68,7 @@ class KeychainHelper {
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
                 kSecAttrAccount as String: account,
-                kSecValueData as String: data,
+                kSecValueData as String: data
             ] as [String: Any]
 
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -104,7 +103,7 @@ class KeychainHelper {
                 kSecAttrService as String: service,
                 kSecAttrAccount as String: account,
                 kSecMatchLimit as String: kSecMatchLimitOne,
-                kSecReturnData as String: true,
+                kSecReturnData as String: true
             ] as [String: Any]
 
         var result: AnyObject?
@@ -144,7 +143,7 @@ class KeychainHelper {
             [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
-                kSecAttrAccount as String: account,
+                kSecAttrAccount as String: account
             ] as [String: Any]
         let attributes =
             [
@@ -206,7 +205,7 @@ class KeychainHelper {
             [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
-                kSecAttrAccount as String: account,
+                kSecAttrAccount as String: account
             ] as [String: Any]
 
         let status = SecItemDelete(query as CFDictionary)

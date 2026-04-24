@@ -7,54 +7,59 @@
 
 import OpenAPIURLSession
 import Photos
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 #if DEBUG
-    import XcodebuildNvimPreview
+import XcodebuildNvimPreview
 #endif
 
 @main
 struct PhotonicApp: App {
-
     @AppStorage("serverInfo") private var serverInfoData: Data?
-    @StateObject private var compositionRoot: CompositionRootContainer = CompositionRootContainer()
+    @StateObject private var compositionRoot = CompositionRootContainer()
 
     private var client: APIProtocol? {
-        guard let serverInfoData else { return nil }
-        guard
-            let serverInfo = try? JSONDecoder().decode(
-                ServerInfo.self, from: serverInfoData)
-        else { return nil }
+        guard let serverInfoData else {
+            return nil
+        }
+        guard let serverInfo = try? JSONDecoder().decode(
+            ServerInfo.self, from: serverInfoData
+        ) else {
+            return nil
+        }
         let authManager = AuthManager(
             clientId: serverInfo.clientId,
             authorizeUrl: serverInfo.authorizationUrl,
-            tokenUrl: serverInfo.tokenUrl)
+            tokenUrl: serverInfo.tokenUrl
+        )
         return Client(
             serverURL: serverInfo.serverUrl, transport: URLSessionTransport(),
             middlewares: [
                 LoggingMiddleware(),
-                AuthMiddleware(manager: authManager),
-            ])
+                AuthMiddleware(manager: authManager)
+            ]
+        )
     }
 
     var body: some Scene {
         WindowGroup {
             Group {
                 if compositionRoot.serverConfiguration != nil {
-                    PhotonicMainView()
-                        .environment(\.apiClient, client ?? createMockClient())
-                        .environment(\.compositionRoot, compositionRoot.root)
+                    PhotonicMainView().environment(\.apiClient, client ?? createMockClient()).environment(
+                        \.compositionRoot,
+                        compositionRoot.root
+                    )
                 } else {
                     SetupUrlView(
                         viewModel: createSetupViewModel(),
-                        onSetupComplete: { config in
+                        onSetupComplete: {
+                            config in
                             compositionRoot.setConfiguration(config)
                         }
                     )
                 }
-            }
-            .modelContainer(for: BackupAlbumSelection.self)
+            }.modelContainer(for: BackupAlbumSelection.self)
             #if DEBUG
                 .setupNvimPreview {
                     NavigationStack {
@@ -71,7 +76,7 @@ struct PhotonicApp: App {
     }
 
     private func createMockClient() -> APIProtocol {
-        return Client(
+        Client(
             serverURL: URL(string: "http://localhost")!,
             transport: URLSessionTransport()
         )
@@ -85,7 +90,9 @@ final class CompositionRootContainer: ObservableObject {
     @Published var serverConfiguration: ServerConfiguration?
 
     var root: CompositionRoot? {
-        guard let serverInfo = serverConfiguration else { return nil }
+        guard let serverInfo = serverConfiguration else {
+            return nil
+        }
         // Convert ServerConfiguration to ServerInfo for legacy compatibility
         let legacyServerInfo = ServerInfo(
             serverUrl: serverInfo.serverUrl.value,
@@ -103,21 +110,22 @@ final class CompositionRootContainer: ObservableObject {
     func loadConfiguration() {
         // Try to load existing configuration
         if let data = UserDefaults.standard.data(forKey: "de.photonic.serverConfiguration"),
-            let config = try? JSONDecoder().decode(ServerConfiguration.self, from: data)
+           let config = try? JSONDecoder().decode(ServerConfiguration.self, from: data)
         {
-            self.serverConfiguration = config
+            serverConfiguration = config
         }
     }
 
     func setConfiguration(_ config: ServerConfiguration) {
-        self.serverConfiguration = config
+        serverConfiguration = config
     }
 }
 
 struct ApiClientKey: EnvironmentKey {
     static var defaultValue: APIProtocol = Client(
         serverURL: URL(string: "http://localhost")!,
-        transport: URLSessionTransport())
+        transport: URLSessionTransport()
+    )
 }
 
 extension EnvironmentValues {

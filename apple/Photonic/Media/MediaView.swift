@@ -9,7 +9,6 @@ import OpenAPIURLSession
 import SwiftUI
 
 struct MediaView: View {
-    
     private static let logger = LoggerFactory.logger(for: .ui)
 
     private static let pageSize = 60
@@ -48,8 +47,7 @@ struct MediaView: View {
     }
 }
 
-extension Components.Schemas.MediumListResponse: Identifiable {
-}
+extension Components.Schemas.MediumListResponse: Identifiable {}
 
 #Preview {
     MediaView()

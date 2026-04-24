@@ -9,7 +9,7 @@ import SwiftUI
 
 public struct BackupProgressView: View {
     @ObservedObject var viewModel: BackupAlbumSelectionViewModel
-    
+
     public var body: some View {
         NavigationView {
             VStack(spacing: 20) {
@@ -18,7 +18,7 @@ public struct BackupProgressView: View {
                     Text(viewModel.statusMessage)
                         .font(.headline)
                         .multilineTextAlignment(.center)
-                    
+
                     if viewModel.isBackupInProgress {
                         Text(viewModel.progressText)
                             .font(.subheadline)
@@ -26,7 +26,7 @@ public struct BackupProgressView: View {
                     }
                 }
                 .padding()
-                
+
                 // Progress Bar
                 if let progress = viewModel.backupProgress {
                     VStack(spacing: 12) {
@@ -35,28 +35,28 @@ public struct BackupProgressView: View {
                             total: Double(progress.totalItems)
                         )
                         .progressViewStyle(.linear)
-                        
+
                         HStack {
                             Text("\(Int(progress.progressPercentage))%")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            
+
                             Spacer()
-                            
+
                             Text("\(progress.processedItems) / \(progress.totalItems)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
                     }
                     .padding(.horizontal)
-                    
+
                     // Current Item
                     if let currentItem = progress.currentItem, progress.status == .uploading {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Currently uploading:")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            
+
                             Text(currentItem.id)
                                 .font(.caption)
                                 .foregroundColor(.primary)
@@ -65,7 +65,7 @@ public struct BackupProgressView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
                     }
-                    
+
                     // Errors
                     if !progress.errors.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
@@ -76,7 +76,7 @@ public struct BackupProgressView: View {
                                     .font(.subheadline)
                                     .foregroundColor(.orange)
                             }
-                            
+
                             ScrollView {
                                 LazyVStack(alignment: .leading, spacing: 4) {
                                     ForEach(progress.errors.suffix(5), id: \.mediaId) { error in
@@ -97,9 +97,9 @@ public struct BackupProgressView: View {
                         .padding(.horizontal)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 // Control Buttons
                 HStack(spacing: 16) {
                     if viewModel.isBackupInProgress {
@@ -118,7 +118,7 @@ public struct BackupProgressView: View {
                             }
                             .buttonStyle(.bordered)
                         }
-                        
+
                         Button("Cancel") {
                             Task {
                                 await viewModel.cancelBackup()
@@ -153,11 +153,17 @@ public struct BackupProgressView: View {
     )
 }
 
-// Mock for preview
+/// Mock for preview
 private class MockBackupSelectionRepository: BackupSelectionRepository {
-    func fetchSelections() async throws -> [BackupAlbumSelectionEntity] { [] }
+    func fetchSelections() async throws -> [BackupAlbumSelectionEntity] {
+        []
+    }
+
     func saveSelection(_ selection: BackupAlbumSelectionEntity) async throws {}
     func deleteSelection(withId id: String) async throws {}
-    func findSelection(byAlbumId albumId: String) async throws -> BackupAlbumSelectionEntity? { nil }
+    func findSelection(byAlbumId albumId: String) async throws -> BackupAlbumSelectionEntity? {
+        nil
+    }
+
     func clearAllSelections() async throws {}
 }

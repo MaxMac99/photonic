@@ -12,7 +12,6 @@ import SwiftUI
 // MARK: - Preview Dependencies Container
 
 enum PreviewDependencies {
-
     // MARK: - Mock Repositories
 
     static let mockAuthRepository = MockAuthRepository()
@@ -30,17 +29,18 @@ enum PreviewDependencies {
 
     static func createMockClient() -> APIProtocol {
         // Return the MockAPI from the Preview Content folder
-        return MockAPI()
+        MockAPI()
     }
 
     static func createMockCompositionRoot() -> CompositionRoot {
-        return CompositionRoot(
+        CompositionRoot(
             serverInfo: ServerInfo(
                 serverUrl: URL(string: "https://photonic.example.com")!,
                 clientId: "mock-client",
                 tokenUrl: URL(string: "https://photonic.example.com/oauth/token")!,
                 authorizationUrl: URL(string: "https://photonic.example.com/oauth/authorize")!
-            ))
+            )
+        )
     }
 
     // MARK: - Sample Data
@@ -108,7 +108,7 @@ enum PreviewDependencies {
             coverMediaId: nil,
             isShared: false,
             ownerUserId: "user-123"
-        ),
+        )
     ]
 
     static let sampleMediaItems = [
@@ -147,7 +147,7 @@ enum PreviewDependencies {
             duration: nil,
             location: MediaItem.Location(latitude: 40.7128, longitude: -74.0060, altitude: 10.0),
             albumIds: ["album-2"]
-        ),
+        )
     ]
 }
 
@@ -172,13 +172,13 @@ final class MockAuthRepository: AuthRepository {
     }
 
     func getUserAccount() async throws -> UserAccount {
-        return PreviewDependencies.sampleUser
+        PreviewDependencies.sampleUser
     }
 }
 
 final class MockMediaRepository: MediaRepository {
     func listAlbums() async throws -> [Album] {
-        return PreviewDependencies.sampleAlbums
+        PreviewDependencies.sampleAlbums
     }
 
     func listMedia(in albums: [Album]) async throws -> AsyncThrowingStream<MediaItem, Error> {
@@ -195,21 +195,21 @@ final class MockMediaRepository: MediaRepository {
     func fetchMedia(albumId: String?, startDate: Date?, endDate: Date?, page: Int, pageSize: Int)
         async throws -> [MediaItem]
     {
-        return PreviewDependencies.sampleMediaItems
+        PreviewDependencies.sampleMediaItems
     }
 
     func upload(_ item: MediaItem, data: Data) async throws -> UploadResult {
-        return UploadResult(mediaId: item.id, success: true, error: nil)
+        UploadResult(mediaId: item.id, success: true, error: nil)
     }
 
     func getMediaData(for item: MediaItem) async throws -> Data {
-        return Data()
+        Data()
     }
 }
 
 final class MockAlbumRepository: AlbumRepository {
     func fetchAll() async throws -> [Album] {
-        return PreviewDependencies.sampleAlbums
+        PreviewDependencies.sampleAlbums
     }
 
     func fetch(id: String) async throws -> Album {
@@ -220,7 +220,7 @@ final class MockAlbumRepository: AlbumRepository {
     }
 
     func create(name: String) async throws -> Album {
-        return Album(
+        Album(
             id: UUID().uuidString,
             name: name,
             createdAt: Date(),
@@ -230,7 +230,7 @@ final class MockAlbumRepository: AlbumRepository {
     }
 
     func update(_ album: Album) async throws -> Album {
-        return album
+        album
     }
 
     func delete(id: String) async throws {
@@ -248,7 +248,7 @@ final class MockAlbumRepository: AlbumRepository {
 
 final class MockUserRepository: UserRepository {
     func getUserStats() async throws -> UserStats {
-        return UserStats(
+        UserStats(
             albums: 3,
             media: 757,
             quota: 100_000_000_000,
@@ -261,7 +261,7 @@ final class MockServerConfigurationRepository: ServerConfigurationRepository {
     var configuration: ServerConfiguration? = PreviewDependencies.sampleServerConfig
 
     func getCurrentConfiguration() async throws -> ServerConfiguration? {
-        return configuration
+        configuration
     }
 
     func saveConfiguration(_ configuration: ServerConfiguration) async throws {
@@ -269,11 +269,11 @@ final class MockServerConfigurationRepository: ServerConfigurationRepository {
     }
 
     func deleteConfiguration() async throws {
-        self.configuration = nil
+        configuration = nil
     }
 
     func discoverServerInfo(url: URL) async throws -> ServerDiscoveryInfo {
-        return ServerDiscoveryInfo(
+        ServerDiscoveryInfo(
             clientId: "discovered-client-id",
             authorizeUrl: URL(string: "\(url.absoluteString)/oauth/authorize")!,
             tokenUrl: URL(string: "\(url.absoluteString)/oauth/token")!,
@@ -289,7 +289,7 @@ final class MockBackupService: BackupServiceProtocol {
         AsyncThrowingStream { continuation in
             Task {
                 let total = 10
-                for i in 0...total {
+                for i in 0 ... total {
                     continuation.yield(
                         BackupProgress(
                             totalItems: total,
@@ -298,7 +298,8 @@ final class MockBackupService: BackupServiceProtocol {
                                 ? PreviewDependencies.sampleMediaItems.first : nil,
                             status: i < total ? .uploading : .completed,
                             errors: []
-                        ))
+                        )
+                    )
                     try? await Task.sleep(nanoseconds: 500_000_000)
                 }
                 continuation.finish()

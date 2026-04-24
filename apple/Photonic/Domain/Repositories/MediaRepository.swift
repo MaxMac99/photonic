@@ -19,7 +19,7 @@ public struct UploadResult: Equatable {
     public let mediaId: String
     public let success: Bool
     public let error: String?
-    
+
     public init(mediaId: String, success: Bool, error: String? = nil) {
         self.mediaId = mediaId
         self.success = success

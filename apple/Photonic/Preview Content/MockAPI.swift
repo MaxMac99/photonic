@@ -29,19 +29,19 @@ struct MockAPI: APIProtocol {
     func add_medium_item(_ input: Operations.add_medium_item.Input) async throws
         -> Operations.add_medium_item.Output
     {
-        return .created(.init(body: .json(UUID().uuidString)))
+        .created(.init(body: .json(UUID().uuidString)))
     }
 
     func delete_medium(_ input: Operations.delete_medium.Input) async throws
         -> Operations.delete_medium.Output
     {
-        return .noContent(.init())
+        .noContent(.init())
     }
 
     func create_medium(_ input: Operations.create_medium.Input) async throws
         -> Operations.create_medium.Output
     {
-        return .created(.init(body: .json(UUID().uuidString)))
+        .created(.init(body: .json(UUID().uuidString)))
     }
 
     func get_medium(_ input: Operations.get_medium.Input) async throws
@@ -59,7 +59,7 @@ struct MockAPI: APIProtocol {
                             .init(
                                 created_at: now,
                                 filename: "IMG_4597",
-                                filesize: 12_000,
+                                filesize: 12000,
                                 id: UUID().uuidString,
                                 is_primary: true,
                                 medium_item_type: .original,
@@ -69,25 +69,31 @@ struct MockAPI: APIProtocol {
                         ],
                         medium_type: .PHOTO,
                         updated_at: now
-                    ))))
+                    )
+                )
+            )
+        )
     }
 
     func get_medium_metadata(_ input: Operations.get_medium_metadata.Input) async throws
         -> Operations.get_medium_metadata.Output
     {
-        return .ok(
+        .ok(
             .init(
                 body: .json(
                     .init(
-                        file_info: .init(file_size: 12_000, mime_type: "image/raw"),
+                        file_info: .init(file_size: 12000, mime_type: "image/raw"),
                         technical: .init()
-                    ))))
+                    )
+                )
+            )
+        )
     }
 
     func get_all_media(_ input: Operations.get_all_media.Input) async throws
         -> Operations.get_all_media.Output
     {
-        return .ok(
+        .ok(
             .init(
                 body: .json([
                     .init(
@@ -95,21 +101,24 @@ struct MockAPI: APIProtocol {
                         items: [
                             .init(
                                 filename: "IMG_4597",
-                                filesize: 12_000,
+                                filesize: 12000,
                                 id: UUID().uuidString,
                                 is_primary: true,
                                 medium_item_type: .original,
                                 mime: "image/raw"
                             )
                         ],
-                        medium_type: .PHOTO)
-                ])))
+                        medium_type: .PHOTO
+                    )
+                ])
+            )
+        )
     }
 
     func system_info(_ input: Operations.system_info.Input) async throws
         -> Operations.system_info.Output
     {
-        return .ok(
+        .ok(
             .init(
                 body: .json(
                     .init(
@@ -117,6 +126,9 @@ struct MockAPI: APIProtocol {
                         client_id: "nWqJe0OkoCG5wXXjYdXWWOF78RNFIknlsyKtxHH2",
                         token_url: "https://auth.mvissing.de/application/o/token/",
                         version: "0.1.0"
-                    ))))
+                    )
+                )
+            )
+        )
     }
 }

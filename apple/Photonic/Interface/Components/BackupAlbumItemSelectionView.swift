@@ -9,19 +9,18 @@ import Photos
 import SwiftUI
 
 public struct BackupAlbumItemSelectionView: View {
-
     @StateObject private var viewModel: BackupAlbumItemViewModel
     let selection: BackupAlbumSelectionEntity?
     let onSelectionChange: (AlbumSelectionType?) -> Void
-    
+
     private let height: CGFloat = 124
-    
+
     public init(
         collection: PHAssetCollection,
         selection: BackupAlbumSelectionEntity?,
         onSelectionChange: @escaping (AlbumSelectionType?) -> Void
     ) {
-        self._viewModel = StateObject(wrappedValue: BackupAlbumItemViewModel(collection: collection))
+        _viewModel = StateObject(wrappedValue: BackupAlbumItemViewModel(collection: collection))
         self.selection = selection
         self.onSelectionChange = onSelectionChange
     }
@@ -30,7 +29,7 @@ public struct BackupAlbumItemSelectionView: View {
         HStack(alignment: .center) {
             HStack(alignment: .center, spacing: 20) {
                 Group {
-                    if let selection = selection {
+                    if let selection {
                         switch selection.selectionType {
                         case .included:
                             Image(systemName: "checkmark.circle.fill")
@@ -65,8 +64,6 @@ public struct BackupAlbumItemSelectionView: View {
             } else if viewModel.isLoadingImage {
                 ProgressView()
                     .padding()
-            } else {
-                EmptyView()
             }
         }
         .task {
@@ -83,7 +80,7 @@ public struct BackupAlbumItemSelectionView: View {
             }
         }
         .onTapGesture(count: 2) {
-            if let selection = selection, selection.selectionType == .excluded {
+            if let selection, selection.selectionType == .excluded {
                 // Remove exclusion
                 onSelectionChange(nil)
             } else {
@@ -92,7 +89,6 @@ public struct BackupAlbumItemSelectionView: View {
             }
         }
     }
-
 }
 
 #Preview {

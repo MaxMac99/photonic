@@ -26,29 +26,29 @@ extension DomainError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .authenticationRequired:
-            return "Authentication is required to perform this action"
+            "Authentication is required to perform this action"
         case .tokenExpired:
-            return "Your session has expired. Please sign in again"
-        case .networkError(let message):
-            return "Network error: \(message)"
-        case .serverError(let code, let message):
-            return "Server error (\(code)): \(message)"
-        case .validationError(let message):
-            return "Validation error: \(message)"
-        case .notFound(let resource):
-            return "\(resource) not found"
+            "Your session has expired. Please sign in again"
+        case let .networkError(message):
+            "Network error: \(message)"
+        case let .serverError(code, message):
+            "Server error (\(code)): \(message)"
+        case let .validationError(message):
+            "Validation error: \(message)"
+        case let .notFound(resource):
+            "\(resource) not found"
         case .unauthorized:
-            return "You are not authorized to perform this action"
+            "You are not authorized to perform this action"
         case .forbidden:
-            return "Access to this resource is forbidden"
-        case .conflict(let message):
-            return "Conflict: \(message)"
-        case .decoding(let message):
-            return "Decoding: \(message)"
-        case .encoding(let message):
-            return "Encoding: \(message)"
-        case .unknown(let message):
-            return "An unknown error occurred: \(message)"
+            "Access to this resource is forbidden"
+        case let .conflict(message):
+            "Conflict: \(message)"
+        case let .decoding(message):
+            "Decoding: \(message)"
+        case let .encoding(message):
+            "Encoding: \(message)"
+        case let .unknown(message):
+            "An unknown error occurred: \(message)"
         }
     }
 }
@@ -67,19 +67,19 @@ extension AuthError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noToken:
-            return "No authentication token available"
+            "No authentication token available"
         case .invalidToken:
-            return "Invalid authentication token"
-        case .refreshFailed(let reason):
-            return "Failed to refresh token: \(reason)"
+            "Invalid authentication token"
+        case let .refreshFailed(reason):
+            "Failed to refresh token: \(reason)"
         case .signInCancelled:
-            return "Sign in was cancelled"
-        case .signInFailed(let reason):
-            return "Sign in failed: \(reason)"
-        case .keychainError(let message):
-            return "Keychain error: \(message)"
-        case .missingClaim(let claim):
-            return "Missing required claim: \(claim)"
+            "Sign in was cancelled"
+        case let .signInFailed(reason):
+            "Sign in failed: \(reason)"
+        case let .keychainError(message):
+            "Keychain error: \(message)"
+        case let .missingClaim(claim):
+            "Missing required claim: \(claim)"
         }
     }
 }

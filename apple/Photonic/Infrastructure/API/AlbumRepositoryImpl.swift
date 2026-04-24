@@ -9,7 +9,6 @@ import Foundation
 import OpenAPIURLSession
 
 final class AlbumRepositoryImpl: AlbumRepository {
-
     private let logger = LoggerFactory.logger(for: .api)
     private let apiClient: APIProtocol
 
@@ -44,7 +43,7 @@ final class AlbumRepositoryImpl: AlbumRepository {
             updatedAt: Date(),
             ownerUserId: "stub-user-id"
         )
-        
+
         logger.info("Album created successfully: \(album.id) (stub implementation)")
         return album
     }

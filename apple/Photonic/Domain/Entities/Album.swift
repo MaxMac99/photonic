@@ -16,7 +16,7 @@ public struct Album: Equatable, Hashable {
     public let coverMediaId: String?
     public let isShared: Bool
     public let ownerUserId: String
-    
+
     public init(
         id: String,
         name: String,
@@ -36,8 +36,8 @@ public struct Album: Equatable, Hashable {
         self.isShared = isShared
         self.ownerUserId = ownerUserId
     }
-    
-    // Convenience initializer for local albums
+
+    /// Convenience initializer for local albums
     public init(id: String, name: String, assetCount: Int) {
         self.init(
             id: id,

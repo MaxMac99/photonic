@@ -9,7 +9,6 @@ import Foundation
 import OpenAPIURLSession
 
 final class UserRepositoryImpl: UserRepository {
-
     private let logger = LoggerFactory.logger(for: .api)
     private let apiClient: APIProtocol
 

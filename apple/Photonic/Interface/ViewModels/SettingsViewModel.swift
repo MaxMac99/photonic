@@ -14,7 +14,6 @@ import SwiftUI
 /// Provides real-time data from repositories and handles sign-out functionality.
 @MainActor
 final class SettingsViewModel: ObservableObject {
-
     private let logger = LoggerFactory.logger(for: .ui)
 
     // MARK: - Dependencies
@@ -35,22 +34,22 @@ final class SettingsViewModel: ObservableObject {
     @Published var userStats: UserStats?
 
     /// Loading state for user data
-    @Published var isLoadingUser: Bool = false
+    @Published var isLoadingUser = false
 
     /// Loading state for server info
-    @Published var isLoadingServer: Bool = false
+    @Published var isLoadingServer = false
 
     /// Error message for display
     @Published var errorMessage: String?
 
     /// Connection status
-    @Published var isConnected: Bool = false
+    @Published var isConnected = false
 
     /// Auto backup setting (persisted in UserDefaults)
-    @AppStorage("autoBackupEnabled") var autoBackupEnabled: Bool = true
+    @AppStorage("autoBackupEnabled") var autoBackupEnabled = true
 
     /// Backup over cellular setting (persisted in UserDefaults)
-    @AppStorage("backupOverCellularEnabled") var backupOverCellularEnabled: Bool = false
+    @AppStorage("backupOverCellularEnabled") var backupOverCellularEnabled = false
 
     /// Last backup date (persisted in UserDefaults)
     @AppStorage("lastBackupDate") var lastBackupTimestamp: Double = 0
@@ -90,7 +89,7 @@ final class SettingsViewModel: ObservableObject {
 
     /// Server version (mock for now, should come from server info endpoint)
     var serverVersion: String {
-        "1.0.0"  // TODO: Get from server info endpoint
+        "1.0.0" // TODO: Get from server info endpoint
     }
 
     /// App version string
@@ -153,17 +152,18 @@ final class SettingsViewModel: ObservableObject {
             let account = try await authRepository.getUserAccount()
 
             // Update published properties - this will trigger UI updates
-            self.userStats = stats
-            self.user = account
-            self.isConnected = true
-            self.isLoadingUser = false
+            userStats = stats
+            user = account
+            isConnected = true
+            isLoadingUser = false
 
             logger.info(
-                "User data loaded successfully - Email: \(account.email), Media: \(stats.media)")
+                "User data loaded successfully - Email: \(account.email), Media: \(stats.media)"
+            )
         } catch {
-            self.isLoadingUser = false
-            self.isConnected = false
-            self.errorMessage = "Failed to load user data: \(error.localizedDescription)"
+            isLoadingUser = false
+            isConnected = false
+            errorMessage = "Failed to load user data: \(error.localizedDescription)"
             logger.error("Failed to load user data", error: error)
         }
     }
@@ -177,14 +177,15 @@ final class SettingsViewModel: ObservableObject {
             let config = try await serverConfigurationRepository.getCurrentConfiguration()
 
             // Update published property - this will trigger UI updates
-            self.serverConfiguration = config
-            self.isLoadingServer = false
+            serverConfiguration = config
+            isLoadingServer = false
 
             logger.info(
-                "Server configuration loaded: \(String(describing: config?.serverUrl.value))")
+                "Server configuration loaded: \(String(describing: config?.serverUrl.value))"
+            )
         } catch {
-            self.isLoadingServer = false
-            self.errorMessage = "Failed to load server configuration: \(error.localizedDescription)"
+            isLoadingServer = false
+            errorMessage = "Failed to load server configuration: \(error.localizedDescription)"
             logger.error("Failed to load server configuration", error: error)
         }
     }

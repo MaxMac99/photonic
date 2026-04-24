@@ -20,15 +20,15 @@ struct UserAccount: Equatable, Hashable {
     let emailVerified: Bool
     let quota: Quota?
     let createdAt: Date
-    
+
     struct Quota: Equatable, Hashable {
         let totalBytes: Int64
         let usedBytes: Int64
-        
+
         var availableBytes: Int64 {
             totalBytes - usedBytes
         }
-        
+
         var usagePercentage: Double {
             guard totalBytes > 0 else { return 0 }
             return Double(usedBytes) / Double(totalBytes) * 100
@@ -38,13 +38,13 @@ struct UserAccount: Equatable, Hashable {
 
 extension UserAccount {
     var displayName: String {
-        if let name = name, !name.isEmpty {
+        if let name, !name.isEmpty {
             return name
         }
-        if let preferredUsername = preferredUsername, !preferredUsername.isEmpty {
+        if let preferredUsername, !preferredUsername.isEmpty {
             return preferredUsername
         }
-        if let nickname = nickname, !nickname.isEmpty {
+        if let nickname, !nickname.isEmpty {
             return nickname
         }
         return email

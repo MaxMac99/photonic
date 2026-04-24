@@ -1,5 +1,5 @@
 //
-//  BackupAlbumSelectionPersistentViewModel.swift
+//  BackupAlbumSelectionViewModel.swift
 //  Photonic
 //
 //  Created by Max Vissing on 08.02.25.
@@ -38,7 +38,7 @@ final class BackupAlbumSelectionViewModel: ObservableObject {
         self.backupService = backupService
     }
 
-    public func loadData() async {
+    func loadData() async {
         isLoading = true
         defer { isLoading = false }
 
@@ -69,13 +69,14 @@ final class BackupAlbumSelectionViewModel: ObservableObject {
         )
         allCollections.append(
             contentsOf: smartCollections.objects(
-                at: IndexSet(integersIn: 0..<smartCollections.count)
-            ))
+                at: IndexSet(integersIn: 0 ..< smartCollections.count)
+            )
+        )
 
         // Fetch user collections
         let userCollections = PHCollection.fetchTopLevelUserCollections(with: nil)
         let assetCollections = userCollections.objects(
-            at: IndexSet(integersIn: 0..<userCollections.count)
+            at: IndexSet(integersIn: 0 ..< userCollections.count)
         )
         .compactMap { $0 as? PHAssetCollection }
 
@@ -84,17 +85,17 @@ final class BackupAlbumSelectionViewModel: ObservableObject {
         // Filter out empty collections
         collections = allCollections.filter { collection in
             let assets = PHAsset.fetchAssets(in: collection, options: nil)
-            return assets.count > 0
+            return !assets.isEmpty
         }
 
         Self.logger.info("Loaded \(collections.count) albums")
     }
 
-    public func selection(for collection: PHAssetCollection) -> BackupAlbumSelectionEntity? {
+    func selection(for collection: PHAssetCollection) -> BackupAlbumSelectionEntity? {
         selections.first { $0.albumIdentifier == collection.localIdentifier }
     }
 
-    public func updateSelection(
+    func updateSelection(
         for collection: PHAssetCollection,
         type: AlbumSelectionType?
     ) async {
@@ -133,7 +134,7 @@ final class BackupAlbumSelectionViewModel: ObservableObject {
         }
     }
 
-    public func removeSelection(_ selection: BackupAlbumSelectionEntity) async {
+    func removeSelection(_ selection: BackupAlbumSelectionEntity) async {
         do {
             try await backupSelectionRepository.deleteSelection(withId: selection.id)
             selections.removeAll { $0.id == selection.id }
@@ -145,7 +146,7 @@ final class BackupAlbumSelectionViewModel: ObservableObject {
         }
     }
 
-    public func getAssetCount(for collection: PHAssetCollection) -> Int {
+    func getAssetCount(for collection: PHAssetCollection) -> Int {
         let estimation = collection.estimatedAssetCount
         if estimation != NSNotFound {
             return estimation
@@ -157,8 +158,8 @@ final class BackupAlbumSelectionViewModel: ObservableObject {
 
     // MARK: - Backup Methods
 
-    public func startBackup() async {
-        guard let backupService = backupService else {
+    func startBackup() async {
+        guard let backupService else {
             Self.logger.error("Backup service not available")
             showError = true
             errorMessage = "Backup service not available"
@@ -214,36 +215,36 @@ final class BackupAlbumSelectionViewModel: ObservableObject {
         }
     }
 
-    public func pauseBackup() async {
-        guard let backupService = backupService else { return }
+    func pauseBackup() async {
+        guard let backupService else { return }
         await backupService.pauseBackup()
     }
 
-    public func resumeBackup() async {
-        guard let backupService = backupService else { return }
+    func resumeBackup() async {
+        guard let backupService else { return }
         await backupService.resumeBackup()
     }
 
-    public func cancelBackup() async {
+    func cancelBackup() async {
         backupTask?.cancel()
 
-        guard let backupService = backupService else { return }
+        guard let backupService else { return }
         await backupService.cancelBackup()
 
         isBackupInProgress = false
         backupProgress = nil
     }
 
-    public var hasSelectionsForBackup: Bool {
+    var hasSelectionsForBackup: Bool {
         selections.contains { $0.selectionType == .included }
     }
 
-    public var progressText: String {
+    var progressText: String {
         guard let progress = backupProgress else { return "No backup in progress" }
         return "\(progress.processedItems) / \(progress.totalItems) items"
     }
 
-    public var statusMessage: String {
+    var statusMessage: String {
         guard let progress = backupProgress else { return "Ready to backup" }
 
         switch progress.status {
@@ -255,7 +256,7 @@ final class BackupAlbumSelectionViewModel: ObservableObject {
             return "Backup paused"
         case .completed:
             return "Backup completed successfully"
-        case .failed(let message):
+        case let .failed(message):
             return "Backup failed: \(message)"
         case .canceled:
             return "Backup canceled"

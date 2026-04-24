@@ -1,5 +1,5 @@
 //
-//  PhotonicImage.swift
+//  MediumPreviewView.swift
 //  Photonic
 //
 //  Created by Max Vissing on 26.01.25.
@@ -9,7 +9,6 @@ import OpenAPIURLSession
 import SwiftUI
 
 struct MediumPreviewView: View {
-
     private static let logger = LoggerFactory.logger(for: .ui)
 
     @Environment(\.apiClient) var client
@@ -45,13 +44,14 @@ struct MediumPreviewView: View {
             let imageData = try await Data(collecting: response, upTo: Int.max)
             image = imageData
             Self.logger.debug(
-                "Preview loaded for medium: \(medium.id), size: \(imageData.count) bytes")
+                "Preview loaded for medium: \(medium.id), size: \(imageData.count) bytes"
+            )
         } catch {
             Self.logger.error("Failed to fetch preview for medium: \(medium.id)", error: error)
         }
     }
 }
 
-//#Preview {
+// #Preview {
 //    PhotonicImage()
-//}
+// }

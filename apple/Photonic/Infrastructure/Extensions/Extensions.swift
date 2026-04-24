@@ -9,10 +9,10 @@ import Foundation
 import OSLog
 
 extension Array: Swift.RawRepresentable where Element: Codable {
-
     private static var logger: Logger {
         LoggerFactory.logger(for: .general)
     }
+
     public init?(rawValue: String) {
         guard let data = rawValue.data(using: .utf8) else { return nil }
         do {
@@ -25,7 +25,7 @@ extension Array: Swift.RawRepresentable where Element: Codable {
 
     public var rawValue: String {
         guard let data = try? JSONEncoder().encode(self),
-            let result = String(data: data, encoding: .utf8)
+              let result = String(data: data, encoding: .utf8)
         else {
             return "[]"
         }
@@ -35,10 +35,10 @@ extension Array: Swift.RawRepresentable where Element: Codable {
 }
 
 extension Set: Swift.RawRepresentable where Element: Codable {
-
     private static var logger: Logger {
         LoggerFactory.logger(for: .general)
     }
+
     public init?(rawValue: String) {
         guard let data = rawValue.data(using: .utf8) else { return nil }
         do {
@@ -51,7 +51,7 @@ extension Set: Swift.RawRepresentable where Element: Codable {
 
     public var rawValue: String {
         guard let data = try? JSONEncoder().encode(self),
-            let result = String(data: data, encoding: .utf8)
+              let result = String(data: data, encoding: .utf8)
         else {
             return "[]"
         }

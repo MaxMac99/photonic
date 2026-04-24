@@ -7,8 +7,8 @@
 
 import OSLog
 import PhotosUI
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @Model
 final class BackupAlbumSelection: Hashable {
@@ -16,7 +16,7 @@ final class BackupAlbumSelection: Hashable {
     var name: String
     var selectionType: SelectionType
     var creationDate: Date
-    
+
     init(localIdentifier: String, name: String, selectionType: SelectionType, creationDate: Date) {
         self.localIdentifier = localIdentifier
         self.name = name
@@ -32,7 +32,6 @@ final class BackupAlbumSelection: Hashable {
             creationDate: .now
         )
     }
-
 
     enum SelectionType: Codable {
         case included, excluded

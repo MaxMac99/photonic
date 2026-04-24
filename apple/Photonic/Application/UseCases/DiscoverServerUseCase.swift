@@ -70,7 +70,7 @@ final class DiscoverServerUseCase: DiscoverServerUseCaseProtocol {
             transport: URLSessionTransport(),
             middlewares: [
                 LoggingMiddleware(),
-                AuthMiddleware(manager: authManager),
+                AuthMiddleware(manager: authManager)
             ]
         )
 
@@ -78,7 +78,7 @@ final class DiscoverServerUseCase: DiscoverServerUseCaseProtocol {
 
         // Perform authentication and validate by fetching user stats
         logger.info("Performing interactive sign-in...")
-        let _ = try await authRepository.signInInteractive()
+        _ = try await authRepository.signInInteractive()
         logger.info("Sign-in successful, received tokens")
 
         logger.info("Validating connection by fetching user stats...")
@@ -104,12 +104,12 @@ final class DiscoverServerUseCase: DiscoverServerUseCaseProtocol {
         }
 
         guard let scheme = components.scheme?.lowercased(),
-            ["http", "https"].contains(scheme)
+              ["http", "https"].contains(scheme)
         else {
             return nil
         }
 
-        if components.port == nil && scheme == "http" {
+        if components.port == nil, scheme == "http" {
             components.port = 8080
         }
 

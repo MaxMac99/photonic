@@ -28,17 +28,6 @@ struct BackupProgress: Equatable {
         guard totalItems > 0 else { return 0 }
         return Double(processedItems) / Double(totalItems) * 100
     }
-
-    init(
-        totalItems: Int, processedItems: Int, currentItem: MediaItem?, status: BackupStatus,
-        errors: [BackupError]
-    ) {
-        self.totalItems = totalItems
-        self.processedItems = processedItems
-        self.currentItem = currentItem
-        self.status = status
-        self.errors = errors
-    }
 }
 
 enum BackupStatus: Equatable {
@@ -64,7 +53,6 @@ struct BackupError: Equatable {
 }
 
 final class BackupService: BackupServiceProtocol {
-
     private static let logger = LoggerFactory.logger(for: .application)
 
     private let mediaRepository: MediaRepository
@@ -102,14 +90,14 @@ final class BackupService: BackupServiceProtocol {
                             currentItem: nil,
                             status: .preparing,
                             errors: []
-                        ))
+                        )
+                    )
 
                     // Get albums to backup (only included ones, exclude excluded ones)
                     let includedSelections = selections.filter { $0.selectionType == .included }
-                    let _ = Set(
-                        selections.filter { $0.selectionType == .excluded }.map {
-                            $0.albumIdentifier
-                        })
+                    _ = Set(
+                        selections.filter { $0.selectionType == .excluded }.map(\.albumIdentifier)
+                    )
 
                     // Convert to Album entities
                     var albumsToBackup: [Album] = []
@@ -142,7 +130,7 @@ final class BackupService: BackupServiceProtocol {
                         pageSize: 10000
                     )
 
-                    let existingChecksums = Set(existingMedia.map { $0.checksum })
+                    let existingChecksums = Set(existingMedia.map(\.checksum))
                     let mediaToUpload = allMedia.filter { !existingChecksums.contains($0.checksum) }
 
                     Self.logger.info("Found \(mediaToUpload.count) new items to upload")
@@ -152,8 +140,8 @@ final class BackupService: BackupServiceProtocol {
                     // Upload each media item
                     for (index, item) in mediaToUpload.enumerated() {
                         // Check for pause/cancel
-                        while isPaused && !isCancelled {
-                            try await Task.sleep(nanoseconds: 100_000_000)  // 0.1 second
+                        while isPaused, !isCancelled {
+                            try await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
                         }
 
                         if isCancelled {
@@ -164,7 +152,8 @@ final class BackupService: BackupServiceProtocol {
                                     currentItem: nil,
                                     status: .canceled,
                                     errors: errors
-                                ))
+                                )
+                            )
                             break
                         }
 
@@ -176,7 +165,8 @@ final class BackupService: BackupServiceProtocol {
                                 currentItem: item,
                                 status: .uploading,
                                 errors: errors
-                            ))
+                            )
+                        )
 
                         // Get media data and upload
                         do {
@@ -185,21 +175,23 @@ final class BackupService: BackupServiceProtocol {
                             Self.logger.debug("Successfully uploaded item: \(item.id)")
                         } catch {
                             Self.logger.error(
-                                "Failed to upload item \(item.id): \(error.localizedDescription)")
+                                "Failed to upload item \(item.id): \(error.localizedDescription)"
+                            )
                             errors.append(
                                 BackupError(
                                     mediaId: item.id,
                                     message: error.localizedDescription,
                                     timestamp: Date()
-                                ))
+                                )
+                            )
                         }
                     }
 
                     // Emit completion
                     let finalStatus: BackupStatus =
                         errors.isEmpty
-                        ? .completed
-                        : .failed("Backup completed with \(errors.count) errors")
+                            ? .completed
+                            : .failed("Backup completed with \(errors.count) errors")
 
                     continuation.yield(
                         BackupProgress(
@@ -208,7 +200,8 @@ final class BackupService: BackupServiceProtocol {
                             currentItem: nil,
                             status: finalStatus,
                             errors: errors
-                        ))
+                        )
+                    )
 
                     Self.logger.info("Backup completed with \(errors.count) errors")
                     continuation.finish()
@@ -259,7 +252,7 @@ final class BackupService: BackupServiceProtocol {
         let assets = PHAsset.fetchAssets(in: collection, options: nil)
         var mediaItems: [MediaItem] = []
 
-        for i in 0..<assets.count {
+        for i in 0 ..< assets.count {
             let asset = assets.object(at: i)
 
             // Create MediaItem from PHAsset
@@ -273,7 +266,7 @@ final class BackupService: BackupServiceProtocol {
 
             let mediaItem = MediaItem(
                 id: asset.localIdentifier,
-                checksum: asset.localIdentifier,  // Using identifier as checksum for now
+                checksum: asset.localIdentifier, // Using identifier as checksum for now
                 createdAt: asset.creationDate ?? Date(),
                 location: location
             )
@@ -284,4 +277,3 @@ final class BackupService: BackupServiceProtocol {
         return mediaItems
     }
 }
-

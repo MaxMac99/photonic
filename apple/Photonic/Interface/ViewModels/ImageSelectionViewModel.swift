@@ -13,7 +13,7 @@ import SwiftUI
 public final class ImageSelectionViewModel: ObservableObject {
     private static let logger = LoggerFactory.logger(for: .ui)
     @Published var imageState: ImageState = .empty
-    @Published var selectedItem: PhotosPickerItem? = nil
+    @Published var selectedItem: PhotosPickerItem?
 
     private let photoLibraryAdapter: PhotoLibraryAdapter
 
@@ -33,16 +33,16 @@ public final class ImageSelectionViewModel: ObservableObject {
         var canUpload: Bool {
             switch self {
             case .success:
-                return true
+                true
             default:
-                return false
+                false
             }
         }
     }
 
     public func handleImageSelection(_ item: PhotosPickerItem?) async {
         guard let item else { return }
-        self.selectedItem = item
+        selectedItem = item
 
         guard let identifier = item.itemIdentifier else {
             Self.logger.error("No identifier found for selected item")
@@ -63,7 +63,7 @@ public final class ImageSelectionViewModel: ObservableObject {
     private func loadPreview(item: PhotosPickerItem) async {
         do {
             if let data = try await item.loadTransferable(type: Data.self),
-                let uiImage = UIImage(data: data)
+               let uiImage = UIImage(data: data)
             {
                 Self.logger.debug("Preview loaded: \(uiImage.size)")
                 let swiftImage = Image(uiImage: uiImage)
@@ -93,7 +93,7 @@ public final class ImageSelectionViewModel: ObservableObject {
     }
 
     public func uploadImage() async {
-        guard case .success(_, let assetId) = imageState else {
+        guard case let .success(_, assetId) = imageState else {
             Self.logger.error("Cannot upload: invalid state")
             return
         }
@@ -118,13 +118,12 @@ enum ImageSelectionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noIdentifier:
-            return "No identifier found for selected image"
+            "No identifier found for selected image"
         }
     }
 }
 
-// Placeholder for upload use case
+/// Placeholder for upload use case
 public protocol UploadMediaUseCase {
     func execute(data: Data, filename: String) async throws
 }
-

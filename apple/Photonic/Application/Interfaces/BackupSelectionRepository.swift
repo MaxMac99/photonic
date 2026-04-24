@@ -21,7 +21,7 @@ public struct BackupAlbumSelectionEntity: Equatable, Identifiable {
     public let albumName: String
     public let selectionType: AlbumSelectionType
     public let createdAt: Date
-    
+
     public init(
         id: String = UUID().uuidString,
         albumIdentifier: String,

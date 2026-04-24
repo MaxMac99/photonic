@@ -5,15 +5,14 @@
 //  Interface Layer - Settings Screen
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 #if DEBUG
-    import XcodebuildNvimPreview
+import XcodebuildNvimPreview
 #endif
 
 struct SettingsView: View {
-    
     private let logger = LoggerFactory.logger(for: .ui)
     @Environment(\.apiClient) private var client
     @Environment(\.compositionRoot) private var compositionRoot
@@ -50,7 +49,7 @@ struct SettingsView: View {
             await viewModel.loadData()
         }
         #if DEBUG
-            .setupNvimPreview {
+        .setupNvimPreview {
                 SettingsView(viewModel: SettingsViewModel(
                     authRepository: PreviewDependencies.mockAuthRepository,
                     userRepository: PreviewDependencies.mockUserRepository,
@@ -139,14 +138,14 @@ struct SettingsView: View {
 
     private var backupSection: some View {
         Section("Backup") {
-            if let compositionRoot = compositionRoot {
+            if let compositionRoot {
                 NavigationLink(destination: BackupAlbumSelectionView(
                     viewModel: compositionRoot.makeBackupAlbumSelectionViewModel(modelContext: modelContext)
                 )) {
                     Label("Album Selection", systemImage: "photo.on.rectangle.angled")
                 }
             }
-            
+
             Toggle(isOn: $viewModel.autoBackupEnabled) {
                 Label("Auto Backup", systemImage: "arrow.clockwise")
             }

@@ -10,12 +10,11 @@ import SwiftUI
 
 @MainActor
 class SetupViewModel: ObservableObject {
-
     // MARK: - Published Properties
 
-    @Published var serverUrlString: String = ""
+    @Published var serverUrlString = ""
     @Published var errorMessage: String?
-    @Published var isConnecting: Bool = false
+    @Published var isConnecting = false
     @Published var setupState: SetupState = .idle
 
     // MARK: - Private Properties
@@ -56,27 +55,28 @@ class SetupViewModel: ObservableObject {
             // The use case will handle: discover -> auth -> validate with user_stats
             setupState = .authenticating
             let configuration = try await discoverServerUseCase.discoverAndConnect(
-                urlString: serverUrlString)
-            
+                urlString: serverUrlString
+            )
+
             setupState = .verifying
             // Small delay to show verification state
             try await Task.sleep(nanoseconds: 500_000_000)
-            
+
             setupState = .success(configuration)
             errorMessage = nil
-        } catch DomainError.validationError(let message) {
+        } catch let DomainError.validationError(message) {
             errorMessage = message
             setupState = .error(message)
-        } catch DomainError.networkError(let message) {
+        } catch let DomainError.networkError(message) {
             errorMessage = "Network error: \(message)"
             setupState = .error(errorMessage!)
-        } catch DomainError.serverError(_, let message) {
+        } catch let DomainError.serverError(_, message) {
             errorMessage = "Server error: \(message)"
             setupState = .error(errorMessage!)
         } catch AuthError.signInCancelled {
             errorMessage = "Sign in was cancelled"
             setupState = .idle
-        } catch AuthError.signInFailed(let reason) {
+        } catch let AuthError.signInFailed(reason) {
             errorMessage = "Sign in failed: \(reason)"
             setupState = .error(errorMessage!)
         } catch {
@@ -93,7 +93,6 @@ class SetupViewModel: ObservableObject {
     }
 
     func normalizedUrl() -> URL? {
-        return discoverServerUseCase.validateAndNormalizeUrl(serverUrlString)
+        discoverServerUseCase.validateAndNormalizeUrl(serverUrlString)
     }
 }
-

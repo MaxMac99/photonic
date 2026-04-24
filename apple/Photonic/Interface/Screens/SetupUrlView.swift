@@ -8,11 +8,10 @@
 import SwiftUI
 
 #if DEBUG
-    import XcodebuildNvimPreview
+import XcodebuildNvimPreview
 #endif
 
 struct SetupUrlView: View {
-
     @StateObject private var viewModel: SetupViewModel
     @FocusState private var isUrlFieldFocused: Bool
     @Environment(\.dismiss) private var dismiss
@@ -22,7 +21,7 @@ struct SetupUrlView: View {
         viewModel: @autoclosure @escaping () -> SetupViewModel,
         onSetupComplete: ((ServerConfiguration) -> Void)? = nil
     ) {
-        self._viewModel = StateObject(wrappedValue: viewModel())
+        _viewModel = StateObject(wrappedValue: viewModel())
         self.onSetupComplete = onSetupComplete
     }
 
@@ -44,13 +43,13 @@ struct SetupUrlView: View {
             isUrlFieldFocused = true
         }
         .onChange(of: viewModel.setupState) { _, newState in
-            if case .success(let config) = newState {
+            if case let .success(config) = newState {
                 onSetupComplete?(config)
                 dismiss()
             }
         }
         #if DEBUG
-            .setupNvimPreview {
+        .setupNvimPreview {
                 SetupUrlView(viewModel: MockSetupViewModel())
             }
         #endif
@@ -156,15 +155,15 @@ struct SetupUrlView: View {
     private var buttonTitle: String {
         switch viewModel.setupState {
         case .idle, .error:
-            return "Connect"
+            "Connect"
         case .connecting:
-            return "Connecting..."
+            "Connecting..."
         case .authenticating:
-            return "Authenticating..."
+            "Authenticating..."
         case .verifying:
-            return "Verifying..."
+            "Verifying..."
         case .success:
-            return "Connected"
+            "Connected"
         }
     }
 
@@ -182,8 +181,8 @@ struct SetupUrlView: View {
 final class MockSetupViewModel: SetupViewModel {
     init(state: SetupState = .idle, serverUrl: String = "") {
         super.init(discoverServerUseCase: MockDiscoverServerUseCase())
-        self.setupState = state
-        self.serverUrlString = serverUrl
+        setupState = state
+        serverUrlString = serverUrl
     }
 }
 
@@ -226,7 +225,8 @@ final class MockDiscoverServerUseCase: DiscoverServerUseCaseProtocol {
         viewModel: MockSetupViewModel(
             state: .idle,
             serverUrl: "https://photonic.example.de"
-        ))
+        )
+    )
 }
 
 #Preview("Connecting") {
@@ -238,8 +238,10 @@ final class MockDiscoverServerUseCase: DiscoverServerUseCaseProtocol {
         viewModel: {
             let vm = MockSetupViewModel(
                 state: .error("Failed to connect to server"),
-                serverUrl: "https://photonic.example.de")
+                serverUrl: "https://photonic.example.de"
+            )
             vm.errorMessage = "Failed to connect to server"
             return vm
-        }())
+        }()
+    )
 }

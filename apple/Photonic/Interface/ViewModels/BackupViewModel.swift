@@ -15,7 +15,6 @@ import SwiftUI
 /// to provide real-time backup status and control.
 @MainActor
 final class BackupViewModel: ObservableObject {
-
     // MARK: - Dependencies
 
     private let backupService: BackupServiceProtocol
@@ -33,19 +32,19 @@ final class BackupViewModel: ObservableObject {
     @Published var backupProgress: BackupProgress?
 
     /// Indicates if a backup is currently running
-    @Published var isBackupRunning: Bool = false
+    @Published var isBackupRunning = false
 
     /// Indicates if the backup is paused
-    @Published var isBackupPaused: Bool = false
+    @Published var isBackupPaused = false
 
     /// Loading state for albums
-    @Published var isLoadingAlbums: Bool = false
+    @Published var isLoadingAlbums = false
 
     /// Error message for display
     @Published var errorMessage: String?
 
     /// Backup history/statistics
-    @Published var totalItemsBackedUp: Int = 0
+    @Published var totalItemsBackedUp = 0
     @Published var totalBytesUploaded: Int64 = 0
     @Published var lastBackupDate: Date?
 
@@ -63,7 +62,7 @@ final class BackupViewModel: ObservableObject {
     /// Progress percentage (0-100)
     var progressPercentage: Double {
         guard let progress = backupProgress,
-            progress.totalItems > 0
+              progress.totalItems > 0
         else { return 0 }
         return Double(progress.processedItems) / Double(progress.totalItems) * 100
     }
@@ -130,7 +129,7 @@ final class BackupViewModel: ObservableObject {
 
     /// Selects all albums for backup
     func selectAllAlbums() {
-        selectedAlbumIds = Set(availableAlbums.map { $0.id })
+        selectedAlbumIds = Set(availableAlbums.map(\.id))
     }
 
     /// Deselects all albums
@@ -162,7 +161,7 @@ final class BackupViewModel: ObservableObject {
                         selectionType: .included
                     )
                 }
-                
+
                 let progressStream = try await backupService.startBackup(for: selections)
 
                 for try await progress in progressStream {

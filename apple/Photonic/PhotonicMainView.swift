@@ -5,17 +5,17 @@
 //  Created by Max Vissing on 02.02.25.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 #if DEBUG
-    import Inject
-    import XcodebuildNvimPreview
+import Inject
+import XcodebuildNvimPreview
 #endif
 
 struct PhotonicMainView: View {
     #if DEBUG
-        @ObserveInjection var injection
+    @ObserveInjection var injection
     #endif
 
     @Environment(\.compositionRoot) private var compositionRoot
@@ -49,11 +49,11 @@ struct PhotonicMainView: View {
             }
         }
         #if DEBUG
-            .enableInjection()
+        .enableInjection()
             .setupNvimPreview {
                 PhotonicMainView()
-                .environment(\.apiClient, PreviewDependencies.createMockClient())
-                .environment(\.compositionRoot, PreviewDependencies.createMockCompositionRoot())
+                    .environment(\.apiClient, PreviewDependencies.createMockClient())
+                    .environment(\.compositionRoot, PreviewDependencies.createMockCompositionRoot())
             }
         #endif
     }

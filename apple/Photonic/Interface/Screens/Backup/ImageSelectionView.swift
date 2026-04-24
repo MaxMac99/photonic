@@ -45,11 +45,11 @@ public struct ImageSelectionView: View {
                 EmptyView()
             case .loading:
                 ProgressView()
-            case .preview(let image), .success(let image, _):
+            case let .preview(image), let .success(image, _):
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-            case .error(let error):
+            case let .error(error):
                 VStack(spacing: 10) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 40))
