@@ -111,10 +111,14 @@
                         buildInputs = [ openapi-down-convert ];
 
                         shellHook = ''
+                            # Work inside the server subdirectory so cargo commands pick up
+                            # the workspace Cargo.toml automatically.
+                            cd "$PWD/server"
+
                             # Isolate CARGO_HOME so cargo's subcommand search doesn't
                             # pick up rustup shims from ~/.cargo/bin, which would
                             # shadow the Nix toolchain (e.g. `cargo fmt`).
-                            export CARGO_HOME="$PWD/server/tmpdata/.cargo"
+                            export CARGO_HOME="$PWD/tmpdata/.cargo"
                             mkdir -p "$CARGO_HOME"
                         '';
                     };
