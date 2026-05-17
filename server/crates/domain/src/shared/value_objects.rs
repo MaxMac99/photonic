@@ -20,16 +20,11 @@ impl<T> UpdateOptional<T> {
 }
 
 /// Sort direction for query results
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SortDirection {
     Ascending,
+    #[default]
     Descending,
-}
-
-impl Default for SortDirection {
-    fn default() -> Self {
-        SortDirection::Descending
-    }
 }
 
 /// Keyset cursor for efficient pagination

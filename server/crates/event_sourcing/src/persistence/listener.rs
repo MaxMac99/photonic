@@ -19,11 +19,13 @@ pub(crate) mod fixtures {
 
     use super::*;
 
+    #[allow(dead_code)]
     pub struct MockListener {
         rx: Mutex<Option<tokio::sync::mpsc::Receiver<()>>>,
     }
 
     impl MockListener {
+        #[allow(dead_code)]
         pub fn new() -> (Self, tokio::sync::mpsc::Sender<()>) {
             let (tx, rx) = tokio::sync::mpsc::channel(16);
             (

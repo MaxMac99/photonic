@@ -65,12 +65,11 @@ impl Container {
             .whatever_context("Failed to start ProjectionEventBus")?;
 
         // Phase 7: Background tasks
-        let mut background_tasks = Vec::new();
-        background_tasks.push(spawn_cleanup_task(
+        let background_tasks = vec![spawn_cleanup_task(
             handlers.medium.cleanup_expired_temp_storage.clone(),
             config.storage.temp_ttl_seconds,
             config.storage.cleanup_interval_seconds,
-        ));
+        )];
 
         Ok(Arc::new(Self {
             config,

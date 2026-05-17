@@ -37,7 +37,9 @@ struct FindAllMediumRow {
     pub gps_latitude: Option<f64>,
     pub gps_longitude: Option<f64>,
     pub gps_altitude: Option<f64>,
+    #[allow(dead_code)]
     pub created_at: NaiveDateTime,
+    #[allow(dead_code)]
     pub updated_at: NaiveDateTime,
     pub item_id: Uuid,
     pub medium_item_type: MediumItemTypeDb,
@@ -214,8 +216,8 @@ impl From<&FindAllMediumRow> for MediumListItem {
             row.taken_at_timezone
                 .and_then(|tz| FixedOffset::east_opt(tz).map(|offset| t.with_timezone(&offset)))
         });
-        let gps_coordinates = Option::zip(row.gps_latitude, row.gps_longitude)
-            .map(|(lat, lon)| {
+        let gps_coordinates =
+            Option::zip(row.gps_latitude, row.gps_longitude).and_then(|(lat, lon)| {
                 let coordinates = GpsCoordinates::new(lat, lon, row.gps_altitude);
                 if let Err(e) = &coordinates {
                     error!(
@@ -224,8 +226,7 @@ impl From<&FindAllMediumRow> for MediumListItem {
                     );
                 }
                 coordinates.ok()
-            })
-            .flatten();
+            });
 
         MediumListItem {
             id: row.id,

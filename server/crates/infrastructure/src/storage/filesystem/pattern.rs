@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use chrono::{DateTime, Datelike, FixedOffset, TimeZone, Timelike};
 
 pub struct PatternFields {

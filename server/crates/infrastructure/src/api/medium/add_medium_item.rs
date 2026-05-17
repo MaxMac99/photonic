@@ -19,6 +19,7 @@ use crate::{
     auth::JwtUserClaims,
 };
 
+#[allow(unused_variables)]
 #[instrument(skip(state))]
 #[debug_handler]
 #[utoipa::path(

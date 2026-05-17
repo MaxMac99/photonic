@@ -50,8 +50,7 @@ fn convert_exif_to_metadata(exif: &HashMap<String, Field>, medium_id: MediumId) 
             .get("MIMEType")
             .and_then(|v| v.value.as_str())
             .and_then(|v| mime::Mime::from_str(v).ok())
-            .unwrap_or(mime::APPLICATION_OCTET_STREAM)
-            .into(),
+            .unwrap_or(mime::APPLICATION_OCTET_STREAM),
         file_size: exif
             .get("FileSize")
             .and_then(|v| v.raw.as_ref())

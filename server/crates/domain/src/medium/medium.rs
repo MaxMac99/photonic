@@ -128,7 +128,7 @@ impl ApplyEvent<MediumItemCreatedEvent> for Medium {
 
 impl ApplyEvent<MediumUpdatedEvent> for Medium {
     fn apply(&mut self, e: &MediumUpdatedEvent) {
-        self.taken_at = e.taken_at.clone();
+        self.taken_at = e.taken_at;
         self.camera_make = e.camera_make.clone();
         self.camera_model = e.camera_model.clone();
         self.gps_coordinates = e.gps_coordinates;
@@ -233,7 +233,7 @@ impl Medium {
         let mut event = MediumUpdatedEvent::new(
             self.id,
             self.owner_id,
-            taken_at.clone(),
+            taken_at,
             camera_make.clone(),
             camera_model.clone(),
             gps_coordinates,

@@ -11,7 +11,7 @@ use crate::{api::state::AppState, server::setup_auth};
 
 #[derive(utoipa::ToSchema)]
 #[schema(value_type = String, format = Binary)]
-pub struct Binary(String);
+pub struct Binary(#[allow(dead_code)] String);
 
 #[derive(OpenApi)]
 #[openapi(

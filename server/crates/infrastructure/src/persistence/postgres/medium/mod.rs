@@ -52,7 +52,7 @@ impl MediumRepository for PostgresMediumRepository {
         self.delete_impl(id, user_id).await
     }
 
-    async fn get_user_usage(&self, user_id: UserId) -> DomainResult<Byte> {
+    async fn get_user_usage(&self, _user_id: UserId) -> DomainResult<Byte> {
         todo!()
     }
 

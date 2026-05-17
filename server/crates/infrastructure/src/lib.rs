@@ -1,3 +1,8 @@
+// Allow this stylistic lint workspace-wide for infrastructure: many projection
+// and registry types use `new() -> Self` constructors without a `Default` impl
+// by design.
+#![allow(clippy::new_without_default)]
+
 pub mod api;
 pub mod auth;
 pub mod config;

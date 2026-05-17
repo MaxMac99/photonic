@@ -77,7 +77,7 @@ impl GpsCoordinates {
 
     pub fn new(latitude: f64, longitude: f64, altitude: Option<f64>) -> DomainResult<Self> {
         ensure!(
-            latitude >= Self::MIN_LATITUDE && latitude <= Self::MAX_LATITUDE,
+            (Self::MIN_LATITUDE..=Self::MAX_LATITUDE).contains(&latitude),
             ValidationSnafu {
                 message: format!(
                     "Latitude must be between {} and {}, got {}",
@@ -89,7 +89,7 @@ impl GpsCoordinates {
         );
 
         ensure!(
-            longitude >= Self::MIN_LONGITUDE && longitude <= Self::MAX_LONGITUDE,
+            (Self::MIN_LONGITUDE..=Self::MAX_LONGITUDE).contains(&longitude),
             ValidationSnafu {
                 message: format!(
                     "Longitude must be between {} and {}, got {}",

@@ -219,16 +219,7 @@ where
     F: Fn() -> Fut,
     Fut: std::future::Future<Output = Result<T, E>>,
 {
-    poll_until(
-        || async {
-            match check().await {
-                Ok(result) => Some(result),
-                Err(_) => None,
-            }
-        },
-        config,
-    )
-    .await
+    poll_until(|| async { (check().await).ok() }, config).await
 }
 
 #[cfg(test)]

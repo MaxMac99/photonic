@@ -167,8 +167,8 @@ impl From<&FindMediumRow> for Medium {
             row.taken_at_timezone
                 .and_then(|tz| FixedOffset::east_opt(tz).map(|offset| t.with_timezone(&offset)))
         });
-        let gps_coordinates = Option::zip(row.gps_latitude, row.gps_longitude)
-            .map(|(lat, lon)| {
+        let gps_coordinates =
+            Option::zip(row.gps_latitude, row.gps_longitude).and_then(|(lat, lon)| {
                 let coordinates = GpsCoordinates::new(lat, lon, row.gps_altitude);
                 if let Err(e) = &coordinates {
                     error!(
@@ -177,8 +177,7 @@ impl From<&FindMediumRow> for Medium {
                     );
                 }
                 coordinates.ok()
-            })
-            .flatten();
+            });
 
         Medium {
             id: row.id,
