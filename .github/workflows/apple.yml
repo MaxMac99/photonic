@@ -26,7 +26,7 @@ concurrency:
 jobs:
   style:
     name: SwiftLint & SwiftFormat
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -34,12 +34,11 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
-      # The default devshell shellHook cd's into ./server, so we explicitly
-      # cd back into apple/ before invoking the tools. swiftlint and
-      # swiftformat are provided by the default devshell (see flake.nix).
+      # swiftlint/swiftformat are provided by the .#apple devshell
+      # (darwin-only, see flake.nix).
 
       - name: SwiftLint
-        run: nix develop --command bash -c 'cd "$GITHUB_WORKSPACE/apple" && swiftlint lint --strict --reporter github-actions-logging'
+        run: nix develop .#apple --command bash -c 'cd "$GITHUB_WORKSPACE/apple" && swiftlint lint --strict --reporter github-actions-logging'
 
       - name: SwiftFormat (lint)
-        run: nix develop --command bash -c 'cd "$GITHUB_WORKSPACE/apple" && swiftformat --lint .'
+        run: nix develop .#apple --command bash -c 'cd "$GITHUB_WORKSPACE/apple" && swiftformat --lint .'

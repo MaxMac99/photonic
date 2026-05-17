@@ -108,7 +108,7 @@
                 devShells = {
                     default = mkShell {
                         inputsFrom = [ bin ];
-                        buildInputs = [ openapi-down-convert swiftlint swiftformat ];
+                        buildInputs = [ openapi-down-convert ];
 
                         shellHook = ''
                             # Isolate CARGO_HOME so cargo's subcommand search doesn't
@@ -116,13 +116,6 @@
                             # shadow the Nix toolchain (e.g. `cargo fmt`).
                             export CARGO_HOME="$PWD/server/tmpdata/.cargo"
                             mkdir -p "$CARGO_HOME"
-                        '' + lib.optionalString stdenv.isDarwin ''
-                            # On darwin, nix's stdenv pins DEVELOPER_DIR to its
-                            # apple-sdk store path, which has no swift toolchain.
-                            # SwiftLint shells out to `xcrun --find swift` to load
-                            # sourcekitd and fails. Clear it so xcrun falls back to
-                            # `xcode-select -p` (the user's installed Xcode).
-                            unset DEVELOPER_DIR
                         '';
                     };
 
@@ -193,6 +186,21 @@
 
                         # Add PostgreSQL tools to the shell
                         buildInputs = [ postgresql sqlx-cli openapi-down-convert ];
+                    };
+                } // lib.optionalAttrs stdenv.isDarwin {
+                    # Apple-side tooling. swiftlint/swiftformat in nixpkgs are
+                    # darwin-only, so this shell is only defined on darwin.
+                    apple = mkShell {
+                        buildInputs = [ swiftlint swiftformat ];
+
+                        shellHook = ''
+                            # Nix's darwin stdenv pins DEVELOPER_DIR to its
+                            # apple-sdk store path, which has no swift toolchain.
+                            # SwiftLint shells out to `xcrun --find swift` to load
+                            # sourcekitd and fails. Clear it so xcrun falls back to
+                            # `xcode-select -p` (the host's installed Xcode).
+                            unset DEVELOPER_DIR
+                        '';
                     };
                 };
             }
