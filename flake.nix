@@ -111,15 +111,18 @@
                         buildInputs = [ openapi-down-convert swiftlint swiftformat ];
 
                         shellHook = ''
-                            # Work inside the server subdirectory so cargo commands pick up
-                            # the workspace Cargo.toml automatically.
-                            cd "$PWD/server"
-
                             # Isolate CARGO_HOME so cargo's subcommand search doesn't
                             # pick up rustup shims from ~/.cargo/bin, which would
                             # shadow the Nix toolchain (e.g. `cargo fmt`).
-                            export CARGO_HOME="$PWD/tmpdata/.cargo"
+                            export CARGO_HOME="$PWD/server/tmpdata/.cargo"
                             mkdir -p "$CARGO_HOME"
+                        '' + lib.optionalString stdenv.isDarwin ''
+                            # On darwin, nix's stdenv pins DEVELOPER_DIR to its
+                            # apple-sdk store path, which has no swift toolchain.
+                            # SwiftLint shells out to `xcrun --find swift` to load
+                            # sourcekitd and fails. Clear it so xcrun falls back to
+                            # `xcode-select -p` (the user's installed Xcode).
+                            unset DEVELOPER_DIR
                         '';
                     };
 

@@ -128,11 +128,11 @@ struct SetupUrlView: View {
 
     private var actionSection: some View {
         Section {
-            Button(action: {
+            Button {
                 Task {
                     await viewModel.connectToServer()
                 }
-            }) {
+            } label: {
                 HStack {
                     Text(buttonTitle)
                         .fontWeight(.medium)
@@ -196,12 +196,14 @@ final class MockDiscoverServerUseCase: DiscoverServerUseCaseProtocol {
         try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
 
         if shouldSucceed {
+            // swiftlint:disable force_unwrapping
             return ServerConfiguration(
                 serverUrl: URL(string: "https://photonic.example.com")!,
                 clientId: "mock-client-id",
                 tokenUrl: URL(string: "https://photonic.example.com/oauth/token")!,
                 authorizationUrl: URL(string: "https://photonic.example.com/oauth/authorize")!
             )!
+            // swiftlint:enable force_unwrapping
         } else {
             throw DomainError.networkError("Mock connection failed")
         }

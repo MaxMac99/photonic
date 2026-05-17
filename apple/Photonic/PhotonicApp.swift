@@ -53,8 +53,7 @@ struct PhotonicApp: App {
                 } else {
                     SetupUrlView(
                         viewModel: createSetupViewModel(),
-                        onSetupComplete: {
-                            config in
+                        onSetupComplete: { config in
                             compositionRoot.setConfiguration(config)
                         }
                     )
@@ -77,6 +76,7 @@ struct PhotonicApp: App {
 
     private func createMockClient() -> APIProtocol {
         Client(
+            // swiftlint:disable:next force_unwrapping
             serverURL: URL(string: "http://localhost")!,
             transport: URLSessionTransport()
         )
@@ -110,8 +110,7 @@ final class CompositionRootContainer: ObservableObject {
     func loadConfiguration() {
         // Try to load existing configuration
         if let data = UserDefaults.standard.data(forKey: "de.photonic.serverConfiguration"),
-           let config = try? JSONDecoder().decode(ServerConfiguration.self, from: data)
-        {
+           let config = try? JSONDecoder().decode(ServerConfiguration.self, from: data) {
             serverConfiguration = config
         }
     }
@@ -123,6 +122,7 @@ final class CompositionRootContainer: ObservableObject {
 
 struct ApiClientKey: EnvironmentKey {
     static var defaultValue: APIProtocol = Client(
+        // swiftlint:disable:next force_unwrapping
         serverURL: URL(string: "http://localhost")!,
         transport: URLSessionTransport()
     )

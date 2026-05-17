@@ -72,9 +72,9 @@ final class BackupService: BackupServiceProtocol {
         self.photoLibraryAdapter = photoLibraryAdapter
     }
 
+    // swiftlint:disable:next function_body_length
     func startBackup(for selections: [BackupAlbumSelectionEntity]) async throws
-        -> AsyncThrowingStream<BackupProgress, Error>
-    {
+        -> AsyncThrowingStream<BackupProgress, Error> {
         Self.logger.info("Starting backup for \(selections.count) album selections")
         isPaused = false
         isCancelled = false
@@ -252,8 +252,8 @@ final class BackupService: BackupServiceProtocol {
         let assets = PHAsset.fetchAssets(in: collection, options: nil)
         var mediaItems: [MediaItem] = []
 
-        for i in 0 ..< assets.count {
-            let asset = assets.object(at: i)
+        for index in 0 ..< assets.count {
+            let asset = assets.object(at: index)
 
             // Create MediaItem from PHAsset
             let location: MediaItem.Location? = asset.location.map { clLocation in

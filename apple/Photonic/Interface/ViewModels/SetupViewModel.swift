@@ -68,20 +68,24 @@ class SetupViewModel: ObservableObject {
             errorMessage = message
             setupState = .error(message)
         } catch let DomainError.networkError(message) {
-            errorMessage = "Network error: \(message)"
-            setupState = .error(errorMessage!)
+            let detail = "Network error: \(message)"
+            errorMessage = detail
+            setupState = .error(detail)
         } catch let DomainError.serverError(_, message) {
-            errorMessage = "Server error: \(message)"
-            setupState = .error(errorMessage!)
+            let detail = "Server error: \(message)"
+            errorMessage = detail
+            setupState = .error(detail)
         } catch AuthError.signInCancelled {
             errorMessage = "Sign in was cancelled"
             setupState = .idle
         } catch let AuthError.signInFailed(reason) {
-            errorMessage = "Sign in failed: \(reason)"
-            setupState = .error(errorMessage!)
+            let detail = "Sign in failed: \(reason)"
+            errorMessage = detail
+            setupState = .error(detail)
         } catch {
-            errorMessage = "Failed to connect: \(error.localizedDescription)"
-            setupState = .error(errorMessage!)
+            let detail = "Failed to connect: \(error.localizedDescription)"
+            errorMessage = detail
+            setupState = .error(detail)
         }
 
         isConnecting = false

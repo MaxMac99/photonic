@@ -11,7 +11,7 @@ import SwiftData
 
 public final class BackupSelectionRepositoryImpl: BackupSelectionRepository {
     private static let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier!,
+        subsystem: Bundle.main.bundleIdentifier ?? "com.photonic.app",
         category: String(describing: BackupSelectionRepositoryImpl.self)
     )
 

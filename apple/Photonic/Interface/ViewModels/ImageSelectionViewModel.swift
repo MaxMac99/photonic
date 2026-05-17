@@ -63,8 +63,7 @@ public final class ImageSelectionViewModel: ObservableObject {
     private func loadPreview(item: PhotosPickerItem) async {
         do {
             if let data = try await item.loadTransferable(type: Data.self),
-               let uiImage = UIImage(data: data)
-            {
+               let uiImage = UIImage(data: data) {
                 Self.logger.debug("Preview loaded: \(uiImage.size)")
                 let swiftImage = Image(uiImage: uiImage)
                 if case .success = imageState {

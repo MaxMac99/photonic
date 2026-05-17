@@ -14,7 +14,7 @@ import UIKit
 @MainActor
 public final class BackupAlbumItemViewModel: ObservableObject {
     private static let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier!,
+        subsystem: Bundle.main.bundleIdentifier ?? "com.photonic.app",
         category: String(describing: BackupAlbumItemViewModel.self)
     )
 

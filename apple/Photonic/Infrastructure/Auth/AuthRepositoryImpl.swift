@@ -45,13 +45,13 @@ final class AuthRepositoryImpl: AuthRepository {
             id: claims.sub,
             email: email,
             name: claims.name,
-            givenName: claims.given_name,
-            familyName: claims.family_name,
+            givenName: claims.givenName,
+            familyName: claims.familyName,
             nickname: claims.nickname,
-            preferredUsername: claims.preferred_username,
+            preferredUsername: claims.preferredUsername,
             profileUrl: claims.profile,
             pictureUrl: claims.picture,
-            emailVerified: claims.email_verified ?? false,
+            emailVerified: claims.emailVerified ?? false,
             quota: quota,
             createdAt: claims.iat
         )

@@ -92,8 +92,7 @@ struct LoggingMiddleware: ClientMiddleware {
             // Skip large or uninteresting headers
             if key.lowercased() != "date",
                !key.lowercased().contains("content-encoding"),
-               !key.lowercased().contains("cache")
-            {
+               !key.lowercased().contains("cache") {
                 headers[key] = value
             }
         }

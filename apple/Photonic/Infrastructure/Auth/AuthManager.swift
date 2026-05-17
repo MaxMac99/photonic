@@ -15,17 +15,26 @@ struct PhotonicClaims: Claims {
     var sub: String
     var exp: Date
     var iat: Date
-    var auth_time: Date?
+    var authTime: Date?
     var name: String?
-    var given_name: String?
-    var family_name: String?
+    var givenName: String?
+    var familyName: String?
     var nickname: String?
-    var preferred_username: String?
+    var preferredUsername: String?
     var profile: String?
     var picture: String?
     var email: String?
-    var email_verified: Bool?
+    var emailVerified: Bool?
     var quota: String?
+
+    enum CodingKeys: String, CodingKey {
+        case iss, sub, exp, iat, name, nickname, profile, picture, email, quota
+        case authTime = "auth_time"
+        case givenName = "given_name"
+        case familyName = "family_name"
+        case preferredUsername = "preferred_username"
+        case emailVerified = "email_verified"
+    }
 }
 
 struct Token {
@@ -62,18 +71,15 @@ actor AuthManager {
 
         logger.info("Starting new authorization flow")
 
-        authorizeTask = Task {
-            () throws -> Token in
+        let task = Task<Token, Error> {
             self.oauth.authConfig.authorizeEmbedded = true
             let anchor = await ASPresentationAnchor()
             self.oauth.authConfig.authorizeContext = anchor
 
             self.logger.debug("Initiating OAuth2 authorization")
 
-            let raw: String = try await withCheckedThrowingContinuation {
-                continuation in
-                self.oauth.authorize {
-                    _, error in
+            let raw: String = try await withCheckedThrowingContinuation { continuation in
+                self.oauth.authorize { _, error in
                     if let error {
                         self.logger.error("OAuth2 authorization failed", error: error)
                         continuation.resume(throwing: error)
@@ -92,16 +98,15 @@ actor AuthManager {
             self.logger.debug("Parsing JWT token")
             return try Token(raw: raw, jwt: JWT<PhotonicClaims>(jwtString: raw))
         }
-        return try await authorizeTask!.value
+        authorizeTask = task
+        return try await task.value
     }
 
     func refreshAccessToken() async throws {
         logger.info("Refreshing access token")
 
-        try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<Void, Error>) in
-            self.oauth.doRefreshToken {
-                _, error in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            self.oauth.doRefreshToken { _, error in
                 if let error {
                     self.logger.error("Token refresh failed", error: error)
                     continuation.resume(throwing: error)

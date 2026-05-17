@@ -172,6 +172,7 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            // swiftlint:disable:next force_unwrapping
             Link(destination: URL(string: "https://github.com/photonic/photonic-ios")!) {
                 HStack {
                     Label("GitHub", systemImage: "link")
@@ -181,6 +182,7 @@ struct SettingsView: View {
                 }
             }
 
+            // swiftlint:disable:next force_unwrapping
             Link(destination: URL(string: "https://photonic.app/privacy")!) {
                 HStack {
                     Label("Privacy Policy", systemImage: "hand.raised")

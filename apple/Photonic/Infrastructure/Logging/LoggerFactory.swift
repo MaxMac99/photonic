@@ -38,23 +38,30 @@ enum LoggerFactory {
     }
 }
 
+private func locationContext(file: String, function: String, line: Int) -> String {
+    "[File: \(file), Function: \(function), Line: \(line)]"
+}
+
 /// Extension to make logging more convenient
 extension Logger {
     /// Log an error with additional context
-    func error(_ message: String, error: Error? = nil, file: String = #file, function: String = #function, line: Int = #line) {
+    func error(
+        _ message: String,
+        error: Error? = nil,
+        file: String = #file,
+        function: String = #function,
+        line: Int = #line
+    ) {
+        let context = locationContext(file: file, function: function, line: line)
         let logMessage: String
         if let error {
             logMessage = "\(message) - Error: \(error.localizedDescription)"
-            self
-                .error(
-                    "\(message, privacy: .public) - Error: \(error.localizedDescription, privacy: .public) [File: \(file, privacy: .public), Function: \(function, privacy: .public), Line: \(line, privacy: .public)]"
-                )
+            self.error(
+                "\(message, privacy: .public) - Error: \(error.localizedDescription, privacy: .public) \(context, privacy: .public)"
+            )
         } else {
             logMessage = message
-            self
-                .error(
-                    "\(message, privacy: .public) [File: \(file, privacy: .public), Function: \(function, privacy: .public), Line: \(line, privacy: .public)]"
-                )
+            self.error("\(message, privacy: .public) \(context, privacy: .public)")
         }
         #if DEBUG
         let fileName = (file as NSString).lastPathComponent
@@ -63,10 +70,14 @@ extension Logger {
     }
 
     /// Log a warning with additional context
-    func warning(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
-        warning(
-            "\(message, privacy: .public) [File: \(file, privacy: .public), Function: \(function, privacy: .public), Line: \(line, privacy: .public)]"
-        )
+    func warning(
+        _ message: String,
+        file: String = #file,
+        function: String = #function,
+        line: Int = #line
+    ) {
+        let context = locationContext(file: file, function: function, line: line)
+        warning("\(message, privacy: .public) \(context, privacy: .public)")
         #if DEBUG
         let fileName = (file as NSString).lastPathComponent
         print("🟡 WARN  [\(fileName):\(line)] \(message)")
@@ -74,7 +85,12 @@ extension Logger {
     }
 
     /// Log info message
-    func info(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
+    func info(
+        _ message: String,
+        file: String = #file,
+        function: String = #function,
+        line: Int = #line
+    ) {
         info("\(message, privacy: .public)")
         #if DEBUG
         let fileName = (file as NSString).lastPathComponent
@@ -83,22 +99,30 @@ extension Logger {
     }
 
     /// Log debug information (only in DEBUG builds)
-    func debug(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
+    func debug(
+        _ message: String,
+        file: String = #file,
+        function: String = #function,
+        line: Int = #line
+    ) {
         #if DEBUG
-        debug(
-            "\(message, privacy: .public) [File: \(file, privacy: .public), Function: \(function, privacy: .public), Line: \(line, privacy: .public)]"
-        )
+        let context = locationContext(file: file, function: function, line: line)
+        debug("\(message, privacy: .public) \(context, privacy: .public)")
         let fileName = (file as NSString).lastPathComponent
         print("🟢 DEBUG [\(fileName):\(line)] \(message)")
         #endif
     }
 
     /// Log verbose/trace information (only in DEBUG builds)
-    func verbose(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
+    func verbose(
+        _ message: String,
+        file: String = #file,
+        function: String = #function,
+        line: Int = #line
+    ) {
         #if DEBUG
-        trace(
-            "\(message, privacy: .public) [File: \(file, privacy: .public), Function: \(function, privacy: .public), Line: \(line, privacy: .public)]"
-        )
+        let context = locationContext(file: file, function: function, line: line)
+        trace("\(message, privacy: .public) \(context, privacy: .public)")
         let fileName = (file as NSString).lastPathComponent
         print("⚪ TRACE [\(fileName):\(line)] \(message)")
         #endif

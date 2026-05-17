@@ -11,51 +11,29 @@
 --exclude **/DerivedData
 --exclude **/Pods
 
-# Formatting options
+# Indentation / width
 --indent 4
 --tabwidth 4
 --maxwidth 140
+
+# Keep `{` on the same line as `if` / `guard` / `func` — matches Apple's
+# style guide and SwiftLint's `opening_brace` rule. Without this, the two
+# tools fight each other on multi-line conditions.
+--disable wrapMultilineStatementBraces
+
+# Argument wrapping: when wrapping is needed, wrap before the first argument.
 --wraparguments before-first
 --wrapparameters before-first
 --wrapcollections before-first
 --closingparen balanced
+
+# Misc preferences
 --commas inline
---trimwhitespace always
 --semicolons never
+--trimwhitespace always
 --ifdef no-indent
 --self remove
 --importgrouping testable-bottom
 --stripunusedargs closure-only
 --header ignore
---redundanttype inferred
 --emptybraces no-space
-
-# Enable a conservative set of rules by default (opt in to the common ones)
---enable isEmpty
---enable redundantSelf
---enable redundantParens
---enable redundantReturn
---enable redundantVoidReturnType
---enable redundantType
---enable trailingSpace
---enable blankLinesAtStartOfScope
---enable blankLinesAtEndOfScope
---enable consecutiveBlankLines
---enable consecutiveSpaces
---enable duplicateImports
---enable sortImports
---enable spaceAroundBraces
---enable spaceAroundBrackets
---enable spaceAroundComments
---enable spaceAroundGenerics
---enable spaceAroundOperators
---enable spaceAroundParens
---enable spaceInsideBraces
---enable spaceInsideBrackets
---enable spaceInsideComments
---enable spaceInsideGenerics
---enable spaceInsideParens
---enable todos
---enable void
---enable wrapArguments
---enable wrapMultilineStatementBraces

@@ -103,8 +103,7 @@ final class CompositionRoot {
     }
 
     @MainActor func makeBackupAlbumSelectionViewModel(modelContext: ModelContext)
-        -> BackupAlbumSelectionViewModel
-    {
+        -> BackupAlbumSelectionViewModel {
         let backupSelectionRepository = BackupSelectionRepositoryImpl(modelContext: modelContext)
         return BackupAlbumSelectionViewModel(
             backupSelectionRepository: backupSelectionRepository,

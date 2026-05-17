@@ -193,8 +193,7 @@ final class MockMediaRepository: MediaRepository {
     }
 
     func fetchMedia(albumId: String?, startDate: Date?, endDate: Date?, page: Int, pageSize: Int)
-        async throws -> [MediaItem]
-    {
+        async throws -> [MediaItem] {
         PreviewDependencies.sampleMediaItems
     }
 
