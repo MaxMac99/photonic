@@ -1,0 +1,55 @@
+[package]
+name = "composition"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+kernel = { workspace = true }
+event_sourcing = { workspace = true }
+medium = { workspace = true }
+metadata = { workspace = true }
+task = { workspace = true }
+user = { workspace = true }
+system = { workspace = true }
+http = { workspace = true }
+postgres = { workspace = true }
+filesystem = { workspace = true }
+exif = { workspace = true }
+async-trait.workspace = true
+axum.workspace = true
+byte-unit.workspace = true
+chrono.workspace = true
+confique.workspace = true
+futures.workspace = true
+futures-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+derive-new.workspace = true
+snafu.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+
+opentelemetry.workspace = true
+opentelemetry_sdk.workspace = true
+opentelemetry-otlp.workspace = true
+tracing-opentelemetry.workspace = true
+
+[dev-dependencies]
+photonic-client = { workspace = true }
+reqwest = { workspace = true, features = ["json", "multipart"] }
+jsonwebtoken.workspace = true
+serial_test.workspace = true
+rstest.workspace = true
+fake.workspace = true
+derive_builder.workspace = true
+tempfile.workspace = true
+tower.workspace = true
+test-log.workspace = true
+dotenv.workspace = true
+serde.workspace = true

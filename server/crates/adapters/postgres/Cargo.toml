@@ -1,0 +1,30 @@
+[package]
+name = "postgres"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+kernel = { workspace = true }
+event_sourcing = { workspace = true }
+medium = { workspace = true }
+metadata = { workspace = true }
+task = { workspace = true }
+user = { workspace = true }
+async-trait.workspace = true
+byte-unit.workspace = true
+chrono.workspace = true
+convert_case.workspace = true
+futures.workspace = true
+futures-util.workspace = true
+mime.workspace = true
+pin-project-lite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+snafu.workspace = true
+sqlx.workspace = true
+strum.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true

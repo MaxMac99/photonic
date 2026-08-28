@@ -1,0 +1,19 @@
+[package]
+name = "exif"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+kernel = { workspace = true }
+medium = { workspace = true }
+metadata = { workspace = true }
+async-trait.workspace = true
+chrono.workspace = true
+serde_json.workspace = true
+mime.workspace = true
+serde.workspace = true
+snafu.workspace = true
+uuid.workspace = true
+tokio.workspace = true
+tracing.workspace = true

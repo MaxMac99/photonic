@@ -1,0 +1,9 @@
+[package]
+name = "system"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+kernel = { workspace = true }
+derive-new.workspace = true

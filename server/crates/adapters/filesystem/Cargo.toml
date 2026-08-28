@@ -1,0 +1,24 @@
+[package]
+name = "filesystem"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+kernel = { workspace = true }
+medium = { workspace = true }
+async-trait.workspace = true
+byte-unit.workspace = true
+bytes.workspace = true
+chrono.workspace = true
+filenamify.workspace = true
+futures.workspace = true
+mime_guess.workspace = true
+path-clean.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+uuid.workspace = true

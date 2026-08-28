@@ -1,0 +1,17 @@
+[package]
+name = "task"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+kernel = { workspace = true }
+event_sourcing = { workspace = true }
+async-trait.workspace = true
+chrono.workspace = true
+derive-new.workspace = true
+serde.workspace = true
+snafu.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true

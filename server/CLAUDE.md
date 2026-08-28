@@ -20,14 +20,11 @@ so inside a Nix shell you can run `cargo` directly. Outside Nix, `cd server` fir
 # Build the project
 cargo build
 
-# Run in development mode
+# Run the server (binary name: photonic)
 cargo run
 
 # Build optimized release version
 cargo build --release
-
-# Run release build
-cargo run --release
 ```
 
 ### Code Quality
@@ -41,19 +38,22 @@ cargo clippy
 
 # Check code without building
 cargo check
+
+# Single crate (fast loop when working on one module)
+cargo check -p medium
 ```
 
 ### Database Management
 
 ```bash
 # Run database migrations (requires DATABASE_URL environment variable)
-sqlx migrate run
+sqlx migrate run --source crates/composition/migrations
 
 # Revert last migration
-sqlx migrate revert
+sqlx migrate revert --source crates/composition/migrations
 
 # Create new migration
-sqlx migrate add <migration_name>
+sqlx migrate add <migration_name> --source crates/composition/migrations
 ```
 
 ### Testing
@@ -65,42 +65,12 @@ cargo test
 # Run tests with output
 cargo test -- --nocapture
 
-# Run specific test
-cargo test <test_name>
+# Run tests of a single module crate
+cargo test -p medium
+
+# Integration tests (spin up the real server; need DATABASE_URL)
+cargo test -p composition
 ```
-
-### Event DTOs and AsyncAPI
-
-Event DTOs are automatically generated from the AsyncAPI specification during the build process.
-
-```bash
-# Event DTOs are generated automatically during cargo build
-cargo build
-
-# The AsyncAPI spec is located at (repo root, shared contract):
-# ../asyncapi.yaml   (from server/)
-
-# Generated DTOs are output to:
-# crates/infrastructure/src/infrastructure/events/generated/
-```
-
-**How it works:**
-
-1. The `build.rs` script runs before compilation
-2. It reads `asyncapi.yaml` and uses the AsyncAPI CLI to generate Rust DTOs
-3. Generated DTOs have serde support for serialization/deserialization
-4. The build script only regenerates when `asyncapi.yaml` changes
-
-**Prerequisites:**
-
-- AsyncAPI CLI is automatically installed via Nix flake's shellHook
-- If not using Nix: `npm install -g @asyncapi/cli`
-
-**Modifying events:**
-
-1. Edit `asyncapi.yaml` (at the repo root) to add/modify event schemas
-2. Run `cargo build` - DTOs will be regenerated automatically
-3. Implement the `EventDto` trait for the generated struct (manual step)
 
 ### OpenAPI Spec and Typed Client Generation
 
@@ -125,7 +95,8 @@ cat ../openapi.yaml
 **How it works:**
 
 1. **Generate OpenAPI Spec** (manual): Run `cargo xtask generate-openapi` to update
-   `../openapi.yaml` from your utoipa annotations
+   `../openapi.yaml` from your utoipa annotations. The annotations live in the HTTP adapter
+   (`crates/adapters/http`), which xtask calls directly.
 2. **Generate Client** (automatic): During `cargo build`, the `build.rs` script in the
    `photonic-client` crate automatically generates a typed Rust client from `../openapi.yaml`
    using progenitor
@@ -155,7 +126,8 @@ async fn test_list_media(#[future] app: TestApp, token: String) {
 
 **Modifying the API:**
 
-1. Update the handler function and its `#[utoipa::path(...)]` annotation
+1. Update the handler function and its `#[utoipa::path(...)]` annotation in
+   `crates/adapters/http/src/api/`
 2. Update DTOs with `#[derive(ToSchema)]` if adding new types
 3. Regenerate the spec: `cargo xtask generate-openapi`
 4. Run `cargo build` - the typed client regenerates automatically from the spec
@@ -171,25 +143,27 @@ cargo xtask generate-openapi
 cargo xtask generate-openapi --output custom-path.yaml
 ```
 
-## Architecture: Clean Hexagonal Architecture
+## Architecture: Modular Monolith with Hexagonal Adapters
 
-### Architecture Principles
+The server is a modular monolith organized around bounded contexts ("modules") plus a shared
+kernel, with all technical concerns isolated in adapter crates and wired together by a single
+composition root.
 
-The application follows **Clean Hexagonal Architecture** (Ports and Adapters) with clear
-separation of concerns:
+### The Dependency Rule
 
-1. **Dependency Rule**: Dependencies only point inward - outer layers depend on inner layers,
-   never the reverse
-2. **Domain Independence**: The domain layer has zero dependencies on infrastructure, frameworks,
-   or external libraries
-3. **Port/Adapter Pattern**: All external dependencies are abstracted behind interfaces (ports)
-   with implementations (adapters) in the infrastructure layer
-4. **CQRS Pattern**: Application layer uses Command Query Responsibility Segregation for clear
-   separation of read and write operations
-5. **Value Objects**: Rich domain models with business rule validation encapsulated in value
-   objects
-6. **Dependency Injection**: All dependencies are injected through a central DI container,
-   maintaining loose coupling
+Dependencies only point inward:
+
+```
+bin → composition → adapters → modules → kernel → event_sourcing
+                         ↓            ↓
+                    (implement)   (define ports)
+```
+
+- **Modules never depend on each other.** Cross-module collaboration happens either through
+  ports wired by the composition root, or through events on the projection bus.
+- **Modules never depend on adapters or the composition root.**
+- The one deliberate exception: `medium → user` (medium uses user's `QuotaManager` service).
+  Acyclic and documented; invert via a port if medium ever needs extraction.
 
 ### Directory Structure
 
@@ -197,87 +171,121 @@ separation of concerns:
 server/
 ├── Cargo.toml                      # Workspace root
 └── crates/
-    ├── domain/                     # Core business logic (innermost layer)
-    │   ├── album/                  # Album bounded context
-    │   ├── medium/                 # Medium bounded context
-    │   └── user/                   # User bounded context
+    ├── kernel/                     # Shared vocabulary (NO business logic)
+    │                               #   DomainError/ApplicationError, DomainEvent re-export,
+    │                               #   PublishEvent port, ID aliases, FileLocation/StorageTier,
+    │                               #   file value objects, serde helpers, crypto
+    ├── event_sourcing/             # Event store, projection bus, aggregate reconstitution
     │
-    ├── application/                # Use cases / Application services (CQRS)
-    │   ├── album/
-    │   │   ├── commands/           # Write operations
-    │   │   └── queries/            # Read operations
-    │   ├── medium/
-    │   └── user/
+    ├── modules/                    # Bounded contexts — each owns its domain + application layer
+    │   ├── medium/                 #   src/domain/ (aggregates, events, VOs)
+    │   │                           #   src/application/ (commands, queries, ports, listeners)
+    │   ├── metadata/
+    │   ├── task/
+    │   ├── user/
+    │   └── system/                 #   Application-only (system info query)
     │
-    ├── event_sourcing/             # Event store, projections, aggregate reconstitution
+    ├── adapters/                   # One crate per external technology
+    │   ├── http/                   #   Axum handlers, API DTOs, JWT auth (inbound)
+    │   ├── postgres/               #   Repositories, event/snapshot/checkpoint stores, projections
+    │   ├── filesystem/             #   File storage (FileStorage port impl)
+    │   └── exif/                   #   exiftool metadata extraction (MetadataExtractor port impl)
     │
-    ├── infrastructure/             # Technical implementations
-    │   ├── config/                 # Configuration management
-    │   ├── di/                     # Dependency injection container
-    │   ├── persistence/postgres/   # PostgreSQL adapters
-    │   ├── storage/                # File storage implementations
-    │   ├── events/                 # Event bus implementation
-    │   ├── api/                    # Axum HTTP handlers (inbound adapter)
-    │   └── external/exif/          # Exiftool integration
+    ├── composition/                # Composition root (lib) — the ONLY place that knows all
+    │   │                           #   concrete types
+    │   ├── config/                 #   confique GlobalConfig (server/storage/database)
+    │   ├── di/                     #   Container, factories, listener registration, streams
+    │   ├── listeners/              #   CROSS-MODULE listeners (see below)
+    │   ├── events/                 #   Event bus adapter implementing PublishEvent
+    │   ├── migrations/             #   SQL migrations
+    │   └── tests/                  #   Integration tests (spin up the real server)
     │
+    ├── bin/                        # Thin main(): tracing + config + run_server (package "photonic")
     ├── photonic-client/            # Generated typed client (for integration tests)
-    │
     └── xtask/                      # Build automation (OpenAPI spec generation)
 ```
 
-### Layer Responsibilities
+### Layers
 
-#### Domain Layer (innermost)
+#### Kernel
 
-- **Purpose**: Core business logic and rules
-- **Contains**: Entities, Value Objects, Domain Services, Domain Events, Port interfaces
-- **Dependencies**: NONE (pure Rust, no external dependencies)
-- **Example**: `AlbumService` validates business rules for album operations
+- **Purpose**: Shared vocabulary every module may use — errors, ID types, storage/file value
+  objects, event abstractions, serde helpers.
+- **Rule**: Keep it tiny and free of business logic. The moment logic wants to live here, push
+  it down into one of the modules. A fat kernel is how modular monoliths rot.
 
-#### Application Layer
+#### Modules (bounded contexts)
 
-- **Purpose**: Orchestrates domain objects to fulfill use cases
-- **Contains**: Application Services, Command/Query handlers, DTOs
-- **Dependencies**: Domain layer only
-- **Example**: `CreateAlbumCommand` coordinates album creation using domain services
+- **Purpose**: Core business logic. Each module has its own `domain/` (aggregates, events,
+  value objects, domain services) and `application/` (CQRS commands/queries, ports, listeners).
+- **Dependencies**: `kernel` and `event_sourcing` only — never another module, never an adapter.
+- **Ports**: Repository/external-service traits are defined in the module
+  (`application/ports.rs` or `domain/ports.rs`) and implemented by adapters.
+- **Domain events stay internal** unless another module legitimately needs to react to them.
 
-#### Infrastructure Layer
+#### Adapters
 
-- **Purpose**: Technical implementations of domain ports + HTTP inbound adapter
-- **Contains**: Database adapters, File storage, External services, Configuration, HTTP handlers
-- **Dependencies**: Domain and Application layers
-- **Example**: `AlbumRepositoryImpl` implements `AlbumRepository` trait using PostgreSQL
+- **Purpose**: Technical implementations of module ports + the HTTP inbound adapter. One crate
+  per technology (postgres, filesystem, exif, http).
+- **Dependencies**: modules (to implement their ports), kernel, event_sourcing. Never the
+  composition root.
+- **Postgres adapter** contains the per-module projections (read models) next to the
+  repositories, plus the event sourcing stores.
+- Adapters take **plain settings structs** (e.g. `FilesystemSettings`, `AuthSettings`), mapped
+  from the global config by the composition root — they never depend on `GlobalConfig`.
+
+#### Composition root
+
+- **Purpose**: Assemble the application. Owns configuration, the DI container, listener
+  registration, background tasks, db init/migrations, and the server runtime (`run_server`).
+- **Cross-module listeners live here** (`src/listeners/`): e.g. "when a Medium was created,
+  start metadata extraction", "when metadata was extracted, enrich the medium", task lifecycle
+  listeners. These glue modules together via the projection bus without creating module-to-module
+  dependencies.
+- **Integration tests** live in `tests/` here, using the real wiring via `run_server` plus the
+  generated typed client.
 
 ### Key Architectural Patterns
 
-1. **Repository Pattern**: Domain defines repository interfaces (ports), infrastructure provides
-   implementations
-2. **CQRS**: Separate command (write) and query (read) models in the application layer
+1. **Repository Pattern**: Modules define repository interfaces (ports), the postgres adapter
+   provides implementations
+2. **CQRS**: Separate command (write) and query (read) handlers per module
 3. **Event Sourcing**: Domain state reconstituted from an append-only event log; projections
-   maintain read models
-4. **Domain Events**: Enable loose coupling between bounded contexts
-5. **Value Objects**: Encapsulate business rules and validation (e.g., `AlbumTitle` ensures max
-   length)
-6. **Dependency Injection**: Central DI container wires all dependencies without coupling
-7. **Port/Adapter Pattern**: All external dependencies hidden behind interfaces
+   maintain read models; listeners are checkpointed projection handlers (replay on start)
+4. **Domain Events**: Modules publish via the `PublishEvent` port; cross-module reactions are
+   wired in the composition root
+5. **Value Objects**: Business rules encapsulated in kernel/module value objects
+6. **Port/Adapter Pattern**: All external dependencies hidden behind interfaces, one adapter
+   crate per technology
+7. **Composition Root**: All wiring in `composition`; `bin` is a ~20-line main
+
+### Module Communication Rules
+
+1. **Sync calls across modules** go through ports injected by the composition root (currently:
+   none — medium uses user's QuotaManager directly as the single documented exception).
+2. **Async collaboration** goes through the projection bus (domain events), with listeners
+   registered in `composition/src/di/listeners.rs` + implemented in
+   `composition/src/listeners/`.
+3. **Data ownership**: each module owns its tables/projections; no cross-module joins.
 
 ### API Structure
 
-- REST API built with Axum framework
+- REST API built with Axum (in the `http` adapter)
 - OpenAPI documentation generated with utoipa (available at `/api-docs`)
 - JWT authentication using jwt-authorizer
 - Versioned API endpoints under `/api/v1/`
 
 ### Configuration
 
-The application uses environment-based configuration with the following structure:
+The application uses environment-based configuration (confique), defined in
+`crates/composition/src/config/`:
 
-- `ServerConfig`: Server host, port, and JWT settings
-- `StorageConfig`: File storage configuration
+- `ServerConfig`: Server host, port, and JWT/OAuth settings
+- `StorageConfig`: File storage configuration (paths, quotas, cleanup intervals)
 - `DatabaseConfig`: PostgreSQL connection settings
 
 Configuration is loaded from environment variables, with optional `.env` file support (at the
-repo root).
+repo root). The composition root maps config slices into plain adapter settings.
 
 ### External Dependencies
 
@@ -292,3 +300,9 @@ repo root).
 - File storage paths are configured through environment variables (see `../.env.example`)
 - The exiftool binary must be available in the system PATH
 - Tracing can be configured via `RUST_LOG` environment variable
+- When adding a new adapter: create a crate under `crates/adapters/`, add it to the workspace
+  members + `workspace.dependencies`, implement the port there, and wire it in
+  `composition/src/di/`
+- When adding a new module: create `crates/modules/<name>/` with `domain/` + `application/`,
+  add ports for anything external, and register its streams/projections/listeners in the
+  composition root

@@ -1,0 +1,40 @@
+[package]
+name = "http"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+kernel = { workspace = true }
+medium = { workspace = true }
+metadata = { workspace = true }
+task = { workspace = true }
+user = { workspace = true }
+system = { workspace = true }
+async-trait.workspace = true
+axum.workspace = true
+axum-extra.workspace = true
+base64.workspace = true
+bytes.workspace = true
+byte-unit.workspace = true
+serde_default_utils.workspace = true
+chrono.workspace = true
+futures.workspace = true
+futures-util.workspace = true
+jwt-authorizer.workspace = true
+mime.workspace = true
+mime_serde_shim.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_html_form.workspace = true
+snafu.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+ammonia.workspace = true
+validator.workspace = true
+uuid.workspace = true
+utoipa.workspace = true
+utoipa-axum.workspace = true
+utoipa-swagger-ui.workspace = true

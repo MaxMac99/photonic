@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: infrastructure
+  title: photonic
   description: ''
   contact:
     name: Max Vissing

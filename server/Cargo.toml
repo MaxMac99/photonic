@@ -1,14 +1,36 @@
 [workspace]
 resolver = "2"
-members = ["crates/application", "crates/domain", "crates/event_sourcing",
-    "crates/infrastructure",
+members = [
+    "crates/kernel",
+    "crates/event_sourcing",
+    "crates/modules/medium",
+    "crates/modules/metadata",
+    "crates/modules/task",
+    "crates/modules/user",
+    "crates/modules/system",
+    "crates/adapters/http",
+    "crates/adapters/postgres",
+    "crates/adapters/filesystem",
+    "crates/adapters/exif",
+    "crates/composition",
+    "crates/bin",
     "crates/photonic-client",
     "crates/xtask",
 ]
 default-members = [
-    "crates/domain",
-    "crates/application",
-    "crates/infrastructure",
+    "crates/kernel",
+    "crates/event_sourcing",
+    "crates/modules/medium",
+    "crates/modules/metadata",
+    "crates/modules/task",
+    "crates/modules/user",
+    "crates/modules/system",
+    "crates/adapters/http",
+    "crates/adapters/postgres",
+    "crates/adapters/filesystem",
+    "crates/adapters/exif",
+    "crates/composition",
+    "crates/bin",
 ]
 
 [workspace.package]
@@ -18,10 +40,18 @@ edition = "2021"
 
 [workspace.dependencies]
 # Internal crates
-domain = { path = "crates/domain" }
-application = { path = "crates/application" }
+kernel = { path = "crates/kernel" }
 event_sourcing = { path = "crates/event_sourcing" }
-infrastructure = { path = "crates/infrastructure" }
+medium = { path = "crates/modules/medium" }
+metadata = { path = "crates/modules/metadata" }
+task = { path = "crates/modules/task" }
+user = { path = "crates/modules/user" }
+system = { path = "crates/modules/system" }
+http = { path = "crates/adapters/http" }
+postgres = { path = "crates/adapters/postgres" }
+filesystem = { path = "crates/adapters/filesystem" }
+exif = { path = "crates/adapters/exif" }
+composition = { path = "crates/composition" }
 photonic-client = { path = "crates/photonic-client" }
 xtask = { path = "crates/xtask" }
 
@@ -134,4 +164,4 @@ jsonwebtoken = "9.3"
 test-log = { version = "0.2", features = ["trace"] }
 
 [workspace.metadata.crane]
-name = "infrastructure"
+name = "photonic"

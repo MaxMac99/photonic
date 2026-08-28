@@ -90,12 +90,12 @@
                 bin = pkgs.callPackage crateExpression { };
 
                 dockerImage = pkgs.dockerTools.buildImage {
-                    name = "infrastructure";
+                    name = "photonic";
                     tag = "latest";
                     created = "now";
                     copyToRoot = [ bin pkgs.exiftool pkgs.cacert ];
                     config = {
-                        Cmd = [ "${bin}/bin/infrastructure" ];
+                        Cmd = [ "${bin}/bin/photonic" ];
                     };
                 };
             in
@@ -174,7 +174,7 @@
 
                                 # Run migrations
                                 echo "Running migrations..."
-                                cargo sqlx migrate run --source crates/infrastructure/migrations
+                                cargo sqlx migrate run --source crates/composition/migrations
 
                                 echo "Test database initialized at $PGDATA"
                             else

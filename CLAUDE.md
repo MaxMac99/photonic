@@ -23,7 +23,8 @@ photonic/
 ├── server/            # Rust backend (Cargo workspace)
 │   ├── Cargo.toml
 │   ├── CLAUDE.md
-│   └── crates/        # application, domain, event_sourcing, infrastructure, photonic-client, xtask
+│   └── crates/        # kernel, modules (bounded contexts), adapters,
+│                      # composition root, bin, event_sourcing, photonic-client, xtask
 ├── apple/             # Swift iOS/macOS app (Xcode project)
 │   ├── Photonic.xcodeproj
 │   ├── Photonic/      # App sources (SwiftUI, hexagonal/DDD layout)
@@ -56,8 +57,8 @@ Swift app.
 3. On the server: `cargo build` auto-regenerates the Rust progenitor client
 4. In Xcode: rebuild — `swift-openapi-generator` picks up the updated spec via the symlink
 
-Similarly, `asyncapi.yaml` at the repo root defines the event bus contract. It is consumed by
-the server's `build.rs` to generate Rust event DTOs.
+Similarly, `asyncapi.yaml` at the repo root defines the event bus contract (documentation for
+the event-driven integration between server modules; see `server/CLAUDE.md`).
 
 ## Entry Points
 

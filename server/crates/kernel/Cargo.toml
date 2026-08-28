@@ -1,0 +1,21 @@
+[package]
+name = "kernel"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+event_sourcing = { workspace = true }
+async-trait.workspace = true
+byte-unit.workspace = true
+chrono.workspace = true
+derive-new.workspace = true
+hex.workspace = true
+mime.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+snafu.workspace = true
+strum.workspace = true
+sha2.workspace = true
+tokio = { workspace = true, features = ["fs", "io-util"] }
+uuid.workspace = true

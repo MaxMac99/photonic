@@ -10,7 +10,7 @@ name = "xtask"
 path = "src/main.rs"
 
 [dependencies]
-infrastructure = { workspace = true }
+http = { workspace = true }
 tokio.workspace = true
 clap.workspace = true
 sqlx.workspace = true

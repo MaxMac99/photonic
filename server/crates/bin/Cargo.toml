@@ -1,0 +1,15 @@
+[package]
+name = "photonic"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "photonic"
+path = "src/main.rs"
+
+[dependencies]
+composition = { workspace = true }
+tokio.workspace = true
+snafu.workspace = true
+dotenv.workspace = true

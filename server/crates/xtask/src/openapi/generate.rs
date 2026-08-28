@@ -1,6 +1,6 @@
 use std::fs;
 
-use infrastructure::api::router::create_api;
+use http::api::router::create_api;
 use snafu::{ResultExt, Whatever};
 
 pub async fn generate_openapi_spec(output: &str) -> Result<(), Whatever> {
