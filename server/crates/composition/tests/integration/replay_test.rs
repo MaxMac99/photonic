@@ -56,7 +56,7 @@ async fn all_stored_events_deserialize_with_current_registry() {
         "Event store is empty even after seeding — replay test is vacuous."
     );
 
-    let (_bus, registry) = composition::di::event_system::build_projection_bus(&pool)
+    let (_bus, registry) = composition::di::event_system::build_projection_bus(&pool, false)
         .expect("Failed to build projection bus / registry");
 
     let registered: Vec<String> = registry

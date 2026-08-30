@@ -2,6 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use event_sourcing::{
     bus::projection::ProjectionEventBus,
+    persistence::checkpoint_store::TxCheckpointStore,
     stream::{definition::StreamExtract, linking_projection::StreamLinkingProjection},
 };
 use medium::domain::events::{
@@ -9,7 +10,7 @@ use medium::domain::events::{
 };
 use postgres::{
     persistence::postgres::{
-        checkpoint_store::PostgresTxCheckpointStore,
+        checkpoint_store::{PostgresCoordinatedTxCheckpointStore, PostgresTxCheckpointStore},
         events::{es_event_store::PostgresGlobalEventStore, type_registry::EventTypeRegistry},
         stream_link_store::PostgresStreamLinkStore,
         transaction_provider::PostgresTransactionProvider,
@@ -27,13 +28,23 @@ pub type PgProjectionBus = ProjectionEventBus<i64, Transaction<'static, Postgres
 
 /// Create the ProjectionEventBus with all projections registered.
 /// The event type registry is auto-populated during projection registration.
+///
+/// `multi_instance` (ADR 0006) selects the coordination-safe checkpoint
+/// store so several replicas can share the bus safely; default deployments
+/// run single-instance with the zero-overhead fast path.
 pub fn build_projection_bus(
     db_pool: &PgPool,
+    multi_instance: bool,
 ) -> Result<(Arc<PgProjectionBus>, Arc<RwLock<EventTypeRegistry>>), Whatever> {
     let registry = Arc::new(RwLock::new(EventTypeRegistry::new()));
 
     let global_event_store = PostgresGlobalEventStore::new(db_pool.clone(), registry.clone());
-    let checkpoint_store = PostgresTxCheckpointStore::new();
+    let checkpoint_store: Arc<dyn TxCheckpointStore<i64, Transaction<'static, Postgres>>> =
+        if multi_instance {
+            Arc::new(PostgresCoordinatedTxCheckpointStore::new())
+        } else {
+            Arc::new(PostgresTxCheckpointStore::new())
+        };
     let tx_provider = PostgresTransactionProvider::new(db_pool.clone());
 
     let bus = Arc::new(ProjectionEventBus::new(

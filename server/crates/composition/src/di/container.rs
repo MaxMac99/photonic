@@ -39,7 +39,7 @@ impl Container {
         let storage = build_storage(config.clone()).await?;
 
         // Phase 2: Event system (projection bus + auto-populated registry)
-        let (bus, registry) = build_projection_bus(&db_pool)?;
+        let (bus, registry) = build_projection_bus(&db_pool, config.server.multi_instance)?;
 
         // Phase 3: Application services
         let bus_adapter = Arc::new(ProjectionEventBusAdapter::new(bus.clone()));

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 
 use crate::error;
@@ -23,6 +25,22 @@ pub trait CheckpointStore<Seq>: Send + Sync + 'static {
 pub trait TxCheckpointStore<Seq, Tx>: Send + Sync + 'static {
     async fn load(&self, consumer_name: &str, tx: &mut Tx) -> error::Result<Seq>;
     async fn save(&self, consumer_name: &str, sequence: Seq, tx: &mut Tx) -> error::Result<()>;
+}
+
+#[async_trait]
+impl<Seq, Tx, S> TxCheckpointStore<Seq, Tx> for Arc<S>
+where
+    Seq: Send + 'static,
+    Tx: Send + 'static,
+    S: TxCheckpointStore<Seq, Tx> + ?Sized,
+{
+    async fn load(&self, consumer_name: &str, tx: &mut Tx) -> error::Result<Seq> {
+        (**self).load(consumer_name, tx).await
+    }
+
+    async fn save(&self, consumer_name: &str, sequence: Seq, tx: &mut Tx) -> error::Result<()> {
+        (**self).save(consumer_name, sequence, tx).await
+    }
 }
 
 #[cfg(test)]
