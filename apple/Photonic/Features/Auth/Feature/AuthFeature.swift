@@ -4,21 +4,37 @@ import Foundation
 import PhotonicAPI
 import PhotonicCore
 
-/// Interactive sign-in. The root feature gates the tab view behind this
-/// feature until a session exists.
+/// First-run and sign-in flow: connect to a server (if not yet configured),
+/// then run the OAuth2+PKCE sign-in. The root feature gates the tab shell
+/// behind this feature until a session exists.
 @Reducer
 struct AuthFeature {
     @Dependency(AuthClient.self) private var auth
     @Dependency(ServerConfigurationClient.self) private var serverConfiguration
     @Dependency(DiscoveryClient.self) private var discovery
 
+    private enum CancelID {
+        case connect
+    }
+
     @ObservableState
     struct State: Equatable {
+        var serverURLText = ""
+        var connectionStatus: String?
+        var isConnecting = false
+        var connectedServerURL: ServerURL?
+        var connectedServer: ServerInfo?
         var isSigningIn = false
         var errorMessage: String?
     }
 
-    enum Action: Equatable {
+    enum Action: BindableAction, Equatable {
+        case binding(BindingAction<State>)
+        case onAppear
+        case configLoaded(ServerConfiguration)
+        case connectTapped
+        case connectionSucceeded(ServerURL, ServerInfo)
+        case connectionFailed(String)
         case signInTapped
         case signInSucceeded(AuthSession)
         case signInFailed(String)
@@ -30,19 +46,53 @@ struct AuthFeature {
     }
 
     var body: some ReducerOf<Self> {
+        BindingReducer()
         Reduce { state, action in
             switch action {
+            case .onAppear:
+                return .run { send in
+                    if let configuration = await serverConfiguration.load() {
+                        await send(.configLoaded(configuration))
+                    }
+                }
+
+            case let .configLoaded(configuration):
+                state.serverURLText = configuration.serverURL.absoluteString
+                return connect(configuration.serverURL)
+
+            case .connectTapped:
+                guard let serverURL = ServerURL(state.serverURLText) else {
+                    state.connectionStatus = "Enter a valid server URL (https://…)"
+                    return .none
+                }
+                state.isConnecting = true
+                state.connectionStatus = nil
+                return connect(serverURL)
+
+            case let .connectionSucceeded(serverURL, info):
+                state.isConnecting = false
+                state.connectedServerURL = serverURL
+                state.connectedServer = info
+                state.connectionStatus = "Connected to Photonic \(info.version)"
+                return .none
+
+            case let .connectionFailed(message):
+                state.isConnecting = false
+                state.connectionStatus = message
+                return .none
+
             case .signInTapped:
+                guard let serverURL = state.connectedServerURL,
+                      let info = state.connectedServer
+                else {
+                    state.errorMessage = "Connect to a server first"
+                    return .none
+                }
                 state.isSigningIn = true
                 state.errorMessage = nil
                 return .run { send in
-                    guard let configuration = await serverConfiguration.load() else {
-                        await send(.signInFailed("Connect a server in Settings first"))
-                        return
-                    }
                     do {
-                        let info = try await discovery.fetchSystemInfo(configuration.serverURL)
-                        let session = try await auth.signIn(configuration.serverURL, info)
+                        let session = try await auth.signIn(serverURL, info)
                         await send(.signInSucceeded(session))
                     } catch {
                         await send(.signInFailed(error.localizedDescription))
@@ -60,7 +110,23 @@ struct AuthFeature {
 
             case .delegate:
                 return .none
+
+            case .binding:
+                return .none
             }
         }
+    }
+
+    private func connect(_ serverURL: ServerURL) -> Effect<AuthFeature.Action> {
+        Effect.run { send in
+            do {
+                try await serverConfiguration.save(ServerConfiguration(serverURL: serverURL))
+                let info = try await discovery.fetchSystemInfo(serverURL)
+                await send(.connectionSucceeded(serverURL, info))
+            } catch {
+                await send(.connectionFailed(error.localizedDescription))
+            }
+        }
+        .cancellable(id: CancelID.connect, cancelInFlight: true)
     }
 }

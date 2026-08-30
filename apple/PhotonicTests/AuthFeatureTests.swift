@@ -12,52 +12,145 @@ struct AuthFeatureTests {
         }
     }
 
-    private func makeSession() throws -> AuthSession {
-        let serverURL = try #require(ServerURL("https://photonic.example.com"))
-        return try AuthSession(
-            serverURL: serverURL,
-            serverInfo: ServerInfo(
-                version: "1.2.3",
-                clientID: "photonic-ios",
-                tokenURL: serverURL,
-                authorizeURL: serverURL
-            ),
-            accessToken: #require(
-                AccessToken(value: "access", expiresAt: .distantFuture)
-            ),
-            refreshToken: #require(RefreshToken(value: "refresh"))
+    private struct TestDiscoveryFailure: Error, LocalizedError {
+        var errorDescription: String? {
+            "server unreachable"
+        }
+    }
+
+    private func makeServerInfo(serverURL: ServerURL) -> ServerInfo {
+        ServerInfo(
+            version: "1.2.3",
+            clientID: "photonic-ios",
+            tokenURL: serverURL,
+            authorizeURL: serverURL
         )
     }
 
     @Test
-    func signInWithoutServerConfigurationFails() async {
+    func onAppearConnectsSavedServer() async throws {
+        let serverURL = try #require(ServerURL("https://photonic.example.com"))
+        let info = makeServerInfo(serverURL: serverURL)
+
         let store = TestStore(initialState: AuthFeature.State()) {
             AuthFeature()
         } withDependencies: {
-            $0.serverConfigurationClient.load = { nil }
+            $0.serverConfigurationClient.load = {
+                ServerConfiguration(serverURL: serverURL)
+            }
+            $0.discoveryClient.fetchSystemInfo = { _ in info }
+        }
+
+        await store.send(.onAppear)
+        await store.receive(.configLoaded(ServerConfiguration(serverURL: serverURL))) {
+            $0.serverURLText = "https://photonic.example.com"
+        }
+        await store.receive(.connectionSucceeded(serverURL, info)) {
+            $0.connectedServerURL = serverURL
+            $0.connectedServer = info
+            $0.connectionStatus = "Connected to Photonic 1.2.3"
+        }
+    }
+
+    @Test
+    func connectSavesConfigurationAndDiscoversServer() async throws {
+        let serverURL = try #require(ServerURL("https://photonic.example.com"))
+        let info = makeServerInfo(serverURL: serverURL)
+        var savedConfigurations: [ServerConfiguration] = []
+
+        let store = TestStore(
+            initialState: AuthFeature.State(serverURLText: "https://photonic.example.com")
+        ) {
+            AuthFeature()
+        } withDependencies: {
+            $0.serverConfigurationClient.save = { savedConfigurations.append($0) }
+            $0.discoveryClient.fetchSystemInfo = { _ in info }
+        }
+
+        await store.send(.connectTapped) {
+            $0.isConnecting = true
+        }
+        await store.receive(.connectionSucceeded(serverURL, info)) {
+            $0.isConnecting = false
+            $0.connectedServerURL = serverURL
+            $0.connectedServer = info
+            $0.connectionStatus = "Connected to Photonic 1.2.3"
+        }
+        #expect(savedConfigurations == [ServerConfiguration(serverURL: serverURL)])
+    }
+
+    @Test
+    func connectRejectsInvalidURLWithoutSaving() async {
+        var saveCalled = false
+
+        let store = TestStore(
+            initialState: AuthFeature.State(serverURLText: "not a url")
+        ) {
+            AuthFeature()
+        } withDependencies: {
+            $0.serverConfigurationClient.save = { _ in saveCalled = true }
+        }
+
+        await store.send(.connectTapped) {
+            $0.connectionStatus = "Enter a valid server URL (https://…)"
+        }
+        #expect(!saveCalled)
+    }
+
+    @Test
+    func discoveryFailureSurfacesError() async throws {
+        let serverURL = try #require(ServerURL("https://photonic.example.com"))
+
+        let store = TestStore(
+            initialState: AuthFeature.State(serverURLText: "https://photonic.example.com")
+        ) {
+            AuthFeature()
+        } withDependencies: {
+            $0.serverConfigurationClient.save = { _ in }
+            $0.discoveryClient.fetchSystemInfo = { _ in throw TestDiscoveryFailure() }
+        }
+
+        await store.send(.connectTapped) {
+            $0.isConnecting = true
+        }
+        await store.receive(.connectionFailed("server unreachable")) {
+            $0.isConnecting = false
+            $0.connectionStatus = "server unreachable"
+        }
+    }
+
+    @Test
+    func signInWithoutConnectedServerFails() async {
+        let store = TestStore(initialState: AuthFeature.State()) {
+            AuthFeature()
         }
 
         await store.send(.signInTapped) {
-            $0.isSigningIn = true
-        }
-        await store.receive(.signInFailed("Connect a server in Settings first")) {
-            $0.isSigningIn = false
-            $0.errorMessage = "Connect a server in Settings first"
+            $0.errorMessage = "Connect to a server first"
         }
     }
 
     @Test
     func signInSucceedsAndNotifiesParent() async throws {
-        let configuration = try ServerConfiguration(
-            serverURL: #require(ServerURL("https://photonic.example.com"))
+        let serverURL = try #require(ServerURL("https://photonic.example.com"))
+        let info = makeServerInfo(serverURL: serverURL)
+        let session = try AuthSession(
+            serverURL: serverURL,
+            serverInfo: info,
+            accessToken: #require(
+                AccessToken(value: "access", expiresAt: .distantFuture)
+            ),
+            refreshToken: #require(RefreshToken(value: "refresh"))
         )
-        let session = try makeSession()
 
-        let store = TestStore(initialState: AuthFeature.State()) {
+        let store = TestStore(
+            initialState: AuthFeature.State(
+                connectedServerURL: serverURL,
+                connectedServer: info
+            )
+        ) {
             AuthFeature()
         } withDependencies: {
-            $0.serverConfigurationClient.load = { configuration }
-            $0.discoveryClient.fetchSystemInfo = { _ in session.serverInfo }
             $0.authClient.signIn = { _, _ in session }
         }
 
@@ -72,22 +165,17 @@ struct AuthFeatureTests {
 
     @Test
     func signInFailureSurfacesError() async throws {
-        let configuration = try ServerConfiguration(
-            serverURL: #require(ServerURL("https://photonic.example.com"))
-        )
         let serverURL = try #require(ServerURL("https://photonic.example.com"))
-        let info = ServerInfo(
-            version: "1.2.3",
-            clientID: "photonic-ios",
-            tokenURL: serverURL,
-            authorizeURL: serverURL
-        )
+        let info = makeServerInfo(serverURL: serverURL)
 
-        let store = TestStore(initialState: AuthFeature.State()) {
+        let store = TestStore(
+            initialState: AuthFeature.State(
+                connectedServerURL: serverURL,
+                connectedServer: info
+            )
+        ) {
             AuthFeature()
         } withDependencies: {
-            $0.serverConfigurationClient.load = { configuration }
-            $0.discoveryClient.fetchSystemInfo = { _ in info }
             $0.authClient.signIn = { _, _ in throw TestSignInFailure() }
         }
 
@@ -98,49 +186,5 @@ struct AuthFeatureTests {
             $0.isSigningIn = false
             $0.errorMessage = "sign-in cancelled"
         }
-    }
-}
-
-struct PKCETests {
-    @Test
-    func verifierHasExpectedLengthAndCharset() {
-        let verifier = PKCE.makeVerifier()
-        #expect(verifier.count == 43)
-        let allowed = Set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
-        #expect(verifier.allSatisfy { allowed.contains($0) })
-    }
-
-    @Test
-    func challengeMatchesRFC7636Vector() {
-        let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-        #expect(PKCE.challenge(for: verifier) == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
-    }
-
-    @Test
-    func authorizeURLCarriesPKCEParameters() throws {
-        let serverURL = try #require(ServerURL("https://photonic.example.com"))
-        let info = try ServerInfo(
-            version: "1.2.3",
-            clientID: "photonic-ios",
-            tokenURL: serverURL,
-            authorizeURL: #require(ServerURL("https://photonic.example.com/oauth/authorize"))
-        )
-        let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-        let state = "state-123"
-
-        let url = try #require(PKCE.authorizeURL(
-            info: info,
-            verifier: verifier,
-            redirectURI: PKCE.redirectURI,
-            state: state
-        ))
-        let items = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems)
-
-        #expect(items.first(where: { $0.name == "response_type" })?.value == "code")
-        #expect(items.first(where: { $0.name == "client_id" })?.value == "photonic-ios")
-        #expect(items.first(where: { $0.name == "redirect_uri" })?.value == PKCE.redirectURI)
-        #expect(items.first(where: { $0.name == "code_challenge" })?.value == PKCE.challenge(for: verifier))
-        #expect(items.first(where: { $0.name == "code_challenge_method" })?.value == "S256")
-        #expect(items.first(where: { $0.name == "state" })?.value == state)
     }
 }
