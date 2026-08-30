@@ -14,6 +14,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-runtime.git", from: "1.7.0"),
         .package(url: "https://github.com/apple/swift-openapi-urlsession.git", from: "1.0.2"),
         .package(url: "https://github.com/apple/swift-openapi-generator.git", from: "1.6.0"),
+        .package(url: "https://github.com/pointfreeco/swift-dependencies.git", from: "1.17.1"),
         .package(path: "../PhotonicCore"),
     ],
     targets: [
@@ -22,6 +23,8 @@ let package = Package(
             dependencies: [
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
                 .product(name: "OpenAPIURLSession", package: "swift-openapi-urlsession"),
+                .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
                 .product(name: "PhotonicCore", package: "PhotonicCore"),
             ],
             plugins: [
