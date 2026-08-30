@@ -33,7 +33,6 @@ photonic/
 │   ├── PhotonicUITests/
 │   └── CLAUDE.md
 ├── openapi.yaml       # shared API contract (source of truth)
-├── asyncapi.yaml      # shared event contract
 ├── flake.nix          # Nix dev shells (cd into server/ on entry)
 ├── docker-compose.yml # local dev services (postgres, jaeger)
 ├── docs/              # project-wide docs
@@ -56,9 +55,6 @@ Swift app.
 2. `cd server && cargo xtask generate-openapi` — rewrites root `openapi.yaml`
 3. On the server: `cargo build` auto-regenerates the Rust progenitor client
 4. In Xcode: rebuild — `swift-openapi-generator` picks up the updated spec via the symlink
-
-Similarly, `asyncapi.yaml` at the repo root defines the event bus contract (documentation for
-the event-driven integration between server modules; see `server/CLAUDE.md`).
 
 ## Entry Points
 
