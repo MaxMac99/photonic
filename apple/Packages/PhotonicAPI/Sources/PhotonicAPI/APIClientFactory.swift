@@ -9,11 +9,26 @@ import OpenAPIURLSession
 /// ever importing OpenAPI modules.
 public enum APIClientFactory {
     /// Creates a client for the Photonic server at `serverURL`.
-    /// Auth middleware wraps the transport when auth lands (build-order step 5).
-    public static func make(serverURL: URL) -> Client {
+    public static func make(
+        serverURL: URL,
+        middlewares: [any ClientMiddleware] = []
+    ) -> Client {
         Client(
             serverURL: serverURL,
-            transport: URLSessionTransport()
+            transport: URLSessionTransport(),
+            middlewares: middlewares
         )
+    }
+
+    /// Creates a client that carries the session's bearer token, if any.
+    public static func makeAuthenticatedClient(
+        serverURL: URL,
+        accessToken: String?
+    ) -> Client {
+        var middlewares: [any ClientMiddleware] = []
+        if let accessToken {
+            middlewares.append(BearerAuthMiddleware(accessToken: { accessToken }))
+        }
+        return make(serverURL: serverURL, middlewares: middlewares)
     }
 }
