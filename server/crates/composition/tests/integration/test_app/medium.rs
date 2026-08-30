@@ -65,6 +65,9 @@ impl From<ImageFixture> for CreateMediumRequest {
 }
 
 impl TestApp {
+    // The generated client's `Error` is large; boxing it in every test helper
+    // would obscure the assertions, so allow the lint here.
+    #[allow(clippy::result_large_err)]
     pub async fn create_medium(
         &self,
         user: &User,
