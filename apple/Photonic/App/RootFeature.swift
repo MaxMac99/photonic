@@ -1,8 +1,11 @@
 import ComposableArchitecture
+import Dependencies
 import SwiftUI
 
 @Reducer
 struct RootFeature {
+    @Dependency(AuthClient.self) private var auth
+
     enum Tab: Hashable {
         case backup
         case library
@@ -12,6 +15,8 @@ struct RootFeature {
     @ObservableState
     struct State: Equatable {
         var currentTab: Tab = .backup
+        var isAuthenticated = false
+        var auth = AuthFeature.State()
         var backup = BackupFeature.State()
         var library = LibraryFeature.State()
         var settings = SettingsFeature.State()
@@ -19,6 +24,9 @@ struct RootFeature {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
+        case onAppear
+        case sessionRestored(Bool)
+        case auth(AuthFeature.Action)
         case backup(BackupFeature.Action)
         case library(LibraryFeature.Action)
         case settings(SettingsFeature.Action)
@@ -26,6 +34,9 @@ struct RootFeature {
 
     var body: some ReducerOf<Self> {
         BindingReducer()
+        Scope(state: \.auth, action: \.auth) {
+            AuthFeature()
+        }
         Scope(state: \.backup, action: \.backup) {
             BackupFeature()
         }
@@ -35,11 +46,29 @@ struct RootFeature {
         Scope(state: \.settings, action: \.settings) {
             SettingsFeature()
         }
-        Reduce { _, action in
+        Reduce { state, action in
             switch action {
-            case .binding:
+            case .onAppear:
+                return .run { send in
+                    let session = await auth.restoreSession()
+                    await send(.sessionRestored(session != nil))
+                }
+
+            case let .sessionRestored(authenticated):
+                state.isAuthenticated = authenticated
                 return .none
+
+            case .auth(.delegate(.signInCompleted)):
+                state.isAuthenticated = true
+                return .none
+
+            case .auth:
+                return .none
+
             case .backup, .library, .settings:
+                return .none
+
+            case .binding:
                 return .none
             }
         }
@@ -50,6 +79,17 @@ struct RootView: View {
     @Bindable var store: StoreOf<RootFeature>
 
     var body: some View {
+        if store.isAuthenticated {
+            tabs
+        } else {
+            AuthView(store: store.scope(state: \.auth, action: \.auth))
+                .onAppear {
+                    store.send(.onAppear)
+                }
+        }
+    }
+
+    private var tabs: some View {
         TabView(selection: $store.currentTab) {
             BackupView(store: store.scope(state: \.backup, action: \.backup))
                 .tabItem {
@@ -68,6 +108,9 @@ struct RootView: View {
                     Label("Settings", systemImage: "gearshape")
                 }
                 .tag(RootFeature.Tab.settings)
+        }
+        .onAppear {
+            store.send(.onAppear)
         }
     }
 }
