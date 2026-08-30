@@ -86,6 +86,7 @@ struct SettingsFeatureTests {
         ) {
             SettingsFeature()
         } withDependencies: {
+            $0.serverConfigurationClient.save = { _ in }
             $0.discoveryClient.fetchSystemInfo = { _ in throw TestDiscoveryFailure() }
         }
 

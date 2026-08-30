@@ -239,11 +239,13 @@ struct BackupFeatureTests {
             $0.selectedAlbumIDs = []
         }
         #expect(queue.enqueuedMediaIDs() == ["m1", "m2"])
+        let queuedJobs = queue.enqueuedJobs()
 
         await store.receive(\.startTapped) {
             $0.phase = .processing
         }
         await store.receive(\.jobDidStart) {
+            $0.currentJob = queuedJobs[0]
             $0.snapshot.pending = 1
             $0.snapshot.uploading = 1
         }
@@ -253,6 +255,7 @@ struct BackupFeatureTests {
             $0.snapshot.done = 1
         }
         await store.receive(\.jobDidStart) {
+            $0.currentJob = queuedJobs[1]
             $0.snapshot.pending = 0
             $0.snapshot.uploading = 1
         }

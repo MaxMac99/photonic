@@ -26,23 +26,23 @@ struct LibraryFeatureTests {
     @Test
     func firstPageAppendsMediaAndContinuesPaging() async {
         let media = [medium(UUID()), medium(UUID())]
-        let cursor = MediaCursor(lastDate: nil, lastID: media[1].id)
+        let expectedCursor = MediaCursor(lastDate: nil, lastID: media[1].id)
         var receivedCursors: [MediaCursor?] = []
 
         let store = TestStore(initialState: LibraryFeature.State()) {
             LibraryFeature()
         } withDependencies: {
-            $0.mediaClient.fetchPage = { cursor, pageSize in
-                receivedCursors.append(cursor)
+            $0.mediaClient.fetchPage = { passedCursor, pageSize in
+                receivedCursors.append(passedCursor)
                 #expect(pageSize == 50)
-                return MediaPage(media: media, nextCursor: cursor)
+                return MediaPage(media: media, nextCursor: expectedCursor)
             }
         }
 
         await store.send(.onAppear) {
             $0.isLoading = true
         }
-        await store.receive(.mediaPageLoaded(MediaPage(media: media, nextCursor: cursor))) {
+        await store.receive(.mediaPageLoaded(MediaPage(media: media, nextCursor: expectedCursor))) {
             $0.isLoading = false
             $0.media = media
             $0.hasMore = true

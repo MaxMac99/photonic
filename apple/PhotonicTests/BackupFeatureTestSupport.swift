@@ -45,6 +45,10 @@ final class FakeQueue: @unchecked Sendable {
         jobs.map(\.job.mediaID)
     }
 
+    func enqueuedJobs() -> [UploadJob] {
+        jobs.map(\.job)
+    }
+
     func setStatus(_ status: UploadJob.Status, jobID: UUID, message: String?) {
         guard let index = jobs.firstIndex(where: { $0.job.id == jobID }) else { return }
         jobs[index].status = status
@@ -92,8 +96,11 @@ extension FakePhotos {
     func makeClient() -> PhotoLibraryClient {
         PhotoLibraryClient(
             requestAccess: { true },
-            fetchAlbums: { [weak self] in await self?.albums ?? [] },
-            pendingMedia: { [weak self] _ in await self?.pending ?? [] },
+            fetchAlbums: { self.albums },
+            pendingMedia: { albumID in
+                _ = albumID
+                return self.pending
+            },
             loadData: { _ in Data() }
         )
     }

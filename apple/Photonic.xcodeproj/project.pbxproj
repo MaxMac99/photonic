@@ -421,11 +421,12 @@
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = Photonic/PreviewContent;
 				DEVELOPMENT_TEAM = SXU3PZ2ZWL;
-				EMIT_FRONTEND_COMMAND_LINES = YES;
+				EMIT_FRONTEND_COMMAND_LINES = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Photonic/Info.plist;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Backing up all images";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -467,11 +468,12 @@
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = Photonic/PreviewContent;
 				DEVELOPMENT_TEAM = SXU3PZ2ZWL;
-				EMIT_FRONTEND_COMMAND_LINES = YES;
+				EMIT_FRONTEND_COMMAND_LINES = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Photonic/Info.plist;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Backing up all images";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
