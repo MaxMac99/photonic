@@ -6,6 +6,7 @@ target/
 /gen
 /docker
 tmpdata/
+.work/
 .idea
 .env
 .direnv

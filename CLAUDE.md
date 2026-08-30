@@ -67,6 +67,24 @@ the event-driven integration between server modules; see `server/CLAUDE.md`).
 - **Swift app dev loop**: open `apple/Photonic.xcodeproj` in Xcode.
 - **Local server + deps**: `docker-compose up` at the repo root.
 
+## Worktrees (agent isolation)
+
+Parallel/agent work happens in git worktrees, never by switching branches in the main
+checkout. The layout is fixed:
+
+```
+photonic/                          # main checkout (the daily IDE window)
+└── .work/photonic-<branch>/       # one worktree per workstream
+```
+
+- Create worktrees with `wt new photonic <branch>` (creates `.work/photonic-<branch>`,
+  best-effort `cargo fetch` prewarm). Plain `git worktree add` is fine as long as the
+  path and naming match.
+- Never create worktrees outside `.work/`, and never name them `<branch>` alone.
+- direnv auto-allows everything under `~/projects`; nix-direnv provides the environment
+  on first `cd`. No `direnv allow`, no manual setup.
+- List/clean up: `wt list photonic` / `wt prune photonic` (removes merged worktrees).
+
 ## CI
 
 Path-filtered workflows in `.github/workflows/`:

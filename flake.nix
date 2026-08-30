@@ -111,7 +111,7 @@
                 devShells = {
                     default = mkShell {
                         inputsFrom = [ bin ];
-                        buildInputs = [ openapi-down-convert ];
+                        buildInputs = [ openapi-down-convert sccache ];
 
                         shellHook = ''
                             # Work inside the server subdirectory so cargo commands pick up
@@ -123,6 +123,13 @@
                             # shadow the Nix toolchain (e.g. `cargo fmt`).
                             export CARGO_HOME="$PWD/tmpdata/.cargo"
                             mkdir -p "$CARGO_HOME"
+
+                            # Shared Rust build cache. SCCACHE_DIR lives under $HOME, so
+                            # it is keyed to the user rather than the checkout: every
+                            # worktree's first build hits the same warm cache. Only manual
+                            # cargo builds use it (crane/CI builds are unaffected).
+                            export SCCACHE_DIR="''${SCCACHE_DIR:-$HOME/.cache/photonic-sccache}"
+                            export RUSTC_WRAPPER="''${RUSTC_WRAPPER:-${sccache}/bin/sccache}"
                         '';
                     };
 
