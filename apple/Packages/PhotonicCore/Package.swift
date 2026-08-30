@@ -5,10 +5,10 @@ let package = Package(
     name: "PhotonicCore",
     platforms: [
         .iOS(.v18),
-        .macOS(.v15),
+        .macOS(.v15)
     ],
     products: [
-        .library(name: "PhotonicCore", targets: ["PhotonicCore"]),
+        .library(name: "PhotonicCore", targets: ["PhotonicCore"])
     ],
     targets: [
         .target(name: "PhotonicCore"),
@@ -17,7 +17,7 @@ let package = Package(
             dependencies: [
                 .target(name: "PhotonicCore")
             ]
-        ),
+        )
     ],
     swiftLanguageModes: [.v5]
 )

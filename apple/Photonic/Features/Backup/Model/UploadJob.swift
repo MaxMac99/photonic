@@ -37,9 +37,17 @@ struct BackupQueueSnapshot: Equatable, Sendable {
 
     static let empty = BackupQueueSnapshot()
 
-    var total: Int { pending + uploading + done + failed }
-    var processed: Int { done + failed }
-    var hasPendingWork: Bool { pending > 0 }
+    var total: Int {
+        pending + uploading + done + failed
+    }
+
+    var processed: Int {
+        done + failed
+    }
+
+    var hasPendingWork: Bool {
+        pending > 0
+    }
 }
 
 extension UploadJob {
@@ -48,6 +56,6 @@ extension UploadJob {
     static let samples: [UploadJob] = [
         UploadJob(albumID: "sample-album", albumName: "Camera Roll", mediaID: "sample-media-1"),
         UploadJob(albumID: "sample-album", albumName: "Camera Roll", mediaID: "sample-media-2"),
-        UploadJob(albumID: "sample-album", albumName: "Camera Roll", mediaID: "sample-media-3"),
+        UploadJob(albumID: "sample-album", albumName: "Camera Roll", mediaID: "sample-media-3")
     ]
 }

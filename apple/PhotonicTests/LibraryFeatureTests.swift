@@ -7,7 +7,9 @@ import Testing
 @MainActor
 struct LibraryFeatureTests {
     private struct TestFetchFailure: Error, LocalizedError {
-        var errorDescription: String? { "network unreachable" }
+        var errorDescription: String? {
+            "network unreachable"
+        }
     }
 
     private func medium(_ id: UUID, takenAt: Date? = nil) -> Medium {
@@ -17,7 +19,7 @@ struct LibraryFeatureTests {
             albumID: nil,
             takenAt: takenAt,
             primaryFilename: "IMG_0001.HEIC",
-            primaryFilesize: 1_024
+            primaryFilesize: 1024
         )
     }
 
@@ -49,7 +51,7 @@ struct LibraryFeatureTests {
     }
 
     @Test
-    func nextPagePassesCursorAndStopsOnShortPage() async throws {
+    func nextPagePassesCursorAndStopsOnShortPage() async {
         let firstPageMedia = [medium(UUID(), takenAt: Date(timeIntervalSince1970: 100))]
         let secondPageMedia = [medium(UUID(), takenAt: Date(timeIntervalSince1970: 50))]
         let cursorAfterFirst = MediaCursor(

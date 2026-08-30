@@ -29,7 +29,7 @@ extension MediaClient: DependencyKey {
             )
             switch response {
             case let .ok(ok):
-                return try MediumListMapper.map(try ok.body.json, pageSize: pageSize)
+                return try MediumListMapper.map(ok.body.json, pageSize: pageSize)
             case .undocumented:
                 throw APIMappingError.invalidPayload("media list response was not JSON")
             }

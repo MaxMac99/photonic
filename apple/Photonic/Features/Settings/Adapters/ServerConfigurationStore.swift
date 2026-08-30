@@ -37,9 +37,15 @@ extension ServerConfigurationClient: DependencyKey {
 private actor MemoryStore {
     private var value: ServerConfiguration?
 
-    func load() -> ServerConfiguration? { value }
+    func load() -> ServerConfiguration? {
+        value
+    }
 
-    func save(_ configuration: ServerConfiguration) { value = configuration }
+    func save(_ configuration: ServerConfiguration) {
+        value = configuration
+    }
 
-    func clear() { value = nil }
+    func clear() {
+        value = nil
+    }
 }

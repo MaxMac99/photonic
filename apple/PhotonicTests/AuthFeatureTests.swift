@@ -7,12 +7,14 @@ import Testing
 @MainActor
 struct AuthFeatureTests {
     private struct TestSignInFailure: Error, LocalizedError {
-        var errorDescription: String? { "sign-in cancelled" }
+        var errorDescription: String? {
+            "sign-in cancelled"
+        }
     }
 
     private func makeSession() throws -> AuthSession {
         let serverURL = try #require(ServerURL("https://photonic.example.com"))
-        return AuthSession(
+        return try AuthSession(
             serverURL: serverURL,
             serverInfo: ServerInfo(
                 version: "1.2.3",
@@ -20,10 +22,10 @@ struct AuthFeatureTests {
                 tokenURL: serverURL,
                 authorizeURL: serverURL
             ),
-            accessToken: try #require(
+            accessToken: #require(
                 AccessToken(value: "access", expiresAt: .distantFuture)
             ),
-            refreshToken: try #require(RefreshToken(value: "refresh"))
+            refreshToken: #require(RefreshToken(value: "refresh"))
         )
     }
 
@@ -46,8 +48,8 @@ struct AuthFeatureTests {
 
     @Test
     func signInSucceedsAndNotifiesParent() async throws {
-        let configuration = ServerConfiguration(
-            serverURL: try #require(ServerURL("https://photonic.example.com"))
+        let configuration = try ServerConfiguration(
+            serverURL: #require(ServerURL("https://photonic.example.com"))
         )
         let session = try makeSession()
 
@@ -70,8 +72,8 @@ struct AuthFeatureTests {
 
     @Test
     func signInFailureSurfacesError() async throws {
-        let configuration = ServerConfiguration(
-            serverURL: try #require(ServerURL("https://photonic.example.com"))
+        let configuration = try ServerConfiguration(
+            serverURL: #require(ServerURL("https://photonic.example.com"))
         )
         let serverURL = try #require(ServerURL("https://photonic.example.com"))
         let info = ServerInfo(
@@ -117,11 +119,11 @@ struct PKCETests {
     @Test
     func authorizeURLCarriesPKCEParameters() throws {
         let serverURL = try #require(ServerURL("https://photonic.example.com"))
-        let info = ServerInfo(
+        let info = try ServerInfo(
             version: "1.2.3",
             clientID: "photonic-ios",
             tokenURL: serverURL,
-            authorizeURL: try #require(ServerURL("https://photonic.example.com/oauth/authorize"))
+            authorizeURL: #require(ServerURL("https://photonic.example.com/oauth/authorize"))
         )
         let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
         let state = "state-123"

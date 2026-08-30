@@ -120,7 +120,7 @@ enum TokenExchange {
             "code": code,
             "redirect_uri": PKCE.redirectURI,
             "client_id": info.clientID,
-            "code_verifier": verifier,
+            "code_verifier": verifier
         ])
 
         let (data, response) = try await URLSession.shared.data(for: request)

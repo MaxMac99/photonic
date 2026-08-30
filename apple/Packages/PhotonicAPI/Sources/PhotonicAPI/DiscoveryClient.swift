@@ -17,7 +17,7 @@ extension DiscoveryClient: DependencyKey {
             let response = try await client.system_info(Operations.system_info.Input())
             switch response {
             case let .ok(ok):
-                return try ServerInfoMapper.map(try ok.body.json)
+                return try ServerInfoMapper.map(ok.body.json)
             case .undocumented:
                 throw APIMappingError.invalidPayload("system info response was not JSON")
             }

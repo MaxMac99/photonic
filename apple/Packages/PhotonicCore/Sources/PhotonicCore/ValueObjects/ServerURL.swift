@@ -16,7 +16,7 @@ public struct ServerURL: Hashable, Sendable, Codable {
             url.query == nil,
             url.fragment == nil
         else { return nil }
-        self.rawValue = url
+        rawValue = url
     }
 
     public var absoluteString: String {
@@ -30,19 +30,19 @@ extension ServerURL: CustomStringConvertible {
     }
 }
 
-extension ServerURL {
-    public init(from decoder: Decoder) throws {
+public extension ServerURL {
+    init(from decoder: Decoder) throws {
         let string = try decoder.singleValueContainer().decode(String.self)
         guard let url = ServerURL(string) else {
-            throw DecodingError.dataCorruptedError(
-                in: try decoder.singleValueContainer(),
+            throw try DecodingError.dataCorruptedError(
+                in: decoder.singleValueContainer(),
                 debugDescription: "Invalid server URL: \(string)"
             )
         }
-        self.rawValue = url.rawValue
+        rawValue = url.rawValue
     }
 
-    public func encode(to encoder: Encoder) throws {
+    func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(absoluteString)
     }

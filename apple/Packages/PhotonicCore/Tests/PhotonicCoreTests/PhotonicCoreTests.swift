@@ -1,13 +1,12 @@
 import Foundation
 import Testing
-
 @testable import PhotonicCore
 
 struct ServerURLTests {
     @Test(arguments: [
         "http://localhost:8080",
         "https://photonic.example.com",
-        "https://photonic.example.com/base/path",
+        "https://photonic.example.com/base/path"
     ])
     func acceptsValidBaseURLs(_ string: String) {
         #expect(ServerURL(string) != nil)
@@ -56,17 +55,17 @@ struct AccessTokenTests {
 
     @Test
     func expiryBoundary() throws {
-        let expiry = Date(timeIntervalSince1970: 1_000)
+        let expiry = Date(timeIntervalSince1970: 1000)
         let token = try #require(AccessToken(value: "abc", expiresAt: expiry))
         #expect(!token.isExpired(at: Date(timeIntervalSince1970: 999)))
         #expect(token.isExpired(at: expiry))
-        #expect(token.isExpired(at: Date(timeIntervalSince1970: 1_001)))
+        #expect(token.isExpired(at: Date(timeIntervalSince1970: 1001)))
     }
 }
 
 struct RefreshTokenTests {
     @Test
-    func acceptsNonEmptyToken() throws {
+    func acceptsNonEmptyToken() {
         #expect(RefreshToken(value: "abc123") != nil)
     }
 
@@ -80,7 +79,7 @@ struct MediaHashTests {
     @Test(arguments: [
         "0123456789abcdef0123456789abcdef",
         "ABCDEF0123456789ABCDEF0123456789",
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
     ])
     func acceptsValidHashes(_ value: String) throws {
         let hash = try #require(MediaHash(value))
@@ -89,9 +88,9 @@ struct MediaHashTests {
 
     @Test(arguments: [
         "",
-        "0123456789abcdeg0123456789abcdef",  // non-hex
-        "01234567",  // too short
-        String(repeating: "0123456789abcdef", count: 8) + "0",  // too long (129)
+        "0123456789abcdeg0123456789abcdef", // non-hex
+        "01234567", // too short
+        String(repeating: "0123456789abcdef", count: 8) + "0" // too long (129)
     ])
     func rejectsInvalidHashes(_ value: String) {
         #expect(MediaHash(value) == nil)

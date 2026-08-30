@@ -3,7 +3,9 @@ import Foundation
 @testable import Photonic
 
 struct TestUploadFailure: Error, LocalizedError {
-    var errorDescription: String? { "upload failed" }
+    var errorDescription: String? {
+        "upload failed"
+    }
 }
 
 struct FakeJobEntry {

@@ -35,7 +35,7 @@ enum PKCE {
             URLQueryItem(name: "redirect_uri", value: redirectURI),
             URLQueryItem(name: "code_challenge", value: challenge(for: verifier)),
             URLQueryItem(name: "code_challenge_method", value: "S256"),
-            URLQueryItem(name: "state", value: state),
+            URLQueryItem(name: "state", value: state)
         ]
         components.queryItems = (components.queryItems ?? []) + queryItems
         return components.url

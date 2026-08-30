@@ -7,7 +7,7 @@ struct LibraryView: View {
 
     var body: some View {
         Group {
-            if store.media.isEmpty && !store.isLoading {
+            if store.media.isEmpty, !store.isLoading {
                 ContentUnavailableView {
                     Label("Library", systemImage: "photo.on.rectangle")
                 } description: {
@@ -101,7 +101,7 @@ struct LibraryView: View {
                             id: UUID(),
                             type: index.isMultiple(of: 2) ? .photo : .video,
                             albumID: nil,
-                            takenAt: Date(timeIntervalSinceNow: -Double(index) * 3_600),
+                            takenAt: Date(timeIntervalSinceNow: -Double(index) * 3600),
                             primaryFilename: "IMG_00\(index).HEIC",
                             primaryFilesize: 2_400_000
                         )

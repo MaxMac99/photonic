@@ -7,13 +7,15 @@ import Testing
 @MainActor
 struct SettingsFeatureTests {
     private struct TestDiscoveryFailure: Error, LocalizedError {
-        var errorDescription: String? { "server unreachable" }
+        var errorDescription: String? {
+            "server unreachable"
+        }
     }
 
     @Test
     func onAppearLoadsSavedConfiguration() throws {
-        let saved = ServerConfiguration(
-            serverURL: try #require(ServerURL("https://photonic.example.com"))
+        let saved = try ServerConfiguration(
+            serverURL: #require(ServerURL("https://photonic.example.com"))
         )
 
         let store = TestStore(initialState: SettingsFeature.State()) {
