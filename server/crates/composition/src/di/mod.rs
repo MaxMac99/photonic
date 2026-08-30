@@ -1,7 +1,7 @@
 mod container;
-mod event_system;
+pub mod event_system;
 mod factories;
 mod listeners;
-pub(crate) mod stream_definitions;
+pub mod stream_definitions;
 
 pub use container::Container;
