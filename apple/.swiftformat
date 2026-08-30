@@ -4,12 +4,9 @@
 
 --swiftversion 5.10
 
-# Paths to skip (generated code and build artefacts)
---exclude Photonic/Infrastructure/API/Generated
---exclude PhotonicClient
+# Paths to skip (build artefacts; OpenAPI-generated code lives in DerivedData)
 --exclude **/.build
 --exclude **/DerivedData
---exclude **/Pods
 
 # Indentation / width
 --indent 4
