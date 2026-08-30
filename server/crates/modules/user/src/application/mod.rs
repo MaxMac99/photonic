@@ -8,7 +8,7 @@ pub use config::QuotaConfig;
 pub mod ports;
 pub mod quota_manager;
 
-pub use ports::UserRepository;
+pub use ports::{QuotaReservationStore, UserRepository};
 pub use quota_manager::QuotaManager;
 
 pub struct UserApplicationHandlers {

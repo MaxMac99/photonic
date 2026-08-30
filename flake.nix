@@ -151,6 +151,10 @@
                             export PGDATA="$PWD/tmpdata/.pgdata-test"
                             export TEST_DATABASE_URL="postgresql:///$USER?host=$PGDATA"
                             export DATABASE_URL="$TEST_DATABASE_URL"
+                            # sqlx-cli 0.9+ no longer defaults the connection
+                            # user to the OS user when the URL has none; every
+                            # URL here is userless, so pin it explicitly.
+                            export PGUSER="$USER"
 
                             # Set up test environment variables
                             export OAUTH_CLIENT_ID="test-client-id"

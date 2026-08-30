@@ -76,7 +76,6 @@ struct PhotonicApp: App {
 
     private func createMockClient() -> APIProtocol {
         Client(
-            // swiftlint:disable:next force_unwrapping
             serverURL: URL(string: "http://localhost")!,
             transport: URLSessionTransport()
         )
@@ -122,7 +121,6 @@ final class CompositionRootContainer: ObservableObject {
 
 struct ApiClientKey: EnvironmentKey {
     static var defaultValue: APIProtocol = Client(
-        // swiftlint:disable:next force_unwrapping
         serverURL: URL(string: "http://localhost")!,
         transport: URLSessionTransport()
     )

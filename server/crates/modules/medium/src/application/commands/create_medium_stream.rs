@@ -11,12 +11,11 @@ use kernel::{
 };
 use mime::Mime;
 use tokio::io::AsyncRead;
-use tracing::{debug, error, info, instrument};
-use user::QuotaManager;
+use tracing::{debug, error, info, instrument, warn};
 use uuid::Uuid;
 
 use crate::{
-    application::ports::FileStorage,
+    application::ports::{FileStorage, QuotaPort},
     domain::{
         events::MediumCreatedEvent, Medium, MediumCreateRequest, MediumItemCreateRequest,
         MediumItemType, MediumType,
@@ -39,7 +38,7 @@ pub struct CreateMediumStreamCommand {
 #[derive(new)]
 pub struct CreateMediumStreamHandler {
     file_storage: Arc<dyn FileStorage>,
-    quota_manager: Arc<QuotaManager>,
+    quota: Arc<dyn QuotaPort>,
     event_bus: Arc<dyn PublishEvent<MediumCreatedEvent>>,
 }
 
@@ -53,79 +52,104 @@ impl CreateMediumStreamHandler {
     pub async fn handle(&self, command: CreateMediumStreamCommand) -> ApplicationResult<MediumId> {
         info!("Creating medium from stream");
 
-        self.quota_manager
-            .with_quota(command.user_id, command.file_size, || async {
-                let medium_type = command
-                    .medium_type
-                    .unwrap_or_else(|| MediumType::from(command.mime_type.clone()));
-                let filename = Filename::new(&command.filename)
-                    .map_err(|e| ApplicationError::Domain { source: e })?;
-                let priority = command.priority.map(Priority::new).unwrap_or_default();
+        let reservation = self
+            .quota
+            .reserve(command.user_id, command.file_size)
+            .await?;
 
-                let temp_file_id = Uuid::new_v4();
-                let temp_location = FileLocation::new(
-                    StorageTier::Temporary,
-                    PathBuf::from(format!("{}.{}", temp_file_id, filename.extension())),
-                );
-
-                let medium_item_request = MediumItemCreateRequest {
-                    owner_id: command.user_id,
-                    medium_item_type: MediumItemType::Original,
-                    mime: command.mime_type,
-                    filename,
-                    filesize: command.file_size,
-                    priority,
-                    dimensions: None,
-                    locations: vec![temp_location.clone()],
-                };
-
-                let medium_request = MediumCreateRequest {
-                    owner_id: command.user_id,
-                    medium_type,
-                    taken_at: command.date_taken,
-                    camera_make: command.camera_make,
-                    camera_model: command.camera_model,
-                    medium_item: medium_item_request,
-                };
-                let (medium, created_event) = Medium::new(medium_request)?;
-                let medium_id = medium.id;
-
-                debug!(
-                    medium_id = %medium_id,
-                    temp_location = ?temp_location.relative_path,
-                    "Storing file and persisting events"
-                );
-
-                // Store file to temporary storage
-                self.file_storage
-                    .store_file_stream(&temp_location, command.stream)
-                    .await
-                    .map_err(|e| {
-                        error!(
-                            medium_id = %medium_id,
-                            error = %format_domain_error(&e),
-                            "File storage failed"
-                        );
-                        ApplicationError::Domain { source: e }
-                    })?;
-
-                // Publish event — persists to event store, then dispatches to listeners
-                self.event_bus.publish(created_event).await.map_err(|e| {
-                    error!(
+        match self.create(command).await {
+            Ok(medium_id) => {
+                // The medium exists, so the reserved bytes are consumed.
+                // A failed commit only skips the finality marker — the
+                // bytes are already accounted for, so just warn.
+                if let Err(e) = self.quota.commit(reservation).await {
+                    warn!(
                         medium_id = %medium_id,
                         error = %e,
-                        "Failed to publish event"
+                        "Failed to commit quota reservation"
                     );
-                    e
-                })?;
-
-                info!(
-                    medium_id = %medium_id,
-                    "Medium created successfully from stream"
-                );
-
+                }
+                info!(medium_id = %medium_id, "Medium created successfully from stream");
                 Ok(medium_id)
-            })
+            }
+            Err(e) => {
+                if let Err(release_err) = self.quota.release(reservation).await {
+                    error!(
+                        error = %release_err,
+                        "CRITICAL: Failed to release quota reservation. \
+                         Manual intervention required"
+                    );
+                }
+                Err(e)
+            }
+        }
+    }
+
+    async fn create(&self, command: CreateMediumStreamCommand) -> ApplicationResult<MediumId> {
+        let medium_type = command
+            .medium_type
+            .unwrap_or_else(|| MediumType::from(command.mime_type.clone()));
+        let filename =
+            Filename::new(&command.filename).map_err(|e| ApplicationError::Domain { source: e })?;
+        let priority = command.priority.map(Priority::new).unwrap_or_default();
+
+        let temp_file_id = Uuid::new_v4();
+        let temp_location = FileLocation::new(
+            StorageTier::Temporary,
+            PathBuf::from(format!("{}.{}", temp_file_id, filename.extension())),
+        );
+
+        let medium_item_request = MediumItemCreateRequest {
+            owner_id: command.user_id,
+            medium_item_type: MediumItemType::Original,
+            mime: command.mime_type,
+            filename,
+            filesize: command.file_size,
+            priority,
+            dimensions: None,
+            locations: vec![temp_location.clone()],
+        };
+
+        let medium_request = MediumCreateRequest {
+            owner_id: command.user_id,
+            medium_type,
+            taken_at: command.date_taken,
+            camera_make: command.camera_make,
+            camera_model: command.camera_model,
+            medium_item: medium_item_request,
+        };
+        let (medium, created_event) = Medium::new(medium_request)?;
+        let medium_id = medium.id;
+
+        debug!(
+            medium_id = %medium_id,
+            temp_location = ?temp_location.relative_path,
+            "Storing file and persisting events"
+        );
+
+        // Store file to temporary storage
+        self.file_storage
+            .store_file_stream(&temp_location, command.stream)
             .await
+            .map_err(|e| {
+                error!(
+                    medium_id = %medium_id,
+                    error = %format_domain_error(&e),
+                    "File storage failed"
+                );
+                ApplicationError::Domain { source: e }
+            })?;
+
+        // Publish event — persists to event store, then dispatches to listeners
+        self.event_bus.publish(created_event).await.map_err(|e| {
+            error!(
+                medium_id = %medium_id,
+                error = %e,
+                "Failed to publish event"
+            );
+            e
+        })?;
+
+        Ok(medium_id)
     }
 }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use byte_unit::Byte;
 use chrono::{DateTime, FixedOffset, Utc};
 use kernel::{serde_helpers::serialize_byte_as_u64, StorageTier};
-use medium::domain::{Medium, MediumItem, MediumListItem};
+use medium::domain::{MediumItem, MediumListItem};
 use metadata::domain::{CameraInfo, FileInfo, LocationInfo, Metadata, Orientation, TechnicalInfo};
 use mime_serde_shim::Wrapper as Mime;
 use serde::{Deserialize, Serialize};
@@ -232,8 +232,8 @@ impl From<&MediumListItem> for MediumListResponse {
     }
 }
 
-impl From<Medium> for MediumDetailResponse {
-    fn from(medium: Medium) -> Self {
+impl From<MediumListItem> for MediumDetailResponse {
+    fn from(medium: MediumListItem) -> Self {
         Self {
             id: medium.id,
             medium_type: MediumTypeDto::from(medium.medium_type),

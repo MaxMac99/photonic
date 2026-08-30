@@ -6,7 +6,6 @@ on:
     paths:
       - 'apple/**'
       - 'openapi.yaml'
-      - 'asyncapi.yaml'
       - 'flake.nix'
       - 'flake.lock'
       - '.github/workflows/apple.yml'
@@ -14,7 +13,6 @@ on:
     paths:
       - 'apple/**'
       - 'openapi.yaml'
-      - 'asyncapi.yaml'
       - 'flake.nix'
       - 'flake.lock'
       - '.github/workflows/apple.yml'

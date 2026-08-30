@@ -126,18 +126,13 @@ impl User {
         Ok(QuotaReservedEvent::new(self.id, bytes, self.quota.used()))
     }
 
-    pub fn commit_quota(&self, reserved: &QuotaReservedEvent) -> QuotaCommittedEvent {
-        QuotaCommittedEvent::new(self.id, reserved.bytes, reserved.metadata.event_id)
+    pub fn commit_quota(&self, bytes: Byte, reservation_id: Uuid) -> QuotaCommittedEvent {
+        QuotaCommittedEvent::new(self.id, bytes, reservation_id)
     }
 
-    pub fn release_quota(&mut self, reserved: &QuotaReservedEvent) -> QuotaReleasedEvent {
-        self.quota.release_quota(reserved.bytes);
-        QuotaReleasedEvent::new(
-            self.id,
-            reserved.bytes,
-            self.quota.used(),
-            reserved.metadata.event_id,
-        )
+    pub fn release_quota(&mut self, bytes: Byte, reservation_id: Uuid) -> QuotaReleasedEvent {
+        self.quota.release_quota(bytes);
+        QuotaReleasedEvent::new(self.id, bytes, self.quota.used(), reservation_id)
     }
 
     pub fn update(

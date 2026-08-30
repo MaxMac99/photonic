@@ -148,6 +148,24 @@ pub struct MediumListItem {
     pub items: Vec<MediumItem>,
 }
 
+impl From<Medium> for MediumListItem {
+    fn from(medium: Medium) -> Self {
+        Self {
+            id: medium.id,
+            owner_id: medium.owner_id,
+            medium_type: medium.medium_type,
+            leading_item_id: medium.leading_item_id,
+            taken_at: medium.taken_at,
+            camera_make: medium.camera_make,
+            camera_model: medium.camera_model,
+            gps_coordinates: medium.gps_coordinates,
+            created_at: medium.created_at,
+            updated_at: medium.updated_at,
+            items: medium.items,
+        }
+    }
+}
+
 impl Medium {
     pub fn new(request: MediumCreateRequest) -> DomainResult<(Self, MediumCreatedEvent)> {
         ensure!(

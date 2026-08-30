@@ -18,4 +18,9 @@ pub struct ServerConfig {
     pub authorize_url: String,
     #[config(env = "JWT_SECRET")]
     pub jwt_secret: Option<String>,
+    /// Set when running more than one instance of the server: selects the
+    /// coordination-safe checkpoint store so replicas claim projection
+    /// checkpoints instead of double-processing events (ADR 0006).
+    #[config(default = false, env = "SERVER_MULTI_INSTANCE")]
+    pub multi_instance: bool,
 }

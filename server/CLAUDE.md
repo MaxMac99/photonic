@@ -160,10 +160,9 @@ bin → composition → adapters → modules → kernel → event_sourcing
 ```
 
 - **Modules never depend on each other.** Cross-module collaboration happens either through
-  ports wired by the composition root, or through events on the projection bus.
+  ports wired by the composition root, or through events on the projection bus. (The former
+  `medium → user` exception is gone: quota is behind medium's `QuotaPort`, ADR 0005.)
 - **Modules never depend on adapters or the composition root.**
-- The one deliberate exception: `medium → user` (medium uses user's `QuotaManager` service).
-  Acyclic and documented; invert via a port if medium ever needs extraction.
 
 ### Directory Structure
 
@@ -261,8 +260,8 @@ server/
 
 ### Module Communication Rules
 
-1. **Sync calls across modules** go through ports injected by the composition root (currently:
-   none — medium uses user's QuotaManager directly as the single documented exception).
+1. **Sync calls across modules** go through ports injected by the composition root (e.g.
+   medium's `QuotaPort`, implemented by user's `QuotaManager` via a composition adapter).
 2. **Async collaboration** goes through the projection bus (domain events), with listeners
    registered in `composition/src/di/listeners.rs` + implemented in
    `composition/src/listeners/`.

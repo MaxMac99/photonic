@@ -89,10 +89,13 @@ impl TestApp {
 
     /// Clean up test data from the database
     pub async fn cleanup(&self) {
-        sqlx::query("TRUNCATE users, albums, media, medium_items, locations, media_tags CASCADE")
-            .execute(&self.db_pool)
-            .await
-            .expect("Failed to clean test database");
+        sqlx::query(
+            "TRUNCATE users, albums, media, medium_items, locations, media_tags, \
+             quota_reservations CASCADE",
+        )
+        .execute(&self.db_pool)
+        .await
+        .expect("Failed to clean test database");
     }
 
     /// Shut down the server and release all resources.

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use event_sourcing::aggregate::repository::AggregateRepository;
-use medium::application::MediumApplicationHandlers;
+use medium::application::{ports::QuotaPort, MediumApplicationHandlers};
 use metadata::application::MetadataApplicationHandlers;
 use snafu::{ResultExt, Whatever};
 use sqlx::PgPool;
@@ -13,11 +13,15 @@ use super::{
     event_system::build_projection_bus,
     factories::{
         build_aggregate_repository, build_handlers, build_repositories, build_storage,
-        ApplicationHandlers,
+        ApplicationHandlers, UserQuotaPort,
     },
     listeners::register_listeners,
 };
-use crate::{config::GlobalConfig, events::ProjectionEventBusAdapter, tasks::spawn_cleanup_task};
+use crate::{
+    config::GlobalConfig,
+    events::ProjectionEventBusAdapter,
+    tasks::{spawn_cleanup_task, spawn_quota_reservation_sweep},
+};
 
 /// Dependency injection container.
 /// Manages the lifecycle and wiring of all application dependencies.
@@ -35,15 +39,18 @@ impl Container {
         let storage = build_storage(config.clone()).await?;
 
         // Phase 2: Event system (projection bus + auto-populated registry)
-        let (bus, registry) = build_projection_bus(&db_pool)?;
+        let (bus, registry) = build_projection_bus(&db_pool, config.server.multi_instance)?;
 
         // Phase 3: Application services
         let bus_adapter = Arc::new(ProjectionEventBusAdapter::new(bus.clone()));
         let quota_manager = Arc::new(QuotaManager::new(
             repositories.user.clone(),
             bus_adapter.clone(),
+            repositories.quota_reservations.clone(),
+            config.storage.quota_reservation_ttl_seconds,
         ));
-        let handlers = build_handlers(&config, &repositories, &storage, quota_manager, bus_adapter);
+        let quota_port: Arc<dyn QuotaPort> = Arc::new(UserQuotaPort::new(quota_manager.clone()));
+        let handlers = build_handlers(&config, &repositories, &storage, quota_port, bus_adapter);
 
         // Phase 4: Register listeners (as checkpointed projection handlers)
         {
@@ -61,11 +68,14 @@ impl Container {
             .whatever_context("Failed to start ProjectionEventBus")?;
 
         // Phase 7: Background tasks
-        let background_tasks = vec![spawn_cleanup_task(
-            handlers.medium.cleanup_expired_temp_storage.clone(),
-            config.storage.temp_ttl_seconds,
-            config.storage.cleanup_interval_seconds,
-        )];
+        let background_tasks = vec![
+            spawn_cleanup_task(
+                handlers.medium.cleanup_expired_temp_storage.clone(),
+                config.storage.temp_ttl_seconds,
+                config.storage.cleanup_interval_seconds,
+            ),
+            spawn_quota_reservation_sweep(quota_manager, config.storage.cleanup_interval_seconds),
+        ];
 
         Ok(Arc::new(Self {
             config,

@@ -1,11 +1,10 @@
 mod delete;
 pub(crate) mod entity;
-mod find_by_id;
 mod find_by_medium_id;
 mod save;
 
 use async_trait::async_trait;
-use kernel::{error::DomainResult, MediumId, MetadataId};
+use kernel::{error::DomainResult, MetadataId};
 use metadata::{application::ports::MetadataRepository, domain::Metadata};
 use sqlx::PgPool;
 
@@ -19,18 +18,9 @@ impl PostgresMetadataRepository {
     }
 }
 
+/// Write-side port (ADR 0002).
 #[async_trait]
 impl MetadataRepository for PostgresMetadataRepository {
-    #[tracing::instrument(skip(self), fields(metadata_id = %id))]
-    async fn find_by_id(&self, id: MetadataId) -> DomainResult<Option<Metadata>> {
-        self.find_by_id_impl(id).await
-    }
-
-    #[tracing::instrument(skip(self), fields(medium_id = %medium_id))]
-    async fn find_by_medium_id(&self, medium_id: MediumId) -> DomainResult<Option<Metadata>> {
-        self.find_by_medium_id_impl(medium_id).await
-    }
-
     #[tracing::instrument(skip(self, metadata), fields(metadata_id = %metadata.id))]
     async fn save(&self, metadata: &Metadata) -> DomainResult<()> {
         self.save_impl(metadata).await

@@ -25,7 +25,8 @@ pub async fn get_test_pool() -> PgPool {
 pub async fn cleanup_test_db(pool: &PgPool) {
     sqlx::query(
         "TRUNCATE users, albums, media, medium_items, locations, media_tags, \
-         tasks, metadata, event_streams, events, snapshots, projection_checkpoints CASCADE",
+         quota_reservations, tasks, metadata, event_streams, events, snapshots, \
+         projection_checkpoints CASCADE",
     )
     .execute(pool)
     .await

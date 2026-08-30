@@ -5,7 +5,7 @@ use kernel::{ApplicationResult, UserId};
 use tracing::{debug, error, info, instrument};
 
 use crate::{
-    application::ports::MediumRepository,
+    application::queries::MediumQueryPort,
     domain::{MediumFilter, MediumListItem},
 };
 
@@ -17,7 +17,7 @@ pub struct FindAllMediaQuery {
 
 #[derive(new)]
 pub struct FindAllMediaHandler {
-    medium_repository: Arc<dyn MediumRepository>,
+    query_port: Arc<dyn MediumQueryPort>,
 }
 
 impl FindAllMediaHandler {
@@ -33,7 +33,7 @@ impl FindAllMediaHandler {
         info!("Finding all media for user");
 
         let media = self
-            .medium_repository
+            .query_port
             .find_all(query.filter, query.user_id)
             .await
             .map_err(|e| {

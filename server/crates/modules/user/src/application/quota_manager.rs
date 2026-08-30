@@ -1,10 +1,11 @@
-use std::{future::Future, sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use byte_unit::Byte;
+use chrono::Utc;
 use derive_new::new;
 use kernel::{
     app_error::{ApplicationError, ApplicationResult},
-    error::{ConcurrentModificationSnafu, DomainError, EntityNotFoundSnafu},
+    error::{ConcurrentModificationSnafu, DomainError, DomainResult, EntityNotFoundSnafu},
     UserId,
 };
 use snafu::OptionExt;
@@ -12,57 +13,71 @@ use tokio::time::sleep;
 use tracing::{debug, error, info, instrument, warn};
 
 use crate::{
-    application::ports::{PublishUserEvent, UserRepository},
-    domain::{QuotaReservedEvent, User},
+    application::ports::{PublishUserEvent, QuotaReservationStore, UserRepository},
+    domain::{QuotaCommittedEvent, QuotaReleasedEvent, QuotaReservation, QuotaReservedEvent, User},
 };
 
+const RETRIES: u32 = 5;
+
+/// Quota operations on the User aggregate produce one of these events; the
+/// retry helper returns them so the caller can publish after a successful
+/// update.
+enum QuotaUserEvent {
+    Reserved(QuotaReservedEvent),
+    Released(QuotaReleasedEvent),
+}
+
+/// Owns quota reservation semantics (ADR 0003/0005): reserve/commit/release
+/// plus the expiry sweep. Reservations are short-lived soft locks tracked in
+/// a [`QuotaReservationStore`]; a crash never strands quota permanently
+/// because the sweep reclaims expired reservations.
 #[derive(new)]
 pub struct QuotaManager {
     user_repository: Arc<dyn UserRepository>,
     event_bus: Arc<dyn PublishUserEvent>,
+    reservation_store: Arc<dyn QuotaReservationStore>,
+    reservation_ttl_seconds: u64,
 }
 
 impl QuotaManager {
-    #[instrument(skip(self, operation), fields(user_id = %user_id, bytes = %bytes.as_u64()))]
-    pub async fn with_quota<F, Fut, T, E>(
+    /// Reserves quota for a user. The reservation record is persisted
+    /// before the aggregate is touched, so a crash mid-reserve always
+    /// leaves a sweepable record.
+    #[instrument(skip(self), fields(user_id = %user_id, bytes = %bytes.as_u64()))]
+    pub async fn reserve(
         &self,
         user_id: UserId,
         bytes: Byte,
-        operation: F,
-    ) -> Result<T, E>
-    where
-        F: FnOnce() -> Fut,
-        Fut: Future<Output = Result<T, E>>,
-        E: From<ApplicationError>,
-    {
-        debug!("Quota manager executing operation");
+    ) -> ApplicationResult<QuotaReservation> {
+        debug!("Reserving quota");
 
-        let (user, reserved) = self.reserve_quota(user_id, bytes).await?;
+        let reservation = QuotaReservation::new(user_id, bytes, self.reservation_ttl_seconds);
+        self.reservation_store
+            .insert(&reservation)
+            .await
+            .map_err(|e| ApplicationError::Domain { source: e })?;
 
-        match operation().await {
-            Ok(result) => {
-                let committed_event = user.commit_quota(&reserved);
-                if let Err(e) = self.event_bus.publish(committed_event).await {
-                    warn!(
-                        user_id = %user_id,
-                        bytes = %bytes.as_u64(),
-                        error = %e,
-                        "Failed to publish quota committed event"
-                    );
-                }
+        match self
+            .update_user_with_retry(user_id, |mut user| {
+                let event = user.reserve_quota(bytes)?;
+                Ok((user, QuotaUserEvent::Reserved(event)))
+            })
+            .await
+        {
+            Ok(()) => {
                 info!(
-                    bytes = %bytes.as_u64(),
-                    "Quota operation completed successfully"
+                    bytes_reserved = %bytes.as_u64(),
+                    reservation_id = %reservation.id,
+                    "Quota reserved successfully"
                 );
-                Ok(result)
+                Ok(reservation)
             }
             Err(e) => {
-                if let Err(rollback_err) = self.release_quota(user_id, reserved).await {
+                if let Err(cleanup_err) = self.reservation_store.claim(reservation.id).await {
                     error!(
-                        user_id = %user_id,
-                        bytes = %bytes.as_u64(),
-                        error = ?rollback_err,
-                        "CRITICAL: Failed to rollback quota reservation. Manual intervention required"
+                        reservation_id = %reservation.id,
+                        error = %cleanup_err,
+                        "Failed to remove reservation record after failed reserve"
                     );
                 }
                 Err(e)
@@ -70,19 +85,106 @@ impl QuotaManager {
         }
     }
 
-    #[instrument(skip(self), fields(user_id = %user_id, bytes = %bytes.as_u64()))]
-    async fn reserve_quota(
-        &self,
-        user_id: UserId,
-        bytes: Byte,
-    ) -> ApplicationResult<(User, QuotaReservedEvent)> {
-        debug!("Attempting quota reservation");
+    /// Finalizes a reservation: the reserved bytes become permanently used.
+    #[instrument(skip(self, reservation), fields(user_id = %reservation.user_id, bytes = %reservation.bytes.as_u64(), reservation_id = %reservation.id))]
+    pub async fn commit(&self, reservation: QuotaReservation) -> ApplicationResult<()> {
+        debug!("Committing quota reservation");
 
+        // Claim first so the sweep can never release committed bytes.
+        let claimed = self
+            .reservation_store
+            .claim(reservation.id)
+            .await
+            .map_err(|e| ApplicationError::Domain { source: e })?;
+        if !claimed {
+            warn!(
+                reservation_id = %reservation.id,
+                "Reservation already claimed (committed or swept); skipping commit"
+            );
+            return Ok(());
+        }
+
+        let event =
+            QuotaCommittedEvent::new(reservation.user_id, reservation.bytes, reservation.id);
+        if let Err(e) = self.event_bus.publish(event).await {
+            warn!(
+                user_id = %reservation.user_id,
+                error = %e,
+                "Failed to publish quota committed event"
+            );
+        }
+
+        info!(
+            bytes = %reservation.bytes.as_u64(),
+            "Quota committed successfully"
+        );
+        Ok(())
+    }
+
+    /// Releases a reservation without consuming the bytes. Safe to call
+    /// after the sweep already reclaimed it (claim-first, idempotent).
+    #[instrument(skip(self, reservation), fields(user_id = %reservation.user_id, bytes = %reservation.bytes.as_u64(), reservation_id = %reservation.id))]
+    pub async fn release(&self, reservation: QuotaReservation) -> ApplicationResult<()> {
+        debug!("Releasing quota reservation");
+
+        let claimed = self
+            .reservation_store
+            .claim(reservation.id)
+            .await
+            .map_err(|e| ApplicationError::Domain { source: e })?;
+        if !claimed {
+            info!(
+                reservation_id = %reservation.id,
+                "Reservation already claimed (committed or swept); skipping release"
+            );
+            return Ok(());
+        }
+
+        self.update_user_with_retry(reservation.user_id, |mut user| {
+            let event = user.release_quota(reservation.bytes, reservation.id);
+            Ok((user, QuotaUserEvent::Released(event)))
+        })
+        .await
+    }
+
+    /// Sweep entry point (ADR 0003): releases every reservation whose
+    /// expiry has passed. Returns the number of reservations reclaimed.
+    #[instrument(skip(self))]
+    pub async fn release_expired(&self) -> ApplicationResult<usize> {
+        let expired = self
+            .reservation_store
+            .find_expired(Utc::now())
+            .await
+            .map_err(|e| ApplicationError::Domain { source: e })?;
+
+        let mut reclaimed = 0;
+        for reservation in expired {
+            match self.release(reservation).await {
+                Ok(()) => reclaimed += 1,
+                Err(e) => {
+                    error!(
+                        error = %e,
+                        "CRITICAL: Failed to release expired quota reservation. \
+                         Manual intervention may be required"
+                    );
+                }
+            }
+        }
+
+        Ok(reclaimed)
+    }
+
+    /// Loads the user, applies the mutation, and persists with optimistic
+    /// concurrency + bounded backoff retry. Events are published only after
+    /// a successful update.
+    async fn update_user_with_retry<F>(&self, user_id: UserId, mutate: F) -> ApplicationResult<()>
+    where
+        F: Fn(User) -> DomainResult<(User, QuotaUserEvent)>,
+    {
         let mut last_version = 0;
-        let retries = 5;
 
-        for attempt in 0..retries {
-            let mut user = self
+        for attempt in 0..RETRIES {
+            let user = self
                 .user_repository
                 .find_by_id(user_id)
                 .await
@@ -94,41 +196,29 @@ impl QuotaManager {
                 .map_err(|e| ApplicationError::Domain { source: e })?;
             last_version = user.version;
 
-            let event = user
-                .reserve_quota(bytes)
-                .map_err(|e| ApplicationError::Domain { source: e })?;
+            let (user, event) = mutate(user).map_err(|e| ApplicationError::Domain { source: e })?;
 
             match self.user_repository.update(&user).await {
-                Ok(_) => {
-                    if let Err(e) = self.event_bus.publish(event.clone()).await {
-                        warn!(
-                            user_id = %user_id,
-                            error = %e,
-                            "Failed to publish quota reserved event"
-                        );
-                    }
-                    info!(
-                        bytes_reserved = %bytes.as_u64(),
-                        "Quota reserved successfully"
-                    );
-                    return Ok((user, event));
+                Ok(()) => {
+                    self.publish(event, user_id).await;
+                    return Ok(());
                 }
                 Err(DomainError::ConcurrentModification { .. }) => {
-                    if attempt < retries - 1 {
+                    if attempt < RETRIES - 1 {
                         let backoff_ms = 10 * 2_u64.pow(attempt);
                         warn!(
                             user_id = %user_id,
                             attempt = attempt + 1,
-                            max_retries = retries,
+                            max_retries = RETRIES,
                             backoff_ms = backoff_ms,
                             version = last_version,
                             "Concurrent modification detected, retrying with backoff"
                         );
-                        sleep(Duration::from_millis(backoff_ms)).await;
+                        sleep(std::time::Duration::from_millis(backoff_ms)).await;
                     } else {
                         error!(
                             user_id = %user_id,
-                            attempts = retries,
+                            attempts = RETRIES,
                             version = last_version,
                             "Concurrent modification retry limit exceeded"
                         );
@@ -154,85 +244,13 @@ impl QuotaManager {
         })
     }
 
-    #[instrument(skip(self, reserved), fields(user_id = %user_id, bytes = %reserved.bytes.as_u64()))]
-    async fn release_quota(
-        &self,
-        user_id: UserId,
-        reserved: QuotaReservedEvent,
-    ) -> ApplicationResult<User> {
-        debug!("Releasing quota reservation");
-
-        let mut last_version = 0;
-        let retries = 5;
-
-        for attempt in 0..retries {
-            let mut user = self
-                .user_repository
-                .find_by_id(user_id)
-                .await
-                .map_err(|e| ApplicationError::Domain { source: e })?
-                .context(EntityNotFoundSnafu {
-                    entity: "User",
-                    id: user_id,
-                })
-                .map_err(|e| ApplicationError::Domain { source: e })?;
-            last_version = user.version;
-
-            let event = user.release_quota(&reserved);
-
-            match self.user_repository.update(&user).await {
-                Ok(_) => {
-                    if let Err(e) = self.event_bus.publish(event).await {
-                        warn!(
-                            user_id = %user_id,
-                            error = %e,
-                            "Failed to publish quota released event"
-                        );
-                    }
-                    info!(
-                        bytes_released = %reserved.bytes.as_u64(),
-                        "Quota released successfully"
-                    );
-                    return Ok(user);
-                }
-                Err(DomainError::ConcurrentModification { .. }) => {
-                    if attempt < retries - 1 {
-                        let backoff_ms = 10 * 2_u64.pow(attempt);
-                        warn!(
-                            user_id = %user_id,
-                            attempt = attempt + 1,
-                            max_retries = retries,
-                            backoff_ms = backoff_ms,
-                            version = last_version,
-                            "Concurrent modification detected, retrying with backoff"
-                        );
-                        sleep(Duration::from_millis(backoff_ms)).await;
-                    } else {
-                        error!(
-                            user_id = %user_id,
-                            attempts = retries,
-                            version = last_version,
-                            "Concurrent modification retry limit exceeded"
-                        );
-                        return Err(ApplicationError::Domain {
-                            source: ConcurrentModificationSnafu {
-                                aggregate_id: user_id,
-                                expected_version: last_version,
-                            }
-                            .build(),
-                        });
-                    }
-                }
-                Err(e) => return Err(ApplicationError::Domain { source: e }),
-            }
+    async fn publish(&self, event: QuotaUserEvent, user_id: UserId) {
+        let result = match event {
+            QuotaUserEvent::Reserved(event) => self.event_bus.publish(event).await,
+            QuotaUserEvent::Released(event) => self.event_bus.publish(event).await,
+        };
+        if let Err(e) = result {
+            warn!(user_id = %user_id, error = %e, "Failed to publish quota event");
         }
-
-        Err(ApplicationError::Domain {
-            source: ConcurrentModificationSnafu {
-                aggregate_id: user_id,
-                expected_version: last_version,
-            }
-            .build(),
-        })
     }
 }

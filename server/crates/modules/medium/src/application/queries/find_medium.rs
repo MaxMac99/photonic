@@ -5,7 +5,7 @@ use kernel::{error::EntityNotFoundSnafu, ApplicationResult, MediumId, UserId};
 use snafu::OptionExt;
 use tracing::{debug, error, info, instrument};
 
-use crate::{application::ports::MediumRepository, domain::Medium};
+use crate::{application::queries::MediumQueryPort, domain::MediumListItem};
 
 #[derive(Debug)]
 pub struct FindMediumQuery {
@@ -15,7 +15,7 @@ pub struct FindMediumQuery {
 
 #[derive(new)]
 pub struct FindMediumHandler {
-    medium_repository: Arc<dyn MediumRepository>,
+    query_port: Arc<dyn MediumQueryPort>,
 }
 
 impl FindMediumHandler {
@@ -23,11 +23,11 @@ impl FindMediumHandler {
         user_id = %query.user_id,
         medium_id = %query.medium_id,
     ))]
-    pub async fn handle(&self, query: FindMediumQuery) -> ApplicationResult<Medium> {
+    pub async fn handle(&self, query: FindMediumQuery) -> ApplicationResult<MediumListItem> {
         info!("Finding medium by ID");
 
         let medium = self
-            .medium_repository
+            .query_port
             .find_by_id(query.medium_id, query.user_id)
             .await
             .and_then(|m| {

@@ -2,10 +2,12 @@ use std::sync::Arc;
 
 use commands::PublishCleanupEvent;
 use kernel::event_bus::PublishEvent;
-use user::QuotaManager;
 
 use crate::{
-    application::ports::{FileStorage, MediumRepository, PublishMediumEvent},
+    application::{
+        ports::{FileStorage, MediumRepository, PublishMediumEvent, QuotaPort},
+        queries::MediumQueryPort,
+    },
     domain::{events::MediumCreatedEvent, StoragePathService},
 };
 
@@ -26,8 +28,9 @@ pub struct MediumApplicationHandlers {
 impl MediumApplicationHandlers {
     pub fn new(
         medium_repository: Arc<dyn MediumRepository>,
+        medium_queries: Arc<dyn MediumQueryPort>,
         file_storage: Arc<dyn FileStorage>,
-        quota_manager: Arc<QuotaManager>,
+        quota: Arc<dyn QuotaPort>,
         event_bus: Arc<dyn PublishMediumEvent>,
         cleanup_event_bus: Arc<dyn PublishCleanupEvent>,
         storage_path_service: Arc<StoragePathService>,
@@ -36,11 +39,11 @@ impl MediumApplicationHandlers {
         Self {
             create_medium_stream: Arc::new(commands::CreateMediumStreamHandler::new(
                 file_storage.clone(),
-                quota_manager,
+                quota,
                 medium_event_bus,
             )),
-            find_all_media: Arc::new(queries::FindAllMediaHandler::new(medium_repository.clone())),
-            find_medium: Arc::new(queries::FindMediumHandler::new(medium_repository.clone())),
+            find_all_media: Arc::new(queries::FindAllMediaHandler::new(medium_queries.clone())),
+            find_medium: Arc::new(queries::FindMediumHandler::new(medium_queries)),
             enrich_medium_with_metadata: Arc::new(commands::EnrichMediumWithMetadataHandler::new(
                 medium_repository.clone(),
                 event_bus,

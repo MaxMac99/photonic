@@ -136,6 +136,7 @@ pub async fn run_server(
         container.medium_handlers(),
         container.metadata_handlers(),
         container.system_handlers(),
+        container.processing_handlers(),
     );
     let auth_settings = http::AuthSettings {
         client_id: config.server.client_id.clone(),

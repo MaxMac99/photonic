@@ -1,30 +1,27 @@
-use std::path::PathBuf;
+use std::{any::Any, path::PathBuf};
 
 use async_trait::async_trait;
 use byte_unit::Byte;
 use chrono::{DateTime, Utc};
 use kernel::{
-    error::DomainResult, event_bus::PublishEvent, FileLocation, FileMetadata, MediumId,
-    MediumItemId, UserId,
+    app_error::ApplicationResult, error::DomainResult, event_bus::PublishEvent, FileLocation,
+    FileMetadata, MediumId, MediumItemId, UserId,
 };
 use tokio::io::AsyncRead;
 
 use crate::domain::{
     events::{MediumCreatedEvent, MediumUpdatedEvent},
-    Medium, MediumFilter, MediumListItem,
+    Medium,
 };
 
+/// Write-side port (ADR 0002): aggregate persistence plus the
+/// command-support reads commands genuinely need. Shaped reads live on the
+/// query ports (`application/queries`).
 #[async_trait]
 pub trait MediumRepository: Send + Sync {
     async fn find_by_id(&self, id: MediumId, user_id: UserId) -> DomainResult<Option<Medium>>;
-    async fn find_all(
-        &self,
-        filter: MediumFilter,
-        user_id: UserId,
-    ) -> DomainResult<Vec<MediumListItem>>;
     async fn save(&self, medium: &Medium) -> DomainResult<()>;
     async fn delete(&self, id: MediumId, user_id: UserId) -> DomainResult<()>;
-    async fn get_user_usage(&self, user_id: UserId) -> DomainResult<Byte>;
     async fn find_expired_temp_locations(
         &self,
         created_before: DateTime<Utc>,
@@ -36,6 +33,40 @@ pub struct ExpiredTempLocation {
     pub item_id: MediumItemId,
     pub owner_id: UserId,
     pub temp_location: FileLocation,
+}
+
+/// Opaque handle to an in-flight quota reservation (ADR 0005).
+///
+/// Minted by a [`QuotaPort`] implementation and only meaningful to the
+/// implementation that created it — it carries that implementation's own
+/// reservation record.
+pub struct Reservation(Box<dyn Any + Send + Sync>);
+
+impl Reservation {
+    /// For [`QuotaPort`] implementations only: wrap the implementation's
+    /// private reservation record.
+    pub fn new(token: Box<dyn Any + Send + Sync>) -> Self {
+        Self(token)
+    }
+
+    /// For [`QuotaPort`] implementations only: recover the wrapped record.
+    pub fn downcast<T: 'static>(self) -> Result<T, Self> {
+        match self.0.downcast::<T>() {
+            Ok(boxed) => Ok(*boxed),
+            Err(inner) => Err(Self(inner)),
+        }
+    }
+}
+
+/// Quota reservation port (ADR 0005): explicit reserve/commit/release
+/// replaces the closure-based API. Reservation and expiry semantics
+/// (short-lived soft locks, ADR 0003) live entirely inside the
+/// implementation; callers only commit or release the returned handle.
+#[async_trait]
+pub trait QuotaPort: Send + Sync {
+    async fn reserve(&self, user_id: UserId, bytes: Byte) -> ApplicationResult<Reservation>;
+    async fn commit(&self, reservation: Reservation) -> ApplicationResult<()>;
+    async fn release(&self, reservation: Reservation) -> ApplicationResult<()>;
 }
 
 #[async_trait]

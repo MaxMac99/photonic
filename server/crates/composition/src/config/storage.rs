@@ -30,6 +30,10 @@ pub struct StorageConfig {
     /// Interval between cleanup sweeps in seconds (default: 1 hour)
     #[config(default = 3600_u64, env = "STORAGE_CLEANUP_INTERVAL_SECONDS")]
     pub cleanup_interval_seconds: u64,
+    /// TTL for quota reservations in seconds (default: 15 minutes).
+    /// Reservations older than this are reclaimed by the sweep.
+    #[config(default = 900_u64, env = "STORAGE_QUOTA_RESERVATION_TTL_SECONDS")]
+    pub quota_reservation_ttl_seconds: u64,
 }
 
 impl StorageConfig {
