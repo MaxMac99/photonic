@@ -4,7 +4,10 @@ use commands::PublishCleanupEvent;
 use kernel::event_bus::PublishEvent;
 
 use crate::{
-    application::ports::{FileStorage, MediumRepository, PublishMediumEvent, QuotaPort},
+    application::{
+        ports::{FileStorage, MediumRepository, PublishMediumEvent, QuotaPort},
+        queries::MediumQueryPort,
+    },
     domain::{events::MediumCreatedEvent, StoragePathService},
 };
 
@@ -25,6 +28,7 @@ pub struct MediumApplicationHandlers {
 impl MediumApplicationHandlers {
     pub fn new(
         medium_repository: Arc<dyn MediumRepository>,
+        medium_queries: Arc<dyn MediumQueryPort>,
         file_storage: Arc<dyn FileStorage>,
         quota: Arc<dyn QuotaPort>,
         event_bus: Arc<dyn PublishMediumEvent>,
@@ -38,8 +42,8 @@ impl MediumApplicationHandlers {
                 quota,
                 medium_event_bus,
             )),
-            find_all_media: Arc::new(queries::FindAllMediaHandler::new(medium_repository.clone())),
-            find_medium: Arc::new(queries::FindMediumHandler::new(medium_repository.clone())),
+            find_all_media: Arc::new(queries::FindAllMediaHandler::new(medium_queries.clone())),
+            find_medium: Arc::new(queries::FindMediumHandler::new(medium_queries)),
             enrich_medium_with_metadata: Arc::new(commands::EnrichMediumWithMetadataHandler::new(
                 medium_repository.clone(),
                 event_bus,

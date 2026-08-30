@@ -5,7 +5,7 @@ use kernel::{app_error::ApplicationResult, error::EntityNotFoundSnafu, MediumId,
 use snafu::OptionExt;
 use tracing::{debug, error, info, instrument};
 
-use crate::{application::ports::MetadataRepository, domain::Metadata};
+use crate::{application::queries::MetadataQueryPort, domain::Metadata};
 
 #[derive(Debug)]
 pub struct FindMetadataByMediumIdQuery {
@@ -15,7 +15,7 @@ pub struct FindMetadataByMediumIdQuery {
 
 #[derive(new)]
 pub struct FindMetadataByMediumIdHandler {
-    metadata_repository: Arc<dyn MetadataRepository>,
+    query_port: Arc<dyn MetadataQueryPort>,
 }
 
 impl FindMetadataByMediumIdHandler {
@@ -27,8 +27,8 @@ impl FindMetadataByMediumIdHandler {
         info!("Finding metadata by medium ID");
 
         let metadata = self
-            .metadata_repository
-            .find_by_medium_id(query.medium_id)
+            .query_port
+            .find_by_medium_id(query.medium_id, query.user_id)
             .await
             .and_then(|m| {
                 m.context(EntityNotFoundSnafu {

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::application::{
     commands::ExtractMetadataHandler,
     ports::{MetadataExtractor, MetadataRepository, PublishMetadataEvent},
-    queries::FindMetadataByMediumIdHandler,
+    queries::{FindMetadataByMediumIdHandler, MetadataQueryPort},
 };
 
 pub mod commands;
@@ -19,16 +19,17 @@ impl MetadataApplicationHandlers {
     pub fn new(
         metadata_extractor: Arc<dyn MetadataExtractor>,
         metadata_repository: Arc<dyn MetadataRepository>,
+        metadata_queries: Arc<dyn MetadataQueryPort>,
         event_bus: Arc<dyn PublishMetadataEvent>,
     ) -> Self {
         Self {
             extract_metadata_handler: Arc::new(ExtractMetadataHandler::new(
                 metadata_extractor,
-                metadata_repository.clone(),
+                metadata_repository,
                 event_bus,
             )),
             find_metadata_by_medium_id: Arc::new(FindMetadataByMediumIdHandler::new(
-                metadata_repository,
+                metadata_queries,
             )),
         }
     }

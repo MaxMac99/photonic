@@ -13,6 +13,7 @@ use kernel::{
 use medium::{
     application::{
         ports::{FileStorage, MediumRepository, QuotaPort, Reservation},
+        queries::MediumQueryPort,
         MediumApplicationHandlers,
     },
     domain::Medium,
@@ -20,6 +21,7 @@ use medium::{
 use metadata::{
     application::{
         ports::{MetadataExtractor, MetadataRepository},
+        queries::MetadataQueryPort,
         MetadataApplicationHandlers,
     },
     domain::Metadata,
@@ -35,7 +37,7 @@ use postgres::persistence::postgres::{
 use sqlx::PgPool;
 use system::application::{AuthConfig, SystemApplicationHandlers};
 use task::{
-    application::{ports::TaskRepository, ProcessingApplicationHandlers},
+    application::{ports::TaskRepository, queries::TaskQueryPort, ProcessingApplicationHandlers},
     domain::Task,
 };
 use user::{
@@ -59,8 +61,11 @@ pub struct Repositories {
     pub user: Arc<dyn UserRepository>,
     pub quota_reservations: Arc<dyn QuotaReservationStore>,
     pub medium: Arc<dyn MediumRepository>,
+    pub medium_queries: Arc<dyn MediumQueryPort>,
     pub metadata: Arc<dyn MetadataRepository>,
+    pub metadata_queries: Arc<dyn MetadataQueryPort>,
     pub task: Arc<dyn TaskRepository>,
+    pub task_queries: Arc<dyn TaskQueryPort>,
 }
 
 pub struct StorageServices {
@@ -115,12 +120,21 @@ pub struct ApplicationHandlers {
 // -- Factory functions --
 
 pub fn build_repositories(db_pool: &PgPool) -> Repositories {
+    // The same concrete adapters implement both the write-side repository
+    // ports and the read-side query ports (ADR 0002).
+    let medium = Arc::new(PostgresMediumRepository::new(db_pool.clone()));
+    let metadata = Arc::new(PostgresMetadataRepository::new(db_pool.clone()));
+    let task = Arc::new(PostgresTaskRepository::new(db_pool.clone()));
+
     Repositories {
         user: Arc::new(PostgresUserRepository::new(db_pool.clone())),
         quota_reservations: Arc::new(PostgresQuotaReservationStore::new(db_pool.clone())),
-        medium: Arc::new(PostgresMediumRepository::new(db_pool.clone())),
-        metadata: Arc::new(PostgresMetadataRepository::new(db_pool.clone())),
-        task: Arc::new(PostgresTaskRepository::new(db_pool.clone())),
+        medium: medium.clone(),
+        medium_queries: medium,
+        metadata: metadata.clone(),
+        metadata_queries: metadata,
+        task: task.clone(),
+        task_queries: task,
     }
 }
 
@@ -164,6 +178,7 @@ pub fn build_handlers(
 
     let medium_handlers = Arc::new(MediumApplicationHandlers::new(
         repositories.medium.clone(),
+        repositories.medium_queries.clone(),
         storage.file_storage.clone(),
         quota,
         event_bus.clone(),
@@ -175,6 +190,7 @@ pub fn build_handlers(
     let metadata_handlers = Arc::new(MetadataApplicationHandlers::new(
         storage.metadata_extractor.clone(),
         repositories.metadata.clone(),
+        repositories.metadata_queries.clone(),
         event_bus.clone(),
     ));
 
@@ -188,6 +204,7 @@ pub fn build_handlers(
 
     let processing_handlers = Arc::new(ProcessingApplicationHandlers::new(
         repositories.task.clone(),
+        repositories.task_queries.clone(),
     ));
 
     ApplicationHandlers {

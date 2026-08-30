@@ -5,25 +5,22 @@ use kernel::{ApplicationResult, UserId};
 use tracing::{debug, error, info, instrument};
 
 use crate::{
-    application::ports::TaskRepository,
+    application::queries::TaskQueryPort,
     domain::{Task, TaskFilter},
 };
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct FindTasksQuery {
     pub user_id: UserId,
     pub filter: TaskFilter,
 }
 
-#[allow(dead_code)]
 #[derive(new)]
 pub struct FindTasksHandler {
-    processing_repository: Arc<dyn TaskRepository>,
+    query_port: Arc<dyn TaskQueryPort>,
 }
 
 impl FindTasksHandler {
-    #[allow(dead_code)]
     #[instrument(skip(self), fields(
         user_id = %query.user_id,
         per_page = query.filter.per_page,
@@ -33,7 +30,7 @@ impl FindTasksHandler {
         info!("Finding tasks for user");
 
         let tasks = self
-            .processing_repository
+            .query_port
             .find_all(query.filter, query.user_id)
             .await
             .inspect_err(|e| {

@@ -8,10 +8,10 @@ use crate::domain::{
     Metadata,
 };
 
+/// Write-side port (ADR 0002): metadata persistence. Shaped reads live on
+/// the query ports (`application/queries`).
 #[async_trait]
 pub trait MetadataRepository: Send + Sync {
-    async fn find_by_id(&self, id: MetadataId) -> DomainResult<Option<Metadata>>;
-    async fn find_by_medium_id(&self, medium_id: MediumId) -> DomainResult<Option<Metadata>>;
     async fn save(&self, metadata: &Metadata) -> DomainResult<()>;
     async fn delete(&self, id: MetadataId) -> DomainResult<()>;
 }

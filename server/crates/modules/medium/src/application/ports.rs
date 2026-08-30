@@ -11,20 +11,17 @@ use tokio::io::AsyncRead;
 
 use crate::domain::{
     events::{MediumCreatedEvent, MediumUpdatedEvent},
-    Medium, MediumFilter, MediumListItem,
+    Medium,
 };
 
+/// Write-side port (ADR 0002): aggregate persistence plus the
+/// command-support reads commands genuinely need. Shaped reads live on the
+/// query ports (`application/queries`).
 #[async_trait]
 pub trait MediumRepository: Send + Sync {
     async fn find_by_id(&self, id: MediumId, user_id: UserId) -> DomainResult<Option<Medium>>;
-    async fn find_all(
-        &self,
-        filter: MediumFilter,
-        user_id: UserId,
-    ) -> DomainResult<Vec<MediumListItem>>;
     async fn save(&self, medium: &Medium) -> DomainResult<()>;
     async fn delete(&self, id: MediumId, user_id: UserId) -> DomainResult<()>;
-    async fn get_user_usage(&self, user_id: UserId) -> DomainResult<Byte>;
     async fn find_expired_temp_locations(
         &self,
         created_before: DateTime<Utc>,
