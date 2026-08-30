@@ -1,10 +1,12 @@
 mod entity;
 mod find_by_id;
 mod insert;
+mod reservation_store;
 mod update;
 
 use async_trait::async_trait;
 use kernel::{error::DomainResult, UserId};
+pub use reservation_store::PostgresQuotaReservationStore;
 use sqlx::PgPool;
 use user::{application::ports::UserRepository, domain::User};
 

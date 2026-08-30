@@ -7,3 +7,4 @@ pub mod application;
 pub mod domain;
 
 pub use application::{QuotaConfig, QuotaManager};
+pub use domain::QuotaReservation;

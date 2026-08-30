@@ -55,8 +55,11 @@ impl QuotaState {
         Ok(())
     }
 
+    /// Saturating on purpose: the reservation sweep may reclaim a
+    /// reservation whose bytes were never added to `used` (crash between
+    /// reservation-record insert and aggregate reserve).
     pub fn release_quota(&mut self, released: Byte) {
-        self.used = Byte::from_u64(self.used.as_u64() - released.as_u64());
+        self.used = Byte::from_u64(self.used.as_u64().saturating_sub(released.as_u64()));
     }
 
     pub fn used(&self) -> Byte {

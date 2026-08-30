@@ -2127,7 +2127,6 @@ dependencies = [
  "strum",
  "tokio",
  "tracing",
- "user",
  "uuid",
 ]
 
