@@ -13,7 +13,7 @@ struct SettingsFeatureTests {
     }
 
     @Test
-    func onAppearLoadsSavedConfiguration() throws {
+    func onAppearLoadsSavedConfiguration() async throws {
         let saved = try ServerConfiguration(
             serverURL: #require(ServerURL("https://photonic.example.com"))
         )
@@ -31,7 +31,7 @@ struct SettingsFeatureTests {
     }
 
     @Test
-    func connectSavesConfigurationAndDiscoversServer() throws {
+    func connectSavesConfigurationAndDiscoversServer() async throws {
         let serverURL = try #require(ServerURL("https://photonic.example.com"))
         let info = ServerInfo(
             version: "1.2.3",

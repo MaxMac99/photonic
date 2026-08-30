@@ -41,6 +41,10 @@ final class FakeQueue: @unchecked Sendable {
         )
     }
 
+    func enqueuedMediaIDs() -> [String] {
+        jobs.map(\.job.mediaID)
+    }
+
     func setStatus(_ status: UploadJob.Status, jobID: UUID, message: String?) {
         guard let index = jobs.firstIndex(where: { $0.job.id == jobID }) else { return }
         jobs[index].status = status
@@ -70,6 +74,28 @@ final class FlakyUploader: @unchecked Sendable {
             stalled.insert(job.mediaID)
             try await Task.sleep(for: .seconds(60))
         }
+    }
+}
+
+/// Deterministic photo-library fake.
+final class FakePhotos: @unchecked Sendable {
+    let albums: [PhotoAlbum]
+    let pending: [PendingMedia]
+
+    init(albums: [PhotoAlbum], pending: [PendingMedia]) {
+        self.albums = albums
+        self.pending = pending
+    }
+}
+
+extension FakePhotos {
+    func makeClient() -> PhotoLibraryClient {
+        PhotoLibraryClient(
+            requestAccess: { true },
+            fetchAlbums: { [weak self] in await self?.albums ?? [] },
+            pendingMedia: { [weak self] _ in await self?.pending ?? [] },
+            loadData: { _ in Data() }
+        )
     }
 }
 

@@ -1,5 +1,6 @@
 import Dependencies
 import Foundation
+import PhotonicCore
 import SwiftData
 
 /// Persisted representation of one upload job. SwiftData is confined to this
@@ -10,6 +11,9 @@ final class PersistedUploadJob {
     var albumID: String
     var albumName: String
     var mediaID: String
+    var mediaTypeRawValue: String?
+    var filename: String?
+    var dateTaken: Date?
     var statusRawValue: String
     var attempts: Int
     var errorMessage: String?
@@ -20,6 +24,9 @@ final class PersistedUploadJob {
         albumID: String,
         albumName: String,
         mediaID: String,
+        mediaTypeRawValue: String? = nil,
+        filename: String? = nil,
+        dateTaken: Date? = nil,
         statusRawValue: String,
         attempts: Int = 0,
         errorMessage: String? = nil,
@@ -29,6 +36,9 @@ final class PersistedUploadJob {
         self.albumID = albumID
         self.albumName = albumName
         self.mediaID = mediaID
+        self.mediaTypeRawValue = mediaTypeRawValue
+        self.filename = filename
+        self.dateTaken = dateTaken
         self.statusRawValue = statusRawValue
         self.attempts = attempts
         self.errorMessage = errorMessage
@@ -61,6 +71,9 @@ actor BackupQueueStore {
                     albumID: job.albumID,
                     albumName: job.albumName,
                     mediaID: job.mediaID,
+                    mediaTypeRawValue: job.mediaType?.rawValue,
+                    filename: job.filename,
+                    dateTaken: job.dateTaken,
                     statusRawValue: UploadJob.Status.pending.rawValue,
                     updatedAt: now
                 )
@@ -165,7 +178,15 @@ actor BackupQueueStore {
 
 private extension PersistedUploadJob {
     var asUploadJob: UploadJob {
-        UploadJob(id: jobID, albumID: albumID, albumName: albumName, mediaID: mediaID)
+        UploadJob(
+            id: jobID,
+            albumID: albumID,
+            albumName: albumName,
+            mediaID: mediaID,
+            mediaType: mediaTypeRawValue.flatMap(MediumType.init(rawValue:)),
+            filename: filename,
+            dateTaken: dateTaken
+        )
     }
 }
 

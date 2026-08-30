@@ -1,4 +1,5 @@
 import Foundation
+import PhotonicCore
 
 /// A single durable unit of work: one media item to upload from one album.
 struct UploadJob: Equatable, Identifiable, Sendable {
@@ -13,12 +14,26 @@ struct UploadJob: Equatable, Identifiable, Sendable {
     let albumID: String
     let albumName: String
     let mediaID: String
+    let mediaType: MediumType?
+    let filename: String?
+    let dateTaken: Date?
 
-    init(id: UUID = UUID(), albumID: String, albumName: String, mediaID: String) {
+    init(
+        id: UUID = UUID(),
+        albumID: String,
+        albumName: String,
+        mediaID: String,
+        mediaType: MediumType? = nil,
+        filename: String? = nil,
+        dateTaken: Date? = nil
+    ) {
         self.id = id
         self.albumID = albumID
         self.albumName = albumName
         self.mediaID = mediaID
+        self.mediaType = mediaType
+        self.filename = filename
+        self.dateTaken = dateTaken
     }
 }
 
@@ -50,12 +65,17 @@ struct BackupQueueSnapshot: Equatable, Sendable {
     }
 }
 
-extension UploadJob {
-    /// Placeholder payload until the photo-library adapter enqueues real
-    /// selections (build-order step 5).
-    static let samples: [UploadJob] = [
-        UploadJob(albumID: "sample-album", albumName: "Camera Roll", mediaID: "sample-media-1"),
-        UploadJob(albumID: "sample-album", albumName: "Camera Roll", mediaID: "sample-media-2"),
-        UploadJob(albumID: "sample-album", albumName: "Camera Roll", mediaID: "sample-media-3")
-    ]
+/// A photo-library album offered for backup selection.
+struct PhotoAlbum: Equatable, Identifiable, Sendable {
+    let id: String
+    let name: String
+    let assetCount: Int
+}
+
+/// One asset discovered in a selected album, ready to become an upload job.
+struct PendingMedia: Equatable, Identifiable, Sendable {
+    let id: String
+    let type: MediumType?
+    let filename: String?
+    let dateTaken: Date?
 }

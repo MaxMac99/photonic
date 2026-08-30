@@ -104,15 +104,19 @@ struct LibraryFeatureTests {
 
     @Test
     func loadMoreIsIgnoredWhileLoading() async {
+        struct UnexpectedFetch: Error {}
+        var fetchWasCalled = false
+
         let store = TestStore(initialState: LibraryFeature.State(isLoading: true)) {
             LibraryFeature()
         } withDependencies: {
             $0.mediaClient.fetchPage = { _, _ in
-                Issue.unimplemented()
-                return MediaPage(media: [], nextCursor: nil)
+                fetchWasCalled = true
+                throw UnexpectedFetch()
             }
         }
 
         await store.send(.loadNextPage)
+        #expect(!fetchWasCalled)
     }
 }

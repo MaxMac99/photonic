@@ -25,20 +25,25 @@ struct BackupView: View {
     private var phaseView: some View {
         switch store.phase {
         case .idle:
-            VStack(spacing: 8) {
-                Text("Ready to back up")
-                    .font(.headline)
-                Button("Start backup") {
-                    store.send(.startTapped)
+            VStack(spacing: 12) {
+                if store.albums.isEmpty {
+                    Button("Choose albums to back up") {
+                        store.send(.chooseAlbumsTapped)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(store.isLoadingAlbums)
+                    if store.isLoadingAlbums {
+                        ProgressView()
+                    }
+                } else {
+                    albumList
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(!store.snapshot.hasPendingWork)
-                #if DEBUG
-                Button("Enqueue sample jobs") {
-                    store.send(.enqueueSampleTapped)
+                if store.snapshot.hasPendingWork {
+                    Button("Start backup") {
+                        store.send(.startTapped)
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .font(.footnote)
-                #endif
             }
         case .processing:
             VStack(spacing: 12) {
@@ -73,6 +78,41 @@ struct BackupView: View {
                 }
                 Button("Close") { store.send(.cancelTapped) }
             }
+        }
+    }
+
+    private var albumList: some View {
+        VStack(spacing: 8) {
+            Text("Choose albums")
+                .font(.headline)
+            ForEach(store.albums) { album in
+                Button {
+                    store.send(.albumToggled(album.id))
+                } label: {
+                    HStack {
+                        Image(
+                            systemName: store.selectedAlbumIDs.contains(album.id)
+                                ? "checkmark.circle.fill"
+                                : "circle"
+                        )
+                        .foregroundStyle(Color.accentColor)
+                        Text(album.name)
+                        Spacer()
+                        Text("\(album.assetCount)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            Button(
+                store.isPreparingSelection ? "Preparing…" :
+                    "Back up \(store.selectedAlbumIDs.count) album(s)"
+            ) {
+                store.send(.enqueueSelectionTapped)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(store.selectedAlbumIDs.isEmpty || store.isPreparingSelection)
         }
     }
 

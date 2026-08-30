@@ -8,6 +8,7 @@ import Foundation
 struct BackupFeature {
     @Dependency(BackupQueueClient.self) private var queue
     @Dependency(UploadClient.self) private var uploads
+    @Dependency(PhotoLibraryClient.self) private var photos
 
     enum Phase: Equatable {
         case idle
@@ -26,11 +27,20 @@ struct BackupFeature {
         var snapshot: BackupQueueSnapshot = .empty
         var currentJob: UploadJob?
         var lastErrorMessage: String?
+        var albums: [PhotoAlbum] = []
+        var selectedAlbumIDs: Set<String> = []
+        var isLoadingAlbums = false
+        var isPreparingSelection = false
     }
 
     enum Action: Equatable {
         case onAppear
-        case enqueueSampleTapped
+        case chooseAlbumsTapped
+        case albumsLoaded([PhotoAlbum])
+        case albumsFailed(String)
+        case albumToggled(String)
+        case enqueueSelectionTapped
+        case selectionQueued([UploadJob])
         case startTapped
         case pauseTapped
         case resumeTapped
@@ -53,9 +63,75 @@ struct BackupFeature {
                     }
                 }
 
-            case .enqueueSampleTapped:
-                return .run { _ in
-                    try await queue.enqueue(UploadJob.samples)
+            case .chooseAlbumsTapped:
+                state.isLoadingAlbums = true
+                state.lastErrorMessage = nil
+                return .run { send in
+                    guard await photos.requestAccess() else {
+                        await send(.albumsFailed("Photo library access was denied"))
+                        return
+                    }
+                    do {
+                        try await send(.albumsLoaded(photos.fetchAlbums()))
+                    } catch {
+                        await send(.albumsFailed(error.localizedDescription))
+                    }
+                }
+
+            case let .albumsLoaded(albums):
+                state.isLoadingAlbums = false
+                state.albums = albums
+                return .none
+
+            case let .albumsFailed(message):
+                state.isLoadingAlbums = false
+                state.lastErrorMessage = message
+                return .none
+
+            case let .albumToggled(albumID):
+                if state.selectedAlbumIDs.contains(albumID) {
+                    state.selectedAlbumIDs.remove(albumID)
+                } else {
+                    state.selectedAlbumIDs.insert(albumID)
+                }
+                return .none
+
+            case .enqueueSelectionTapped:
+                state.isPreparingSelection = true
+                state.lastErrorMessage = nil
+                let selectedIDs = state.selectedAlbumIDs
+                let albums = state.albums
+                return .run { send in
+                    do {
+                        var jobs: [UploadJob] = []
+                        for albumID in selectedIDs {
+                            let name = albums.first(where: { $0.id == albumID })?.name ?? "Unknown"
+                            for media in try await photos.pendingMedia(albumID) {
+                                jobs.append(
+                                    UploadJob(
+                                        albumID: albumID,
+                                        albumName: name,
+                                        mediaID: media.id,
+                                        mediaType: media.type,
+                                        filename: media.filename,
+                                        dateTaken: media.dateTaken
+                                    )
+                                )
+                            }
+                        }
+                        await send(.selectionQueued(jobs))
+                    } catch {
+                        await send(.albumsFailed(error.localizedDescription))
+                    }
+                }
+
+            case let .selectionQueued(jobs):
+                state.isPreparingSelection = false
+                state.snapshot.pending += jobs.count
+                state.selectedAlbumIDs = []
+                return .run { send in
+                    try await queue.enqueue(jobs)
+                    await send(.startTapped)
                 }
 
             case .startTapped, .resumeTapped:

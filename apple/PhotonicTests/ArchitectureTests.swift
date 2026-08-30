@@ -11,7 +11,7 @@ struct ArchitectureTests {
         let deny: Set<String>
     }
 
-    private static let sourceRoot = URL(fileURL: #filePath)
+    private static let sourceRoot = URL(filePath: #filePath)
         .deletingLastPathComponent()
         .deletingLastPathComponent()
 
@@ -108,8 +108,10 @@ struct ArchitectureTests {
             )
             let contents = try String(contentsOf: fileURL, encoding: .utf8)
 
-            for (lineNumber, line) in contents.enumeratedLines() {
-                if let moduleName = Self.importedModule(in: line) {
+            for (lineNumber, line) in contents
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .enumerated() {
+                if let moduleName = Self.importedModule(in: String(line)) {
                     if Self.forbiddenImports.contains(moduleName) {
                         violations.append("\(relativePath):\(lineNumber + 1): import \(moduleName) is forbidden (R7)")
                         continue
@@ -141,11 +143,13 @@ struct ArchitectureTests {
 
     private static func swiftFiles() throws -> [URL] {
         var files: [URL] = []
-        let enumerator = FileManager.default.enumerator(
-            at: sourceRoot,
-            includingPropertiesForKeys: [.isRegularFileKey]
-        )
-        for case let url as URL in enumerator ?? anyIterator() {
+        guard
+            let enumerator = FileManager.default.enumerator(
+                at: sourceRoot,
+                includingPropertiesForKeys: [.isRegularFileKey]
+            )
+        else { return files }
+        for case let url as URL in enumerator {
             guard url.pathExtension == "swift" else { continue }
             let path = url.path
             if path.contains("/Photonic/") || path.contains("/Packages/PhotonicAPI/Sources/")
@@ -154,11 +158,6 @@ struct ArchitectureTests {
             }
         }
         return files.sorted { $0.path < $1.path }
-    }
-
-    private static func anyIterator() -> IndexingIterator<[URL]> {
-        var empty: [URL] = []
-        return empty.makeIterator()
     }
 
     private static func importedModule(in line: String) -> String? {
