@@ -156,16 +156,6 @@
                             # URL here is userless, so pin it explicitly.
                             export PGUSER="$USER"
 
-                            # Set up test environment variables
-                            export OAUTH_CLIENT_ID="test-client-id"
-                            export OAUTH_JWKS_URL="https://example.com/.well-known/jwks.json"
-                            export OAUTH_TOKEN_URL="https://example.com/oauth/token"
-                            export OAUTH_AUTHORIZE_URL="https://example.com/oauth/authorize"
-                            export JWT_SECRET="test-secret-key-for-testing-only"
-
-                            # Set log level (change to 'debug' or 'trace' for more detail)
-                            export RUST_LOG=''${RUST_LOG:-info}
-
                             # Set up test storage directories
                             export STORAGE_BASE_DIRECTORY="$PWD/tmpdata/test-storage"
                             export STORAGE_CACHE_DIRECTORY="$PWD/tmpdata/test-cache"
