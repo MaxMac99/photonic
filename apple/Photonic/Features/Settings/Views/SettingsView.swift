@@ -21,7 +21,7 @@ struct SettingsView: View {
             if let info = store.serverInfo {
                 Section("Connection") {
                     LabeledContent("Version", value: info.version)
-                    LabeledContent("Authorize URL", value: info.authorizeURL.absoluteString)
+                    LabeledContent("Authorize URL", value: info.authorizeURL?.absoluteString ?? "")
                 }
             }
 

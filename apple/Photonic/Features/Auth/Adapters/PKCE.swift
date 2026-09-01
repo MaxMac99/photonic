@@ -24,10 +24,13 @@ enum PKCE {
         redirectURI: String,
         state: String
     ) -> URL? {
-        guard var components = URLComponents(
-            url: info.authorizeURL.rawValue,
-            resolvingAgainstBaseURL: false
-        ) else { return nil }
+        guard
+            let authorizeURL = info.authorizeURL,
+            var components = URLComponents(
+                url: authorizeURL.rawValue,
+                resolvingAgainstBaseURL: false
+            )
+        else { return nil }
 
         let queryItems = [
             URLQueryItem(name: "response_type", value: "code"),

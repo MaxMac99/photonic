@@ -88,6 +88,10 @@ struct AuthFeature {
                     state.errorMessage = "Connect to a server first"
                     return .none
                 }
+                guard info.isOIDCEnabled else {
+                    state.errorMessage = "This server has sign-in (OIDC) disabled"
+                    return .none
+                }
                 state.isSigningIn = true
                 state.errorMessage = nil
                 return .run { send in

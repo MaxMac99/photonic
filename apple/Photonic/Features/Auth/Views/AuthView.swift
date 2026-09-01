@@ -40,16 +40,25 @@ struct AuthView: View {
 
     private func connectedSection(_ info: ServerInfo) -> some View {
         VStack(spacing: 12) {
-            LabeledContent("Server", value: info.authorizeURL.rawValue.host() ?? "")
+            LabeledContent(
+                "Server",
+                value: info.authorizeURL?.rawValue.host() ?? ""
+            )
             LabeledContent("Version", value: info.version)
 
-            if store.isSigningIn {
-                ProgressView("Signing in…")
-            } else {
-                Button("Sign in") {
-                    store.send(.signInTapped)
+            if info.isOIDCEnabled {
+                if store.isSigningIn {
+                    ProgressView("Signing in…")
+                } else {
+                    Button("Sign in") {
+                        store.send(.signInTapped)
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .buttonStyle(.borderedProminent)
+            } else {
+                Text("This server has sign-in (OIDC) disabled.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
     }

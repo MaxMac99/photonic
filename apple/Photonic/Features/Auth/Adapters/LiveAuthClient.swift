@@ -112,14 +112,19 @@ enum TokenExchange {
     }
 
     static func exchange(info: ServerInfo, code: String, verifier: String) async throws -> Tokens {
-        var request = URLRequest(url: info.tokenURL.rawValue)
+        guard
+            let tokenURL = info.tokenURL,
+            let clientID = info.clientID
+        else { throw AuthError.tokenExchangeFailed }
+
+        var request = URLRequest(url: tokenURL.rawValue)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = formBody([
             "grant_type": "authorization_code",
             "code": code,
             "redirect_uri": PKCE.redirectURI,
-            "client_id": info.clientID,
+            "client_id": clientID,
             "code_verifier": verifier
         ])
 

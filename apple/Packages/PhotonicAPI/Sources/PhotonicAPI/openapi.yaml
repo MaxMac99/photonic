@@ -465,16 +465,19 @@ components:
       type: object
       required:
       - version
-      - client_id
-      - token_url
-      - authorize_url
       properties:
         authorize_url:
-          type: string
+          type:
+          - string
+          - 'null'
         client_id:
-          type: string
+          type:
+          - string
+          - 'null'
         token_url:
-          type: string
+          type:
+          - string
+          - 'null'
         version:
           type: string
     LocationInfoDto:

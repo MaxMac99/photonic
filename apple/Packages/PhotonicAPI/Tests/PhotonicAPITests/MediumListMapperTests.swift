@@ -4,9 +4,9 @@ import Testing
 @testable import PhotonicAPI
 
 struct MediumListMapperTests {
-    private static func payload(
+    private func payload(
         id: String,
-        takenAt: String? = "2024-06-01T12:00:00Z",
+        takenAt: Date? = Date(timeIntervalSince1970: 1_717_228_800),
         albumID: String? = nil,
         primary: Bool = true
     ) -> Components.Schemas.MediumListResponse {
@@ -22,12 +22,12 @@ struct MediumListMapperTests {
                     height: nil,
                     id: "item-1",
                     is_primary: primary,
-                    medium_item_type: nil,
+                    medium_item_type: .original,
                     mime: "image/heic",
                     width: nil
                 )
             ],
-            medium_type: .photo,
+            medium_type: .PHOTO,
             taken_at: takenAt
         )
     }

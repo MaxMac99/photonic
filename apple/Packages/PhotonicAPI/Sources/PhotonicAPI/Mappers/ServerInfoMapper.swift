@@ -1,15 +1,22 @@
 import PhotonicCore
 
-/// Maps generated system-info payloads to Core models, validating OAuth
-/// endpoints at the boundary (R9).
+/// Maps generated system-info payloads to Core models. OAuth endpoints are
+/// optional (server may have OIDC disabled) but validated when present (R9).
 public enum ServerInfoMapper {
     public static func map(_ payload: Components.Schemas.InfoResponse) throws -> ServerInfo {
-        guard
-            let tokenURL = ServerURL(payload.token_url),
-            let authorizeURL = ServerURL(payload.authorize_url)
-        else {
-            throw APIMappingError.invalidPayload("system info carries invalid OAuth URLs")
+        let tokenURL = payload.token_url.flatMap(ServerURL.init)
+        let authorizeURL = payload.authorize_url.flatMap(ServerURL.init)
+        let hasClientID = !(payload.client_id ?? "").isEmpty
+
+        switch (hasClientID, tokenURL, authorizeURL) {
+        case (false, nil, nil), (true, .some, .some):
+            break
+        default:
+            throw APIMappingError.invalidPayload(
+                "system info carries a partial OAuth configuration"
+            )
         }
+
         return ServerInfo(
             version: payload.version,
             clientID: payload.client_id,
