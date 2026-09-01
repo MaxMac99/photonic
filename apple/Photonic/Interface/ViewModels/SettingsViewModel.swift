@@ -18,7 +18,8 @@ final class SettingsViewModel: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let authRepository: AuthRepository
+    /// `nil` when the server has OIDC disabled
+    private let authRepository: AuthRepository?
     private let userRepository: UserRepository
     private let serverConfigurationRepository: ServerConfigurationRepository
 
@@ -58,7 +59,8 @@ final class SettingsViewModel: ObservableObject {
 
     /// User's email address
     var userEmail: String {
-        user?.email ?? "Loading..."
+        guard authRepository != nil else { return "No authentication" }
+        return user?.email ?? "Loading..."
     }
 
     /// Storage usage text
@@ -146,6 +148,16 @@ final class SettingsViewModel: ObservableObject {
         isLoadingUser = true
         errorMessage = nil
 
+        guard let authRepository else {
+            // Server has OIDC disabled: there is no account to load
+            logger.info("No authentication configured - skipping user data")
+            user = nil
+            userStats = nil
+            isConnected = false
+            isLoadingUser = false
+            return
+        }
+
         do {
             // Load user stats (which includes basic user info)
             let stats = try await userRepository.getUserStats()
@@ -190,9 +202,10 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
-    /// Signs out the current user
+    /// Signs out the current user. When the server has OIDC disabled this only
+    /// clears the stored server configuration.
     func signOut() async throws {
-        try await authRepository.signOut()
+        try await authRepository?.signOut()
 
         // Clear stored configuration
         try await serverConfigurationRepository.deleteConfiguration()

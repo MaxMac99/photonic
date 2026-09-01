@@ -13,15 +13,16 @@ import SwiftUI
 final class CompositionRoot {
     // MARK: - Properties
 
+    private let logger = LoggerFactory.logger(for: .application)
     private let serverInfo: ServerInfo
     private let apiClient: APIProtocol
-    private let authManager: AuthManager
+    private let authManager: AuthManager?
 
     // MARK: - Repositories (Infrastructure)
 
     private lazy var serverConfigRepository: ServerConfigurationRepository = ServerConfigurationRepositoryImpl()
 
-    private lazy var authRepository: AuthRepository = AuthRepositoryImpl(authManager: authManager)
+    private lazy var authRepository: AuthRepository? = authManager.map { AuthRepositoryImpl(authManager: $0) }
 
     private lazy var mediaRepository: MediaRepository = MediaRepositoryImpl(apiClient: apiClient)
 
@@ -47,21 +48,36 @@ final class CompositionRoot {
 
     init(serverInfo: ServerInfo) {
         self.serverInfo = serverInfo
-        authManager = AuthManager(
-            clientId: serverInfo.clientId,
-            authorizeUrl: serverInfo.authorizationUrl,
-            tokenUrl: serverInfo.tokenUrl
-        )
 
-        // Create API client with logging and auth middleware
-        apiClient = Client(
-            serverURL: serverInfo.serverUrl,
-            transport: URLSessionTransport(),
-            middlewares: [
-                LoggingMiddleware(), // Log requests/responses first
-                AuthMiddleware(manager: authManager) // Then add auth
-            ]
-        )
+        // Servers with OIDC disabled connect without authentication
+        if let clientId = serverInfo.clientId,
+           let authorizationUrl = serverInfo.authorizationUrl,
+           let tokenUrl = serverInfo.tokenUrl {
+            let manager = AuthManager(
+                clientId: clientId,
+                authorizeUrl: authorizationUrl,
+                tokenUrl: tokenUrl
+            )
+            authManager = manager
+
+            // Create API client with logging and auth middleware
+            apiClient = Client(
+                serverURL: serverInfo.serverUrl,
+                transport: URLSessionTransport(),
+                middlewares: [
+                    LoggingMiddleware(), // Log requests/responses first
+                    AuthMiddleware(manager: manager) // Then add auth
+                ]
+            )
+        } else {
+            logger.info("Server has no OAuth configured - API client runs without authentication")
+            authManager = nil
+            apiClient = Client(
+                serverURL: serverInfo.serverUrl,
+                transport: URLSessionTransport(),
+                middlewares: [LoggingMiddleware()]
+            )
+        }
     }
 
     // MARK: - Factory Methods for ViewModels

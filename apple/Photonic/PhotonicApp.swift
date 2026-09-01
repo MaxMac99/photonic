@@ -16,6 +16,7 @@ import XcodebuildNvimPreview
 
 @main
 struct PhotonicApp: App {
+    private let logger = LoggerFactory.logger(for: .application)
     @AppStorage("serverInfo") private var serverInfoData: Data?
     @StateObject private var compositionRoot = CompositionRootContainer()
 
@@ -28,17 +29,24 @@ struct PhotonicApp: App {
         ) else {
             return nil
         }
-        let authManager = AuthManager(
-            clientId: serverInfo.clientId,
-            authorizeUrl: serverInfo.authorizationUrl,
-            tokenUrl: serverInfo.tokenUrl
-        )
+
+        var middlewares: [any ClientMiddleware] = [LoggingMiddleware()]
+        if let clientId = serverInfo.clientId,
+           let authorizationUrl = serverInfo.authorizationUrl,
+           let tokenUrl = serverInfo.tokenUrl {
+            let authManager = AuthManager(
+                clientId: clientId,
+                authorizeUrl: authorizationUrl,
+                tokenUrl: tokenUrl
+            )
+            middlewares.append(AuthMiddleware(manager: authManager))
+        } else {
+            logger.info("Server has no OAuth configured - API client runs without authentication")
+        }
+
         return Client(
             serverURL: serverInfo.serverUrl, transport: URLSessionTransport(),
-            middlewares: [
-                LoggingMiddleware(),
-                AuthMiddleware(manager: authManager)
-            ]
+            middlewares: middlewares
         )
     }
 

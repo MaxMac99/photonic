@@ -35,7 +35,7 @@ final class DiscoverServerUseCase: DiscoverServerUseCaseProtocol {
         let discoveryInfo = try await serverConfigurationRepository.discoverServerInfo(url: url)
 
         logger.debug(
-            "Discovery info - ClientID: \(discoveryInfo.clientId), TokenURL: \(discoveryInfo.tokenUrl)"
+            "Discovery info - ClientID: \(discoveryInfo.clientId ?? "none"), TokenURL: \(discoveryInfo.tokenUrl?.absoluteString ?? "none")"
         )
 
         guard
@@ -53,12 +53,32 @@ final class DiscoverServerUseCase: DiscoverServerUseCaseProtocol {
         logger.info("Saving server configuration...")
         try await serverConfigurationRepository.saveConfiguration(configuration)
 
+        if discoveryInfo.hasOAuth {
+            try await connectWithAuthentication(configuration: configuration)
+        } else {
+            try await connectWithoutAuthentication(serverUrl: url)
+        }
+
+        logger.info("Server discovery and connection completed successfully")
+        return configuration
+    }
+
+    /// Full flow for servers with OIDC enabled: interactive sign-in followed by
+    /// validation via user stats.
+    private func connectWithAuthentication(configuration: ServerConfiguration) async throws {
+        guard let clientId = configuration.clientId,
+              let authorizationUrl = configuration.authorizationUrl,
+              let tokenUrl = configuration.tokenUrl
+        else {
+            throw DomainError.validationError("OAuth configuration missing")
+        }
+
         // Create temporary auth manager and repositories to validate the configuration
         logger.info("Creating auth manager for validation...")
         let authManager = AuthManager(
-            clientId: configuration.clientId,
-            authorizeUrl: configuration.authorizationUrl,
-            tokenUrl: configuration.tokenUrl
+            clientId: clientId,
+            authorizeUrl: authorizationUrl,
+            tokenUrl: tokenUrl
         )
 
         let authRepository = AuthRepositoryImpl(authManager: authManager)
@@ -84,9 +104,20 @@ final class DiscoverServerUseCase: DiscoverServerUseCaseProtocol {
         logger.info("Validating connection by fetching user stats...")
         let stats = try await userRepository.getUserStats()
         logger.info("Validation successful - User has \(stats.media) media items")
+    }
 
-        logger.info("Server discovery and connection completed successfully")
-        return configuration
+    /// Flow for servers with OIDC disabled: connect without authentication and
+    /// validate the connection by fetching the public server info.
+    private func connectWithoutAuthentication(serverUrl: URL) async throws {
+        logger.info("Server has no OAuth configured - connecting without authentication")
+        let apiClient = Client(
+            serverURL: serverUrl,
+            transport: URLSessionTransport(),
+            middlewares: [LoggingMiddleware()]
+        )
+
+        logger.info("Validating connection by fetching server info...")
+        _ = try await apiClient.system_info()
     }
 
     func validateAndNormalizeUrl(_ urlString: String) -> URL? {

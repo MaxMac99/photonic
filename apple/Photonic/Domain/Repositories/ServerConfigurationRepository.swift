@@ -15,8 +15,16 @@ protocol ServerConfigurationRepository {
 }
 
 struct ServerDiscoveryInfo: Equatable {
-    let clientId: String
-    let authorizeUrl: URL
-    let tokenUrl: URL
+    /// `nil` when the server has OIDC disabled
+    let clientId: String?
+    /// `nil` when the server has OIDC disabled
+    let authorizeUrl: URL?
+    /// `nil` when the server has OIDC disabled
+    let tokenUrl: URL?
     let serverVersion: String?
+
+    /// Whether the server offers OAuth login (all OAuth settings present)
+    var hasOAuth: Bool {
+        clientId != nil && authorizeUrl != nil && tokenUrl != nil
+    }
 }

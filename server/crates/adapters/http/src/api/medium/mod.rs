@@ -40,13 +40,19 @@ pub fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(get_medium_item::get_medium_item,))
 }
 
-/// Full router with authorization layers and state.
-pub fn router(state: AppState, authorization: AuthorizationLayer<JwtUserClaims>) -> OpenApiRouter {
-    routes()
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            ensure_user_exists,
-        ))
-        .layer(authorization)
-        .with_state(state)
+/// Full router with authorization layers and state. When `authorization` is
+/// `None` (authentication disabled) the routes are mounted without the JWT
+/// layer.
+pub fn router(
+    state: AppState,
+    authorization: Option<AuthorizationLayer<JwtUserClaims>>,
+) -> OpenApiRouter {
+    let with_user_check = routes().layer(middleware::from_fn_with_state(
+        state.clone(),
+        ensure_user_exists,
+    ));
+    match authorization {
+        Some(authorization) => with_user_check.layer(authorization).with_state(state),
+        None => with_user_check.with_state(state),
+    }
 }

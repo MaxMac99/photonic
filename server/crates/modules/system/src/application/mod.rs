@@ -11,7 +11,7 @@ pub struct SystemApplicationHandlers {
 }
 
 impl SystemApplicationHandlers {
-    pub fn new(auth_config: Arc<AuthConfig>) -> Self {
+    pub fn new(auth_config: Option<Arc<AuthConfig>>) -> Self {
         Self {
             info: SystemInfoHandler::new(auth_config),
         }

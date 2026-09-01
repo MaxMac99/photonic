@@ -194,10 +194,12 @@ pub fn build_handlers(
         event_bus.clone(),
     ));
 
-    let auth_config = Arc::new(AuthConfig {
-        client_id: config.server.client_id.clone(),
-        token_url: config.server.token_url.clone(),
-        authorize_url: config.server.authorize_url.clone(),
+    let auth_config = config.server.oidc().map(|oidc| {
+        Arc::new(AuthConfig {
+            client_id: oidc.client_id,
+            token_url: oidc.token_url,
+            authorize_url: oidc.authorize_url,
+        })
     });
 
     let system_handlers = Arc::new(SystemApplicationHandlers::new(auth_config));

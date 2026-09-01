@@ -17,7 +17,30 @@ use tokio::{
 use tracing::log::info;
 use tracing_subscriber::{fmt, prelude::*, util::SubscriberInitExt, EnvFilter};
 
-use crate::{config::GlobalConfig, db::init_db, di::Container};
+use crate::{
+    config::{GlobalConfig, ServerConfig},
+    db::init_db,
+    di::Container,
+};
+
+/// Maps server config to HTTP auth settings. Returns `None` when no
+/// authentication is configured (no OIDC block and no `JWT_SECRET`), in which
+/// case the server runs without the authorization layer.
+fn auth_settings(server: &ServerConfig) -> Option<http::AuthSettings> {
+    let oidc = server.oidc();
+    if oidc.is_none() && server.jwt_secret.is_none() {
+        tracing::warn!(
+            "No authentication configured (OAUTH_* and JWT_SECRET unset) - OIDC is disabled"
+        );
+        return None;
+    }
+
+    Some(http::AuthSettings {
+        client_id: oidc.as_ref().map(|o| o.client_id.clone()),
+        jwt_secret: server.jwt_secret.clone(),
+        jwks_url: oidc.as_ref().map(|o| o.jwks_url.clone()),
+    })
+}
 
 /// Server handle that can be used to control a running server
 pub struct ServerHandle {
@@ -138,12 +161,10 @@ pub async fn run_server(
         container.system_handlers(),
         container.processing_handlers(),
     );
-    let auth_settings = http::AuthSettings {
-        client_id: config.server.client_id.clone(),
-        jwt_secret: config.server.jwt_secret.clone(),
-        jwks_url: config.server.jwks_url.to_string(),
-    };
-    let app = http::api::router::create_router(state, &auth_settings).await?;
+    // Authentication is only mounted when configured: either OIDC (all OAuth
+    // settings present) or JWT_SECRET (test mode). Otherwise the API is public.
+    let auth_settings = auth_settings(&config.server);
+    let app = http::api::router::create_router(state, auth_settings.as_ref()).await?;
 
     let port = port.unwrap_or(config.server.port);
     let listener = TcpListener::bind(format!("{}:{}", config.server.host, port))

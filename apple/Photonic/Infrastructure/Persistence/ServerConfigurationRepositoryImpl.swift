@@ -53,17 +53,13 @@ final class ServerConfigurationRepositoryImpl: ServerConfigurationRepository {
             let response = try await client.system_info()
             let info = try response.ok.body.json
 
-            // Map the API response to our domain model
-            guard let authorizeUrl = URL(string: info.authorize_url),
-                  let tokenUrl = URL(string: info.token_url)
-            else {
-                throw DomainError.unknown("Invalid OAuth URLs received from server")
-            }
-
+            // Map the API response to our domain model. The OAuth fields are
+            // null when the server has OIDC disabled; discovery still succeeds
+            // so the app can connect without authentication.
             return ServerDiscoveryInfo(
                 clientId: info.client_id,
-                authorizeUrl: authorizeUrl,
-                tokenUrl: tokenUrl,
+                authorizeUrl: info.authorize_url.flatMap(URL.init(string:)),
+                tokenUrl: info.token_url.flatMap(URL.init(string:)),
                 serverVersion: info.version
             )
         } catch {

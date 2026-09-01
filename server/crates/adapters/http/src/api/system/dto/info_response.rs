@@ -4,9 +4,9 @@ use system::application::SystemInfo;
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct InfoResponse {
     pub version: String,
-    pub client_id: String,
-    pub token_url: String,
-    pub authorize_url: String,
+    pub client_id: Option<String>,
+    pub token_url: Option<String>,
+    pub authorize_url: Option<String>,
 }
 
 impl From<SystemInfo> for InfoResponse {

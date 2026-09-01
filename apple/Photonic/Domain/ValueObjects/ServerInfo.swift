@@ -9,7 +9,10 @@ import Foundation
 
 struct ServerInfo: Codable {
     let serverUrl: URL
-    let clientId: String
-    let tokenUrl: URL
-    let authorizationUrl: URL
+    /// `nil` when the server has OIDC disabled
+    let clientId: String?
+    /// `nil` when the server has OIDC disabled
+    let tokenUrl: URL?
+    /// `nil` when the server has OIDC disabled
+    let authorizationUrl: URL?
 }

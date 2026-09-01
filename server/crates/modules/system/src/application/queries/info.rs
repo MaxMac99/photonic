@@ -7,23 +7,23 @@ use crate::application::AuthConfig;
 #[derive(Debug, Clone)]
 pub struct SystemInfo {
     pub version: String,
-    pub client_id: String,
-    pub token_url: String,
-    pub authorize_url: String,
+    pub client_id: Option<String>,
+    pub token_url: Option<String>,
+    pub authorize_url: Option<String>,
 }
 
 #[derive(new)]
 pub struct SystemInfoHandler {
-    auth_config: Arc<AuthConfig>,
+    auth_config: Option<Arc<AuthConfig>>,
 }
 
 impl SystemInfoHandler {
     pub async fn handle(&self) -> SystemInfo {
         SystemInfo {
             version: env!("CARGO_PKG_VERSION").to_string(),
-            client_id: self.auth_config.client_id.clone(),
-            token_url: self.auth_config.token_url.clone(),
-            authorize_url: self.auth_config.authorize_url.clone(),
+            client_id: self.auth_config.as_ref().map(|c| c.client_id.clone()),
+            token_url: self.auth_config.as_ref().map(|c| c.token_url.clone()),
+            authorize_url: self.auth_config.as_ref().map(|c| c.authorize_url.clone()),
         }
     }
 }

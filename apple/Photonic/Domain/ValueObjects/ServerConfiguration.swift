@@ -9,11 +9,19 @@ import Foundation
 
 struct ServerConfiguration: Equatable, Codable {
     let serverUrl: ServerURL
-    let clientId: String
-    let tokenUrl: URL
-    let authorizationUrl: URL
+    /// `nil` when the server has OIDC disabled
+    let clientId: String?
+    /// `nil` when the server has OIDC disabled
+    let tokenUrl: URL?
+    /// `nil` when the server has OIDC disabled
+    let authorizationUrl: URL?
 
-    init?(serverUrl: URL, clientId: String, tokenUrl: URL, authorizationUrl: URL) {
+    init?(
+        serverUrl: URL,
+        clientId: String?,
+        tokenUrl: URL?,
+        authorizationUrl: URL?
+    ) {
         guard let serverURL = ServerURL(url: serverUrl) else { return nil }
         self.serverUrl = serverURL
         self.clientId = clientId
@@ -33,16 +41,16 @@ struct ServerConfiguration: Equatable, Codable {
             throw DecodingError.dataCorruptedError(forKey: .serverUrl, in: container, debugDescription: "Invalid server URL")
         }
         serverUrl = serverURL
-        clientId = try container.decode(String.self, forKey: .clientId)
-        tokenUrl = try container.decode(URL.self, forKey: .tokenUrl)
-        authorizationUrl = try container.decode(URL.self, forKey: .authorizationUrl)
+        clientId = try container.decodeIfPresent(String.self, forKey: .clientId)
+        tokenUrl = try container.decodeIfPresent(URL.self, forKey: .tokenUrl)
+        authorizationUrl = try container.decodeIfPresent(URL.self, forKey: .authorizationUrl)
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(serverUrl.value, forKey: .serverUrl)
-        try container.encode(clientId, forKey: .clientId)
-        try container.encode(tokenUrl, forKey: .tokenUrl)
-        try container.encode(authorizationUrl, forKey: .authorizationUrl)
+        try container.encodeIfPresent(clientId, forKey: .clientId)
+        try container.encodeIfPresent(tokenUrl, forKey: .tokenUrl)
+        try container.encodeIfPresent(authorizationUrl, forKey: .authorizationUrl)
     }
 }

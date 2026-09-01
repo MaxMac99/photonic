@@ -28,6 +28,7 @@ impl GlobalConfig {
             .env()
             .load()
             .whatever_context("Could not build config")?;
+        config.server.validate_oidc()?;
         config.storage.setup().await?;
 
         debug!("Config: {:?}", config);

@@ -34,7 +34,10 @@ pub struct Binary(#[allow(dead_code)] String);
 )]
 pub struct ApiDoc;
 
-pub async fn create_router(state: AppState, auth: &AuthSettings) -> Result<Router, Whatever> {
+pub async fn create_router(
+    state: AppState,
+    auth: Option<&AuthSettings>,
+) -> Result<Router, Whatever> {
     let (router, api) = create_router_with_api(state, auth).await?;
     let router = router.merge(SwaggerUi::new("/api-docs").url("/api-docs/openapi.json", api));
     Ok(router)
@@ -42,9 +45,12 @@ pub async fn create_router(state: AppState, auth: &AuthSettings) -> Result<Route
 
 pub async fn create_router_with_api(
     state: AppState,
-    auth: &AuthSettings,
+    auth: Option<&AuthSettings>,
 ) -> Result<(Router, utoipa::openapi::OpenApi), Whatever> {
-    let authorization = setup_auth(auth).await?.into_layer();
+    let authorization = match auth {
+        Some(auth) => Some(setup_auth(auth).await?.into_layer()),
+        None => None,
+    };
     Ok(OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest(
             "/api/v1/medium",
