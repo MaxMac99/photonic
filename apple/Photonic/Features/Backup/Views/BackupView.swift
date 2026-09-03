@@ -17,6 +17,7 @@ struct BackupView: View {
         }
         .padding()
         .onAppear {
+            guard !AppRuntime.isRunningUnitTests else { return }
             store.send(.onAppear)
         }
     }

@@ -34,6 +34,7 @@ struct SettingsView: View {
             }
         }
         .onAppear {
+            guard !AppRuntime.isRunningUnitTests else { return }
             store.send(.onAppear)
         }
     }

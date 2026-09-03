@@ -34,6 +34,7 @@ struct AuthView: View {
         }
         .padding(32)
         .onAppear {
+            guard !AppRuntime.isRunningUnitTests else { return }
             store.send(.onAppear)
         }
     }
@@ -42,7 +43,7 @@ struct AuthView: View {
         VStack(spacing: 12) {
             LabeledContent(
                 "Server",
-                value: info.authorizeURL?.rawValue.host() ?? ""
+                value: store.connectedServerURL?.rawValue.host() ?? ""
             )
             LabeledContent("Version", value: info.version)
 
@@ -56,9 +57,13 @@ struct AuthView: View {
                     .buttonStyle(.borderedProminent)
                 }
             } else {
-                Text("This server has sign-in (OIDC) disabled.")
+                Text("This server has sign-in (OIDC) disabled — no account needed.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                Button("Continue") {
+                    store.send(.signInTapped)
+                }
+                .buttonStyle(.borderedProminent)
             }
         }
     }

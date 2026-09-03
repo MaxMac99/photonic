@@ -131,6 +131,43 @@ struct AuthFeatureTests {
     }
 
     @Test
+    func connectWithOIDCDisabledEntersAppWithoutSignIn() async throws {
+        let serverURL = try #require(ServerURL("https://photonic.example.com"))
+        let info = ServerInfo(
+            version: "1.2.3",
+            clientID: nil,
+            tokenURL: nil,
+            authorizeURL: nil
+        )
+        var signInWasCalled = false
+
+        let store = TestStore(
+            initialState: AuthFeature.State(serverURLText: "https://photonic.example.com")
+        ) {
+            AuthFeature()
+        } withDependencies: {
+            $0.serverConfigurationClient.save = { _ in }
+            $0.discoveryClient.fetchSystemInfo = { _ in info }
+            $0.authClient.signIn = { _, _ in
+                signInWasCalled = true
+                throw TestSignInFailure()
+            }
+        }
+
+        await store.send(.connectTapped) {
+            $0.isConnecting = true
+        }
+        await store.receive(.connectionSucceeded(serverURL, info)) {
+            $0.isConnecting = false
+            $0.connectedServerURL = serverURL
+            $0.connectedServer = info
+            $0.connectionStatus = "Connected to Photonic 1.2.3"
+        }
+        await store.receive(.delegate(.signInCompleted))
+        #expect(!signInWasCalled)
+    }
+
+    @Test
     func signInSucceedsAndNotifiesParent() async throws {
         let serverURL = try #require(ServerURL("https://photonic.example.com"))
         let info = makeServerInfo(serverURL: serverURL)

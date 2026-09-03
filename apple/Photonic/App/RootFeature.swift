@@ -84,6 +84,7 @@ struct RootView: View {
         } else {
             AuthView(store: store.scope(state: \.auth, action: \.auth))
                 .onAppear {
+                    guard !AppRuntime.isRunningUnitTests else { return }
                     store.send(.onAppear)
                 }
         }

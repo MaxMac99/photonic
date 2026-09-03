@@ -74,7 +74,12 @@ struct AuthFeature {
                 state.connectedServerURL = serverURL
                 state.connectedServer = info
                 state.connectionStatus = "Connected to Photonic \(info.version)"
-                return .none
+                // Servers with OIDC disabled connect without authentication
+                // (main's semantics): go straight into the app.
+                if info.isOIDCEnabled {
+                    return .none
+                }
+                return .send(.delegate(.signInCompleted))
 
             case let .connectionFailed(message):
                 state.isConnecting = false
@@ -88,9 +93,9 @@ struct AuthFeature {
                     state.errorMessage = "Connect to a server first"
                     return .none
                 }
+                // Nothing interactive to do without OIDC.
                 guard info.isOIDCEnabled else {
-                    state.errorMessage = "This server has sign-in (OIDC) disabled"
-                    return .none
+                    return .send(.delegate(.signInCompleted))
                 }
                 state.isSigningIn = true
                 state.errorMessage = nil

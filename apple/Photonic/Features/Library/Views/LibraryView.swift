@@ -23,6 +23,7 @@ struct LibraryView: View {
             }
         }
         .onAppear {
+            guard !AppRuntime.isRunningUnitTests else { return }
             store.send(.onAppear)
         }
     }
