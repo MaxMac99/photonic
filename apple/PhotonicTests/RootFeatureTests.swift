@@ -1,4 +1,6 @@
 import ComposableArchitecture
+import Foundation
+import PhotonicCore
 import Testing
 @testable import Photonic
 
@@ -13,5 +15,17 @@ struct RootFeatureTests {
         await store.send(.binding(.set(\.currentTab, .settings))) {
             $0.currentTab = .settings
         }
+    }
+
+    @Test
+    func restoringDoesNotDowngradeAuthenticatedState() async {
+        var state = RootFeature.State()
+        state.isAuthenticated = true
+
+        let store = TestStore(initialState: state) {
+            RootFeature()
+        }
+
+        await store.send(.sessionRestored(false))
     }
 }

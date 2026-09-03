@@ -55,7 +55,11 @@ struct RootFeature {
                 }
 
             case let .sessionRestored(authenticated):
-                state.isAuthenticated = authenticated
+                // The connect flow may already have entered the app (OIDC
+                // disabled); restoring must never downgrade that.
+                if !state.isAuthenticated {
+                    state.isAuthenticated = authenticated
+                }
                 return .none
 
             case .auth(.delegate(.signInCompleted)):
@@ -109,9 +113,6 @@ struct RootView: View {
                     Label("Settings", systemImage: "gearshape")
                 }
                 .tag(RootFeature.Tab.settings)
-        }
-        .onAppear {
-            store.send(.onAppear)
         }
     }
 }
