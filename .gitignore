@@ -34,9 +34,10 @@ build/
 *.dSYM
 
 # Swift Package Manager
-Packages/
+# (anchored to repo root so local packages under apple/Packages/ stay tracked)
+/Packages/
 Package.pins
-Package.resolved
+/Package.resolved
 .swiftpm/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata

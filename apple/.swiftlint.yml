@@ -2,6 +2,7 @@ included:
   - Photonic
   - PhotonicTests
   - PhotonicUITests
+  - Packages
 
 excluded:
   - Photonic/Infrastructure/API/Generated

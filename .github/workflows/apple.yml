@@ -40,3 +40,44 @@ jobs:
 
       - name: SwiftFormat (lint)
         run: nix develop .#apple --command bash -c 'cd "$GITHUB_WORKSPACE/apple" && swiftformat --lint .'
+
+  build-test:
+    name: Build & Test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode and simulator inventory
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available | grep -m 3 iPhone
+
+      # Local packages (PhotonicCore, PhotonicAPI) carry their own tests.
+      - name: Swift package tests
+        run: |
+          cd apple/Packages/PhotonicCore && swift test
+          cd ../PhotonicAPI && swift test
+
+      - name: Build app
+        run: |
+          xcodebuild \
+            -project apple/Photonic.xcodeproj \
+            -scheme Photonic \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+            -skipMacroValidation \
+            -skipPackagePluginValidation \
+            build
+
+      # Includes ArchitectureTests (R1-R13 enforcement).
+      - name: Run unit tests
+        run: |
+          xcodebuild \
+            -project apple/Photonic.xcodeproj \
+            -scheme Photonic \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
+            -skipMacroValidation \
+            -skipPackagePluginValidation \
+            -only-testing:PhotonicTests \
+            test
