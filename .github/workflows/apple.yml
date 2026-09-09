@@ -64,7 +64,7 @@ jobs:
             -project apple/Photonic.xcodeproj \
             -scheme Photonic \
             -configuration Debug \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
             -skipMacroValidation \
             -skipPackagePluginValidation \
             build
@@ -76,7 +76,7 @@ jobs:
             -project apple/Photonic.xcodeproj \
             -scheme Photonic \
             -configuration Debug \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
             -skipMacroValidation \
             -skipPackagePluginValidation \
             -only-testing:PhotonicTests \
