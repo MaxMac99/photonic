@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine};
 use byte_unit::Byte;
 use chrono::{DateTime, FixedOffset, Utc};
 use kernel::{serde_helpers::serialize_byte_as_u64, StorageTier};
-use medium::domain::{MediumItem, MediumListItem};
+use medium::domain::{MediumItem, MediumListItem, Thumbhash};
 use metadata::domain::{CameraInfo, FileInfo, LocationInfo, Metadata, Orientation, TechnicalInfo};
 use mime_serde_shim::Wrapper as Mime;
 use serde::{Deserialize, Serialize};
@@ -24,6 +25,11 @@ pub struct MediumListResponse {
     pub camera_make: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub camera_model: Option<String>,
+    /// Base64-encoded 28-byte perceptual placeholder (thumbhash) for
+    /// instant low-res previews while thumbnails load.
+    #[schema(value_type = Option<String>)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumbhash: Option<String>,
     pub items: Vec<MediumItemResponse>,
 }
 
@@ -40,6 +46,9 @@ pub struct MediumDetailResponse {
     pub camera_make: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub camera_model: Option<String>,
+    #[schema(value_type = Option<String>)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumbhash: Option<String>,
     pub created_at: DateTime<FixedOffset>,
     pub updated_at: DateTime<FixedOffset>,
     pub items: Vec<MediumItemDetailResponse>,
@@ -223,6 +232,7 @@ impl From<&MediumListItem> for MediumListResponse {
             taken_at: list_item.taken_at,
             camera_make: list_item.camera_make.clone(),
             camera_model: list_item.camera_model.clone(),
+            thumbhash: encode_thumbhash(&list_item.thumbhash),
             items: list_item
                 .items
                 .iter()
@@ -241,6 +251,7 @@ impl From<MediumListItem> for MediumDetailResponse {
             taken_at: medium.taken_at,
             camera_make: medium.camera_make.clone(),
             camera_model: medium.camera_model.clone(),
+            thumbhash: encode_thumbhash(&medium.thumbhash),
             created_at: medium.created_at.into(),
             updated_at: medium.updated_at.into(),
             items: medium
@@ -250,6 +261,12 @@ impl From<MediumListItem> for MediumDetailResponse {
                 .collect(),
         }
     }
+}
+
+fn encode_thumbhash(thumbhash: &Option<Thumbhash>) -> Option<String> {
+    thumbhash
+        .as_ref()
+        .map(|h| BASE64_STANDARD.encode(h.as_bytes()))
 }
 
 // Metadata conversion implementations

@@ -62,6 +62,17 @@ impl From<MediumItemType> for MediumItemTypeDto {
     }
 }
 
+impl From<MediumItemTypeDto> for MediumItemType {
+    fn from(dto: MediumItemTypeDto) -> Self {
+        match dto {
+            MediumItemTypeDto::Original => MediumItemType::Original,
+            MediumItemTypeDto::Edit => MediumItemType::Edit,
+            MediumItemTypeDto::Preview => MediumItemType::Preview,
+            MediumItemTypeDto::Sidecar => MediumItemType::Sidecar,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum StorageTierDto {

@@ -185,6 +185,8 @@ pub fn build_handlers(
         event_bus.clone(),
         storage.storage_path_service.clone(),
         event_bus.clone(),
+        event_bus.clone(),
+        event_bus.clone(),
     ));
 
     let metadata_handlers = Arc::new(MetadataApplicationHandlers::new(

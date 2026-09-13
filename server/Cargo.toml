@@ -131,6 +131,10 @@ convert_case = "0.6.0"
 ammonia = "4"
 validator = { version = "0.18", features = ["derive"] }
 
+# Thumbnails
+thumbhash = "0.1.0"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+
 # Derive macros
 derive_setters = "0.1.8"
 derive_builder = "0.20.2"

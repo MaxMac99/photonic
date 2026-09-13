@@ -3,6 +3,8 @@ pub mod events;
 pub mod filter;
 pub mod medium;
 pub mod path_service;
+pub mod ports;
+pub mod thumbnail;
 
 pub use camera::*;
 pub use filter::*;
@@ -11,3 +13,5 @@ pub use kernel::{
 };
 pub use medium::*;
 pub use path_service::*;
+pub use ports::*;
+pub use thumbnail::*;

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                m.id,\n                m.owner_id,\n                m.medium_type as \"medium_type: MediumTypeDb\",\n                m.leading_item_id,\n                m.taken_at,\n                m.taken_at_timezone,\n                m.camera_make,\n                m.camera_model,\n                m.gps_latitude,\n                m.gps_longitude,\n                m.gps_altitude,\n                m.created_at,\n                m.updated_at,\n                mi.id as item_id,\n                mi.medium_item_type as \"medium_item_type: MediumItemTypeDb\",\n                mi.mime,\n                mi.filename,\n                mi.size,\n                mi.priority,\n                mi.width,\n                mi.height,\n                mi.created_at as item_created_at,\n                mi.updated_at as item_updated_at,\n                l.variant as \"storage_tier: StorageTierDb\",\n                l.path as relative_path\n            FROM media m\n            JOIN medium_items mi ON mi.medium_id = m.id AND mi.deleted_at IS NULL\n            JOIN locations l ON l.item_id = mi.id\n            WHERE m.id = $1 AND m.owner_id = $2\n            ORDER BY mi.priority ASC, mi.id, l.variant\n            ",
+  "query": "\n            SELECT\n                m.id,\n                m.owner_id,\n                m.medium_type as \"medium_type: MediumTypeDb\",\n                m.leading_item_id,\n                m.taken_at,\n                m.taken_at_timezone,\n                m.camera_make,\n                m.camera_model,\n                m.gps_latitude,\n                m.gps_longitude,\n                m.gps_altitude,\n                m.thumbhash,\n                m.created_at,\n                m.updated_at,\n                mi.id as item_id,\n                mi.medium_item_type as \"medium_item_type: MediumItemTypeDb\",\n                mi.mime,\n                mi.filename,\n                mi.size,\n                mi.priority,\n                mi.width,\n                mi.height,\n                mi.created_at as item_created_at,\n                mi.updated_at as item_updated_at,\n                l.variant as \"storage_tier: StorageTierDb\",\n                l.path as relative_path\n            FROM media m\n            JOIN medium_items mi ON mi.medium_id = m.id AND mi.deleted_at IS NULL\n            JOIN locations l ON l.item_id = mi.id\n            WHERE m.id = $1 AND m.owner_id = $2\n            ORDER BY mi.priority ASC, mi.id, l.variant\n            ",
   "describe": {
     "columns": [
       {
@@ -75,21 +75,26 @@
       },
       {
         "ordinal": 11,
+        "name": "thumbhash",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 12,
         "name": "created_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "updated_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "item_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "medium_item_type: MediumItemTypeDb",
         "type_info": {
           "Custom": {
@@ -106,47 +111,47 @@
         }
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "mime",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "filename",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "size",
         "type_info": "Int8"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "priority",
         "type_info": "Int4"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "width",
         "type_info": "Int4"
       },
       {
-        "ordinal": 20,
+        "ordinal": 21,
         "name": "height",
         "type_info": "Int4"
       },
       {
-        "ordinal": 21,
+        "ordinal": 22,
         "name": "item_created_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 22,
+        "ordinal": 23,
         "name": "item_updated_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 23,
+        "ordinal": 24,
         "name": "storage_tier: StorageTierDb",
         "type_info": {
           "Custom": {
@@ -162,7 +167,7 @@
         }
       },
       {
-        "ordinal": 24,
+        "ordinal": 25,
         "name": "relative_path",
         "type_info": "Varchar"
       }
@@ -178,6 +183,7 @@
       false,
       false,
       false,
+      true,
       true,
       true,
       true,
@@ -201,5 +207,5 @@
       false
     ]
   },
-  "hash": "319f4ffb7bbf2811ecca66169b962b2bdc73bdf146e42bef5e6533d2d05ff218"
+  "hash": "7e671ac5403cdc2504e3495e841dec4c31ebd03f35d5a8593d6dc0e3771e7548"
 }

@@ -57,3 +57,20 @@ pub struct GetMediumPreviewOptions {
     pub width: Option<i32>,
     pub height: Option<i32>,
 }
+
+/// Query parameters for uploading an additional item (e.g. a thumbnail
+/// variant) to an existing medium.
+#[derive(Debug, Clone, Deserialize, IntoParams)]
+pub struct AddMediumItemInput {
+    pub filename: String,
+    /// Required for preview items: which thumbnail size is being uploaded
+    /// (one of: tiny, small, large). Passed through to runtime validation.
+    pub variant: Option<String>,
+    /// Image dimensions; required for preview items and validated against
+    /// the variant's maximum size.
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    #[serde(default = "default_i32::<10>")]
+    #[param(default = 10)]
+    pub priority: i32,
+}

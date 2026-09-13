@@ -3,7 +3,9 @@ use event_sourcing::{
     error::{EventSourcingError, Result},
     projection::handler::ProjectionHandler,
 };
-use medium::domain::events::{MediumCreatedEvent, MediumItemCreatedEvent, MediumUpdatedEvent};
+use medium::domain::events::{
+    MediumCreatedEvent, MediumItemCreatedEvent, MediumThumbhashUpdatedEvent, MediumUpdatedEvent,
+};
 use sqlx::{Postgres, Transaction};
 use tracing::info;
 
@@ -26,6 +28,7 @@ impl RegisterProjection for MediumProjection {
     ) -> Result<()> {
         register_event::<MediumCreatedEvent, _>(bus, registry, Self::new())?;
         register_event::<MediumItemCreatedEvent, _>(bus, registry, Self::new())?;
+        register_event::<MediumThumbhashUpdatedEvent, _>(bus, registry, Self::new())?;
         register_event::<MediumUpdatedEvent, _>(bus, registry, Self::new())?;
         Ok(())
     }
@@ -156,6 +159,35 @@ impl ProjectionHandler<MediumItemCreatedEvent, i64, Transaction<'static, Postgre
             medium_id = %event.medium_id,
             item_id = %event.item_id,
             "MediumProjection: medium item created"
+        );
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl ProjectionHandler<MediumThumbhashUpdatedEvent, i64, Transaction<'static, Postgres>>
+    for MediumProjection
+{
+    type Error = event_sourcing::error::EventSourcingError;
+
+    async fn handle(
+        &self,
+        event: &MediumThumbhashUpdatedEvent,
+        _sequence: i64,
+        tx: &mut Transaction<'static, Postgres>,
+    ) -> Result<()> {
+        sqlx::query("UPDATE media SET thumbhash = $2, updated_at = NOW() WHERE id = $1")
+            .bind(event.medium_id)
+            .bind(event.thumbhash.as_bytes())
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| EventSourcingError::Projection {
+                message: format!("Failed to update media thumbhash: {}", e),
+            })?;
+
+        info!(
+            medium_id = %event.medium_id,
+            "MediumProjection: media thumbhash updated"
         );
         Ok(())
     }
