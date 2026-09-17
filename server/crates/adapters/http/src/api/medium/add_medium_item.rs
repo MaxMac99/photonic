@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use axum::{
     body::Body,
     debug_handler,
@@ -71,19 +69,11 @@ pub async fn add_medium_item(
 
     let data = read_body(body).await?;
 
-    let variant = medium_item_opts
-        .variant
-        .map(|v| ThumbnailVariant::from_str(&v))
-        .transpose()
-        .map_err(|e: kernel::error::DomainError| {
-            ApiError(kernel::app_error::ApplicationError::Domain { source: e })
-        })?;
-
     let command = AddMediumItemCommand {
         user_id,
         medium_id,
         item_type,
-        variant,
+        variant: medium_item_opts.variant.map(ThumbnailVariant::from),
         mime_type: content_type.0.into(),
         filename: medium_item_opts.filename,
         filesize: content_length.0 .0.into(),

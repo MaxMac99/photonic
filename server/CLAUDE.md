@@ -75,14 +75,19 @@ cargo test -p composition
 ### OpenAPI Spec and Typed Client Generation
 
 The OpenAPI specification is generated from utoipa annotations and written to the repo root
-(`../openapi.yaml`). The Swift app symlinks to that same file, so it is the single source of
-truth for the API contract.
+(`../openapi.yaml`). It is the single source of truth for the API contract. `cargo xtask
+generate-openapi` additionally writes a swift-openapi-generator compatible variant to the
+PhotonicAPI package (`../apple/Packages/PhotonicAPI/Sources/PhotonicAPI/openapi.yaml`),
+which the Swift client is generated from.
 
 ```bash
 # Generate spec and client automatically during build
 cargo build
 
-# Manually regenerate just the OpenAPI spec (writes to ../openapi.yaml)
+# Manually regenerate just the OpenAPI spec
+# (writes the canonical spec to ../openapi.yaml and a
+# swift-openapi-generator compatible variant to
+# ../apple/Packages/PhotonicAPI/Sources/PhotonicAPI/openapi.yaml)
 cargo xtask generate-openapi
 
 # View the generated spec (at repo root, shared contract)

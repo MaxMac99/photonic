@@ -4,7 +4,7 @@ use serde_default_utils::*;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use super::types::MediumTypeDto;
+use super::types::{MediumTypeDto, ThumbnailVariantDto};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
 pub enum DirectionDto {
@@ -63,9 +63,8 @@ pub struct GetMediumPreviewOptions {
 #[derive(Debug, Clone, Deserialize, IntoParams)]
 pub struct AddMediumItemInput {
     pub filename: String,
-    /// Required for preview items: which thumbnail size is being uploaded
-    /// (one of: tiny, small, large). Passed through to runtime validation.
-    pub variant: Option<String>,
+    /// Required for preview items: which thumbnail size is being uploaded.
+    pub variant: Option<ThumbnailVariantDto>,
     /// Image dimensions; required for preview items and validated against
     /// the variant's maximum size.
     pub width: Option<u32>,
