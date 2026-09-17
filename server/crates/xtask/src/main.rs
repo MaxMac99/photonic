@@ -18,7 +18,10 @@ enum Commands {
         #[arg(short, long, default_value = "../openapi.yaml")]
         output: String,
         /// Output path for the swift-openapi-generator compatible variant
-        #[arg(long, default_value = "../apple/Packages/PhotonicAPI/Sources/PhotonicAPI/openapi.yaml")]
+        #[arg(
+            long,
+            default_value = "../apple/Packages/PhotonicAPI/Sources/PhotonicAPI/openapi.yaml"
+        )]
         swift_output: String,
     },
     ConvertOpenapi {
