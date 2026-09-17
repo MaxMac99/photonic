@@ -1,6 +1,8 @@
 use std::{env, path::Path};
 
-use xtask::openapi::{convert_openapi, generate_openapi_client, generate_openapi_spec};
+use xtask::openapi::{
+    convert_openapi, generate_openapi_client, generate_openapi_spec, transform_openapi_for_swift,
+};
 
 #[tokio::main]
 async fn main() {
@@ -24,6 +26,16 @@ async fn main() {
         .await
         .expect("Failed to generate OpenAPI spec");
     eprintln!("[build.rs] OpenAPI spec generated successfully");
+
+    eprintln!(
+        "[build.rs] Generating Swift-compatible spec at: ../../../apple/Packages/PhotonicAPI/Sources/PhotonicAPI/openapi.yaml"
+    );
+    transform_openapi_for_swift(
+        openapi_path,
+        "../../../apple/Packages/PhotonicAPI/Sources/PhotonicAPI/openapi.yaml",
+    )
+    .expect("Failed to transform OpenAPI spec for Swift");
+    eprintln!("[build.rs] Swift-compatible spec generated successfully");
 
     eprintln!("[build.rs] Converting OpenAPI spec to: {}", converted_spec);
     convert_openapi(openapi_path, &converted_spec).expect("Failed to convert OpenAPI");

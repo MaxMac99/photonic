@@ -219,7 +219,7 @@ impl FileStorage for FilesystemStorageAdapter {
     async fn retrieve_file_stream(
         &self,
         location: &FileLocation,
-    ) -> DomainResult<Box<dyn AsyncRead + Unpin>> {
+    ) -> DomainResult<Box<dyn AsyncRead + Send + Unpin>> {
         debug!("Opening file stream for retrieval");
 
         let path = self.get_full_path(location);

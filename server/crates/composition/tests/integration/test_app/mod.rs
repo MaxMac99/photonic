@@ -11,6 +11,14 @@ use photonic_client::Client as GeneratedClient;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use tokio::sync::Mutex;
+
+/// Serializes configuration loading against tests that mutate process-global
+/// env vars. `GlobalConfig::load()` reads the JWT/OAuth variables from the
+/// environment; a parallel test that strips them (the OIDC-disabled test)
+/// must never interleave with a TestApp booting up, or that server starts
+/// without its authorization layer and every request 401s.
+pub static CONFIG_ENV_LOCK: Mutex<()> = Mutex::const_new(());
 
 /// Test application using the real application server
 pub struct TestApp {
@@ -23,6 +31,8 @@ pub struct TestApp {
 impl TestApp {
     /// Start a new test application with real server on random port
     pub async fn new() -> Self {
+        let _config_env = CONFIG_ENV_LOCK.lock().await;
+
         // Load .env file for test configuration
         dotenv().ok();
 

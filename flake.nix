@@ -156,12 +156,16 @@
                             # URL here is userless, so pin it explicitly.
                             export PGUSER="$USER"
 
-                            # Set up test environment variables
-                            export OAUTH_CLIENT_ID="test-client-id"
-                            export OAUTH_JWKS_URL="https://example.com/.well-known/jwks.json"
-                            export OAUTH_TOKEN_URL="https://example.com/oauth/token"
-                            export OAUTH_AUTHORIZE_URL="https://example.com/oauth/authorize"
-                            export JWT_SECRET="test-secret-key-for-testing-only"
+                            # Set up test environment variables. These are
+                            # defaults only (${VAR:-...}) so a local .env or
+                            # pre-set value wins; CI (no .env) still gets a
+                            # working auth configuration for the integration
+                            # tests.
+                            export OAUTH_CLIENT_ID="''${OAUTH_CLIENT_ID:-test-client-id}"
+                            export OAUTH_JWKS_URL="''${OAUTH_JWKS_URL:-https://example.com/.well-known/jwks.json}"
+                            export OAUTH_TOKEN_URL="''${OAUTH_TOKEN_URL:-https://example.com/oauth/token}"
+                            export OAUTH_AUTHORIZE_URL="''${OAUTH_AUTHORIZE_URL:-https://example.com/oauth/authorize}"
+                            export JWT_SECRET="''${JWT_SECRET:-test-secret-key-for-testing-only}"
 
                             # Set log level (change to 'debug' or 'trace' for more detail)
                             export RUST_LOG=''${RUST_LOG:-info}

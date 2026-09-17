@@ -29,6 +29,7 @@ pub struct Binary(#[allow(dead_code)] String);
     components(
         schemas(
             Binary,
+            medium::dto::ThumbnailVariantDto,
         ),
     ),
 )]

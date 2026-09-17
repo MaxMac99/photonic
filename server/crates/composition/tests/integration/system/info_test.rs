@@ -5,7 +5,7 @@ use reqwest::StatusCode;
 use rstest::rstest;
 use serial_test::serial;
 
-use crate::integration::{common::fixtures::app, test_app::TestApp};
+use crate::integration::{common::fixtures::app, test_app, test_app::TestApp};
 // ============================================================================
 // SYSTEM INFO TESTS - GET /api/v1/system
 // ============================================================================
@@ -76,6 +76,11 @@ async fn test_system_info_version_format(#[future] app: TestApp) -> Result<(), B
 #[serial]
 async fn test_system_info_oidc_disabled() -> Result<(), Box<dyn Error>> {
     setup_test_tracing();
+
+    // Hold the config-env lock for the whole test: stripping auth vars is
+    // process-global and must not interleave with parallel TestApps loading
+    // their configuration.
+    let _config_env = test_app::CONFIG_ENV_LOCK.lock().await;
 
     // Preserve the environment so subsequent serial tests keep working
     let auth_vars = [

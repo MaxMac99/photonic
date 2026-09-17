@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use snafu::Whatever;
-use xtask::openapi::{convert_openapi, generate_openapi_spec};
+use xtask::openapi::{convert_openapi, generate_openapi_spec, transform_openapi_for_swift};
 
 #[derive(Parser)]
 #[command(name = "xtask")]
@@ -17,6 +17,12 @@ enum Commands {
         /// Output file path
         #[arg(short, long, default_value = "../openapi.yaml")]
         output: String,
+        /// Output path for the swift-openapi-generator compatible variant
+        #[arg(
+            long,
+            default_value = "../apple/Packages/PhotonicAPI/Sources/PhotonicAPI/openapi.yaml"
+        )]
+        swift_output: String,
     },
     ConvertOpenapi {
         /// Input file path
@@ -34,7 +40,13 @@ async fn main() -> Result<(), Whatever> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::GenerateOpenapi { output } => generate_openapi_spec(&output).await,
+        Commands::GenerateOpenapi {
+            output,
+            swift_output,
+        } => {
+            generate_openapi_spec(&output).await?;
+            transform_openapi_for_swift(&output, &swift_output)
+        }
         Commands::ConvertOpenapi { input, output } => convert_openapi(&input, &output),
     }
 }

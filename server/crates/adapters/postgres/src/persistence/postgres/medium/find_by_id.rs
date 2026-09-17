@@ -4,7 +4,7 @@ use byte_unit::Byte;
 use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
 use futures_util::StreamExt;
 use kernel::{error::DomainResult, Dimensions, FileLocation, Filename, MediumId, Priority, UserId};
-use medium::domain::{GpsCoordinates, Medium, MediumItem};
+use medium::domain::{GpsCoordinates, Medium, MediumItem, Thumbhash};
 use tracing::{error, info};
 use uuid::Uuid;
 
@@ -30,6 +30,7 @@ struct FindMediumRow {
     pub gps_latitude: Option<f64>,
     pub gps_longitude: Option<f64>,
     pub gps_altitude: Option<f64>,
+    pub thumbhash: Option<Vec<u8>>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub item_id: Uuid,
@@ -67,6 +68,7 @@ impl PostgresMediumRepository {
                 m.gps_latitude,
                 m.gps_longitude,
                 m.gps_altitude,
+                m.thumbhash,
                 m.created_at,
                 m.updated_at,
                 mi.id as item_id,
@@ -182,6 +184,7 @@ impl From<&FindMediumRow> for Medium {
             camera_make: row.camera_make.clone(),
             camera_model: row.camera_model.clone(),
             gps_coordinates,
+            thumbhash: row.thumbhash.clone().and_then(|h| Thumbhash::new(h).ok()),
             created_at: row.created_at.and_utc(),
             updated_at: row.updated_at.and_utc(),
             items: vec![MediumItem::from(row)],
@@ -215,6 +218,7 @@ mod tests {
             gps_latitude: None,
             gps_longitude: None,
             gps_altitude: None,
+            thumbhash: None,
             created_at: now,
             updated_at: now,
             item_id,

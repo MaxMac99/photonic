@@ -6,7 +6,7 @@ use futures_util::TryStreamExt;
 use kernel::{
     error::DomainResult, shared::SortDirection, Dimensions, FileLocation, Filename, Priority,
 };
-use medium::domain::{GpsCoordinates, MediumFilter, MediumItem, MediumListItem};
+use medium::domain::{GpsCoordinates, MediumFilter, MediumItem, MediumListItem, Thumbhash};
 use sqlx::QueryBuilder;
 use tracing::{debug, error, info};
 use uuid::Uuid;
@@ -33,6 +33,7 @@ struct FindAllMediumRow {
     pub gps_latitude: Option<f64>,
     pub gps_longitude: Option<f64>,
     pub gps_altitude: Option<f64>,
+    pub thumbhash: Option<Vec<u8>>,
     #[allow(dead_code)]
     pub created_at: NaiveDateTime,
     #[allow(dead_code)]
@@ -83,6 +84,7 @@ impl PostgresMediumRepository {
                 m.gps_latitude,
                 m.gps_longitude,
                 m.gps_altitude,
+                m.thumbhash,
                 m.created_at,
                 m.updated_at,
                 mi.id as item_id,
@@ -233,6 +235,7 @@ impl From<&FindAllMediumRow> for MediumListItem {
             camera_make: row.camera_make.clone(),
             camera_model: row.camera_model.clone(),
             gps_coordinates,
+            thumbhash: row.thumbhash.clone().and_then(|h| Thumbhash::new(h).ok()),
             created_at: row.item_created_at.and_utc(),
             updated_at: row.item_updated_at.and_utc(),
             items: vec![MediumItem::from(row)],

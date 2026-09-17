@@ -12,7 +12,12 @@ use snafu::ensure;
 use uuid::Uuid;
 
 use super::camera::GpsCoordinates;
-use crate::domain::events::{MediumCreatedEvent, MediumItemCreatedEvent, MediumUpdatedEvent};
+use crate::domain::{
+    events::{
+        MediumCreatedEvent, MediumItemCreatedEvent, MediumThumbhashUpdatedEvent, MediumUpdatedEvent,
+    },
+    Thumbhash,
+};
 
 pub type MediumId = Uuid;
 pub type MediumItemId = Uuid;
@@ -58,6 +63,9 @@ pub struct Medium {
     pub camera_make: Option<String>,
     pub camera_model: Option<String>,
     pub gps_coordinates: Option<GpsCoordinates>,
+    /// Denormalized perceptual placeholder hash (computed from the tiny
+    /// thumbnail) for fast list queries.
+    pub thumbhash: Option<Thumbhash>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub items: Vec<MediumItem>,
@@ -75,6 +83,7 @@ impl Default for Medium {
             camera_make: None,
             camera_model: None,
             gps_coordinates: None,
+            thumbhash: None,
             created_at: DateTime::default(),
             updated_at: DateTime::default(),
             items: Vec::new(),
@@ -122,6 +131,13 @@ impl ApplyEvent<MediumItemCreatedEvent> for Medium {
     }
 }
 
+impl ApplyEvent<MediumThumbhashUpdatedEvent> for Medium {
+    fn apply(&mut self, e: &MediumThumbhashUpdatedEvent) {
+        self.thumbhash = Some(e.thumbhash.clone());
+        self.version += 1;
+    }
+}
+
 impl ApplyEvent<MediumUpdatedEvent> for Medium {
     fn apply(&mut self, e: &MediumUpdatedEvent) {
         self.taken_at = e.taken_at;
@@ -143,6 +159,7 @@ pub struct MediumListItem {
     pub camera_make: Option<String>,
     pub camera_model: Option<String>,
     pub gps_coordinates: Option<GpsCoordinates>,
+    pub thumbhash: Option<Thumbhash>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub items: Vec<MediumItem>,
@@ -159,6 +176,7 @@ impl From<Medium> for MediumListItem {
             camera_make: medium.camera_make,
             camera_model: medium.camera_model,
             gps_coordinates: medium.gps_coordinates,
+            thumbhash: medium.thumbhash,
             created_at: medium.created_at,
             updated_at: medium.updated_at,
             items: medium.items,
@@ -188,6 +206,7 @@ impl Medium {
             camera_make: request.camera_make,
             camera_model: request.camera_model,
             gps_coordinates: None,
+            thumbhash: None,
             created_at: now,
             updated_at: now,
             items: vec![item.clone()],

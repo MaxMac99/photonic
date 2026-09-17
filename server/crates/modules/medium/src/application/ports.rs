@@ -85,7 +85,7 @@ pub trait FileStorage: Send + Sync {
     async fn retrieve_file_stream(
         &self,
         location: &FileLocation,
-    ) -> DomainResult<Box<dyn AsyncRead + Unpin>>;
+    ) -> DomainResult<Box<dyn AsyncRead + Send + Unpin>>;
     async fn get_local_path(&self, location: &FileLocation) -> DomainResult<PathBuf>;
     async fn delete_file(&self, location: &FileLocation) -> DomainResult<()>;
     async fn get_file_metadata(&self, location: &FileLocation) -> DomainResult<FileMetadata>;

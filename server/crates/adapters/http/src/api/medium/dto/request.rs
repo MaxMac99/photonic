@@ -4,7 +4,7 @@ use serde_default_utils::*;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use super::types::MediumTypeDto;
+use super::types::{MediumTypeDto, ThumbnailVariantDto};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
 pub enum DirectionDto {
@@ -56,4 +56,20 @@ pub struct FindAllMediaOptions {
 pub struct GetMediumPreviewOptions {
     pub width: Option<i32>,
     pub height: Option<i32>,
+}
+
+/// Query parameters for uploading an additional item (e.g. a thumbnail
+/// variant) to an existing medium.
+#[derive(Debug, Clone, Deserialize, IntoParams)]
+pub struct AddMediumItemInput {
+    pub filename: String,
+    /// Required for preview items: which thumbnail size is being uploaded.
+    pub variant: Option<ThumbnailVariantDto>,
+    /// Image dimensions; required for preview items and validated against
+    /// the variant's maximum size.
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    #[serde(default = "default_i32::<10>")]
+    #[param(default = 10)]
+    pub priority: i32,
 }

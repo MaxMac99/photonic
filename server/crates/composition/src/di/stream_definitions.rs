@@ -1,6 +1,8 @@
 use event_sourcing::stream::definition::StreamDefinition;
 use medium::domain::{
-    events::{MediumCreatedEvent, MediumItemCreatedEvent, MediumUpdatedEvent},
+    events::{
+        MediumCreatedEvent, MediumItemCreatedEvent, MediumThumbhashUpdatedEvent, MediumUpdatedEvent,
+    },
     Medium,
 };
 use metadata::domain::{
@@ -25,6 +27,7 @@ pub fn medium_stream() -> StreamDefinition<Medium> {
     StreamDefinition::<Medium>::builder()
         .with::<MediumCreatedEvent>(|e| Some(e.medium_id.to_string()))
         .with::<MediumItemCreatedEvent>(|e| Some(e.medium_id.to_string()))
+        .with::<MediumThumbhashUpdatedEvent>(|e| Some(e.medium_id.to_string()))
         .with::<MediumUpdatedEvent>(|e| Some(e.medium_id.to_string()))
         .build()
 }

@@ -95,6 +95,7 @@ mod tests {
             camera_make: camera_make.map(String::from),
             camera_model: camera_model.map(String::from),
             gps_coordinates: None,
+            thumbhash: None,
             created_at: DateTime::parse_from_rfc3339("2024-03-15T10:00:00Z")
                 .unwrap()
                 .with_timezone(&Utc),

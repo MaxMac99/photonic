@@ -64,6 +64,19 @@ impl From<ImageFixture> for CreateMediumRequest {
     }
 }
 
+/// Request body for `POST /api/v1/medium/{id}/item/{format}`.
+#[derive(Debug, Clone, Builder)]
+#[builder(setter(into, strip_option))]
+pub struct AddMediumItemRequest {
+    pub format: String,
+    pub variant: Option<String>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub filename: String,
+    pub content_type: String,
+    pub body: Vec<u8>,
+}
+
 impl TestApp {
     // The generated client's `Error` is large; boxing it in every test helper
     // would obscure the assertions, so allow the lint here.
@@ -200,6 +213,94 @@ impl TestApp {
             .with_interval(Duration::from_millis(100))
             .with_exponential_backoff(2.0, Duration::from_secs(2))
             .with_timeout(Duration::from_secs(20)),
+        )
+        .await
+    }
+}
+
+impl TestApp {
+    /// Uploads an additional item (e.g. a thumbnail variant) to an existing
+    /// medium via `POST /api/v1/medium/{id}/item/{format}`.
+    #[allow(clippy::result_large_err)]
+    pub async fn add_medium_item(
+        &self,
+        user: &User,
+        medium_id: &Uuid,
+        request: AddMediumItemRequest,
+    ) -> Result<ResponseValue<Uuid>, Error> {
+        let url = format!(
+            "{}/api/v1/medium/{}/item/{}",
+            self.base_url, medium_id, request.format
+        );
+
+        let mut query = Vec::with_capacity(5usize);
+        query.push(("filename", request.filename.clone()));
+        if let Some(v) = &request.variant {
+            query.push(("variant", v.clone()));
+        }
+        if let Some(w) = request.width {
+            query.push(("width", w.to_string()));
+        }
+        if let Some(h) = request.height {
+            query.push(("height", h.to_string()));
+        }
+
+        let client = self.client_with_user(user);
+        let client = client.client();
+        let request = client
+            .post(url)
+            .header(header::ACCEPT, HeaderValue::from_static("application/json"))
+            .header(
+                header::CONTENT_TYPE,
+                HeaderValue::from_str(&request.content_type).unwrap(),
+            )
+            .body(request.body)
+            .query(&query)
+            .build()?;
+        let result = client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            201u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+
+    /// GETs a raw endpoint (`/preview`, `/item/{item_id}/raw`) and returns
+    /// the response for byte-level assertions.
+    pub async fn get_raw(
+        &self,
+        user: &User,
+        path: &str,
+        query: &[(&str, String)],
+    ) -> reqwest::Response {
+        let url = format!("{}{}", self.base_url, path);
+        let client = self.client_with_user(user);
+        let client = client.client();
+        let request = client.get(url).query(query).build().unwrap();
+        client.execute(request).await.unwrap()
+    }
+}
+
+impl TestApp {
+    /// Wait for the thumbhash to appear on the medium (computed
+    /// asynchronously after the tiny thumbnail is uploaded).
+    pub async fn wait_for_thumbhash(
+        &self,
+        user: &User,
+        medium_id: &Uuid,
+    ) -> Result<MediumDetailResponse, String> {
+        poll_until(
+            || async {
+                let response = self.client_with_user(user).get_medium(medium_id).await;
+                response.ok().and_then(|medium| {
+                    let medium = medium.into_inner();
+                    Some(medium).filter(|m| m.thumbhash.is_some())
+                })
+            },
+            PollingConfig::new(format!("thumbhash for medium {}", medium_id))
+                .with_interval(Duration::from_millis(50))
+                .with_exponential_backoff(2.0, Duration::from_secs(2))
+                .with_timeout(Duration::from_secs(10)),
         )
         .await
     }
