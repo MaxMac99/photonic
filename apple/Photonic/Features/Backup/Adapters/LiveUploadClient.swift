@@ -18,6 +18,12 @@ enum UploadError: Error, Sendable {
 extension UploadClient: DependencyKey {
     private static let logger = Logger(subsystem: "de.mvissing.photonic", category: "backup")
 
+    /// Resolved server location and credentials for one upload run.
+    private struct UploadContext: Sendable {
+        let serverURL: URL
+        let accessToken: String
+    }
+
     static var liveValue: UploadClient {
         UploadClient(upload: { job in
             @Dependency(PhotoLibraryClient.self) var photos
@@ -32,10 +38,14 @@ extension UploadClient: DependencyKey {
             guard let token = await auth.restoreSession()?.accessToken.value else {
                 throw UploadError.notAuthenticated
             }
+            let context = UploadContext(
+                serverURL: configuration.serverURL.rawValue,
+                accessToken: token
+            )
 
             let mediumID = try await UploadAPI.createMedium(
-                serverURL: configuration.serverURL.rawValue,
-                accessToken: token,
+                serverURL: context.serverURL,
+                accessToken: context.accessToken,
                 filename: job.filename ?? job.mediaID,
                 dateTaken: job.dateTaken,
                 data: data
@@ -46,8 +56,7 @@ extension UploadClient: DependencyKey {
                 of: mediumID,
                 originalFilename: job.filename ?? job.mediaID,
                 originalData: data,
-                serverURL: configuration.serverURL.rawValue,
-                accessToken: token,
+                context: context,
                 generator: thumbnails
             )
         })
@@ -62,8 +71,7 @@ extension UploadClient: DependencyKey {
         of mediumID: UUID,
         originalFilename: String,
         originalData: Data,
-        serverURL: URL,
-        accessToken: String,
+        context: UploadContext,
         generator: ThumbnailGenerator
     ) async {
         let thumbnails: [GeneratedThumbnail]
@@ -76,16 +84,19 @@ extension UploadClient: DependencyKey {
 
         let stem = (originalFilename as NSString).deletingPathExtension
         for thumbnail in thumbnails {
+            let upload = UploadAPI.PreviewItemUpload(
+                mediumID: mediumID,
+                variant: thumbnail.variant,
+                filename: "\(stem)_\(thumbnail.variant.rawValue).jpg",
+                width: thumbnail.width,
+                height: thumbnail.height,
+                data: thumbnail.data
+            )
             do {
                 _ = try await UploadAPI.addPreviewItem(
-                    serverURL: serverURL,
-                    accessToken: accessToken,
-                    mediumID: mediumID,
-                    variant: thumbnail.variant,
-                    filename: "\(stem)_\(thumbnail.variant.rawValue).jpg",
-                    width: thumbnail.width,
-                    height: thumbnail.height,
-                    data: thumbnail.data
+                    serverURL: context.serverURL,
+                    accessToken: context.accessToken,
+                    upload: upload
                 )
             } catch {
                 logger.error(

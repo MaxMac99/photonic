@@ -5,6 +5,13 @@ import ImageIO
 import PhotonicCore
 import UniformTypeIdentifiers
 
+/// A JPEG-encoded thumbnail with its pixel dimensions.
+private struct EncodedThumbnail {
+    let data: Data
+    let width: Int
+    let height: Int
+}
+
 /// Live implementation: generates the tiny/small/large thumbnail variants
 /// from an original image using ImageIO's fast downsampling path, encoding
 /// each as JPEG.
@@ -53,7 +60,7 @@ struct ImageIOThumbnailGenerator: Sendable {
         }
     }
 
-    private static func encodeJPEG(_ image: CGImage) throws -> (data: Data, width: Int, height: Int) {
+    private static func encodeJPEG(_ image: CGImage) throws -> EncodedThumbnail {
         let data = NSMutableData()
 
         guard
@@ -77,7 +84,7 @@ struct ImageIOThumbnailGenerator: Sendable {
             throw ThumbnailGenerationError.encodingFailed
         }
 
-        return (data as Data, image.width, image.height)
+        return EncodedThumbnail(data: data as Data, width: image.width, height: image.height)
     }
 }
 

@@ -38,17 +38,39 @@ public enum UploadAPI {
         }
     }
 
+    /// One thumbnail variant uploaded as a preview item of an
+    /// already-created medium.
+    public struct PreviewItemUpload: Sendable {
+        public let mediumID: UUID
+        public let variant: ThumbnailVariant
+        public let filename: String
+        public let width: Int
+        public let height: Int
+        public let data: Data
+
+        public init(
+            mediumID: UUID,
+            variant: ThumbnailVariant,
+            filename: String,
+            width: Int,
+            height: Int,
+            data: Data
+        ) {
+            self.mediumID = mediumID
+            self.variant = variant
+            self.filename = filename
+            self.width = width
+            self.height = height
+            self.data = data
+        }
+    }
+
     /// Uploads one thumbnail variant as a preview item of an
     /// already-created medium and returns the new item's id.
     public static func addPreviewItem(
         serverURL: URL,
         accessToken: String?,
-        mediumID: UUID,
-        variant: ThumbnailVariant,
-        filename: String,
-        width: Int,
-        height: Int,
-        data: Data
+        upload: PreviewItemUpload
     ) async throws -> UUID {
         let client = APIClientFactory.makeAuthenticatedClient(
             serverURL: serverURL,
@@ -56,16 +78,16 @@ public enum UploadAPI {
         )
         let response = try await client.add_medium_item(
             Operations.add_medium_item.Input(
-                path: .init(medium_id: mediumID.uuidString, format: .preview),
+                path: .init(medium_id: upload.mediumID.uuidString, format: .preview),
                 query: .init(
-                    filename: filename,
+                    filename: upload.filename,
                     variant: Operations.add_medium_item.Input.Query.variantPayload(
-                        rawValue: variant.rawValue
+                        rawValue: upload.variant.rawValue
                     ),
-                    width: Int32(width),
-                    height: Int32(height)
+                    width: Int32(upload.width),
+                    height: Int32(upload.height)
                 ),
-                body: .any(HTTPBody(data))
+                body: .any(HTTPBody(upload.data))
             )
         )
         switch response {
